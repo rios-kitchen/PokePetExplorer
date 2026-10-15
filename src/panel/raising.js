@@ -231,6 +231,7 @@ window.PanelRaising = function PanelRaising(env) {
   // the fishing Pokédex: every species that can be caught, with its portrait once caught
   const fishFaces = {};
   function renderFishdex(state) {
+    $('#pokedexLine').textContent = t('dex.pokedex', state.pokedexCount);
     const caught = Object.keys(state.fishdex).length;
     $('#fishHead').textContent = t('dex.fishdex', { n: caught, total: state.fish.length });
     const TIER = ['common', 'uncommon', 'rare', 'veryRare'];
@@ -252,7 +253,7 @@ window.PanelRaising = function PanelRaising(env) {
 
   let dexKey = '';
   function renderDex(state) {
-    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length, state.photos.map((p) => [p.id, !!p.fav]), state.fishdex]);
+    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length, state.photos.map((p) => [p.id, !!p.fav]), state.fishdex, state.pokedexCount]);
     if (key === dexKey) return;
     dexKey = key;
     renderAlbum(state);

@@ -277,6 +277,14 @@
       if (P.isAway() || P.bubbleBusy()) return;
       P.showBubble(say(e.line, { temp: e.temp, place: e.place }), { ms: 6000 });
     },
+    encounter() {
+      if (P.isAway() || P.bubbleBusy()) return;
+      P.playAnim(['Charge', 'Pose']);
+      P.showBubble(say('encounter'), {
+        priority: 2, ms: 60000,
+        actions: [{ label: tr('wild.outingFight'), primary: true, run: () => api.send('pet:action', 'battle-outing') }, P.laterAction()]
+      });
+    },
     'sign-in-reminder'() {
       if (P.isAway() || P.bubbleBusy()) return;
       P.showBubble(say('signReminder'), {

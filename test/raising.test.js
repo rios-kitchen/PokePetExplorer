@@ -464,3 +464,78 @@ test('weather codes and what the pet says', () => {
   assert.equal(Weather.remark({ kind: 'rain', temp: 35, isDay: true }), 'weatherRain');
   assert.equal(Weather.remark({ kind: 'clear', temp: 20, isDay: true }), 'weatherSunny');
 });
+
+// ---------------------------------------------------------------- battles
+const Battle = require('../src/main/battle');
+const { effectiveness } = require('../src/main/typechart');
+const mv = (id, type, power, cls = 'physical', extra = {}) => ({ id, names: { en: id, zh: id }, type, power, acc: 100, cls, ailment: 'none', ailmentChance: 0, ...extra });
+const BASE = { hp: 45, atk: 49, def: 49, spa: 65, spd: 65, spe: 45 };   // Bulbasaur
+const mon = (key, level, types, moves, extra = {}) => Battle.makeMon({ key, dex: 1, names: { en: key, zh: key }, level, types, base: BASE, moves, ...extra });
+
+test('type chart', () => {
+  assert.equal(effectiveness('fire', ['grass']), 2);
+  assert.equal(effectiveness('water', ['fire', 'rock']), 4);
+  assert.equal(effectiveness('electric', ['ground']), 0);
+  assert.equal(effectiveness('normal', ['ghost']), 0);
+  assert.equal(effectiveness('grass', ['fire', 'flying']), 0.25);
+});
+
+test('stats grow with level; contest stats give a small bonus', () => {
+  const s5 = Battle.statsFor(BASE, 5), s20 = Battle.statsFor(BASE, 20);
+  assert.ok(s20.hp > s5.hp * 2.5 && s20.atk > s5.atk * 2);
+  assert.ok(Battle.statsFor(BASE, 20, { cool: 60 }).atk > s20.atk);
+});
+
+test('a super-effective move does more damage; the battle is won', () => {
+  const me = mon('me', 12, ['fire'], [mv('ember', 'fire', 40, 'special'), mv('scratch', 'normal', 40)]);
+  const wild = mon('wild', 10, ['grass'], [mv('tackle', 'normal', 40)]);
+  const b = Battle.create({ party: [me], wild });
+  const e1 = Battle.act(b, { type: 'move', index: 0 }, seq(0.5));
+  const hit = e1.find((e) => e.t === 'move' && e.side === 'me');
+  assert.equal(hit.eff, 2);
+  let guard = 0;
+  while (!b.over && guard++ < 30) Battle.act(b, { type: 'move', index: 0 }, seq(0.5));
+  assert.equal(b.over, 'win');
+});
+
+test('switching, fainting and losing', () => {
+  const a = mon('a', 5, ['grass'], [mv('tackle', 'normal', 40)]);
+  const c = mon('c', 5, ['grass'], [mv('tackle', 'normal', 40)]);
+  const wild = mon('wild', 30, ['fire'], [mv('flamethrower', 'fire', 90, 'special')]);
+  const b = Battle.create({ party: [a, c], wild });
+  const sw = Battle.act(b, { type: 'switch', to: 1 }, seq(0.5));
+  assert.equal(sw[0].t, 'switch');
+  assert.equal(b.active, 1);
+  let guard = 0;
+  while (!b.over && guard++ < 20) {
+    if (b.needSwitch) Battle.act(b, { type: 'switch', to: b.party.findIndex((p) => !p.fainted) }, seq(0.5));
+    else Battle.act(b, { type: 'move', index: 0 }, seq(0.5));
+  }
+  assert.equal(b.over, 'lose');
+  assert.ok(a.fainted && c.fainted);
+});
+
+test('items: potions heal, a Revive brings a fainted member back, the bag is used up', () => {
+  const a = mon('a', 10, ['grass'], [mv('tackle', 'normal', 40)]);
+  const wild = mon('wild', 3, ['normal'], [mv('tackle', 'normal', 10)]);
+  const b = Battle.create({ party: [a], wild, bag: { potion: 1 } });
+  a.hp = 5;
+  Battle.act(b, { type: 'item', item: 'potion' }, seq(0.99));
+  assert.ok(a.hp > 5);
+  assert.equal(b.bag.potion, 0);
+  assert.deepEqual(Battle.act(b, { type: 'item', item: 'potion' }, seq(0.5)), [], 'none left');
+});
+
+test('catching: low HP, status and better balls help', () => {
+  const wild = mon('wild', 10, ['normal'], [mv('tackle', 'normal', 40)]);
+  const rate = (hpFrac, ball, status) => {
+    wild.hp = Math.max(1, Math.round(wild.maxHp * hpFrac)); wild.status = status ? { id: status } : null;
+    let n = 0;
+    for (let i = 0; i < 2000; i++) if (Battle.tryCatch(wild, ball, 45, Math.random).caught) n++;
+    return n / 2000;
+  };
+  assert.ok(rate(0.1, 'pokeball') > rate(1, 'pokeball') * 1.8);
+  assert.ok(rate(0.5, 'ultraball') > rate(0.5, 'pokeball'));
+  assert.ok(rate(0.5, 'pokeball', 'paralysis') > rate(0.5, 'pokeball'));
+  assert.equal(Battle.tryCatch({ maxHp: 10, hp: 1, status: null }, 'ultraball', 255, () => 0.99).caught, true);
+});

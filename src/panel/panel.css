@@ -470,3 +470,8 @@ body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display:
 .wx-box .hidden { display: none; }
 #wxStatus { margin: 0; }
 #wxStatus:empty { display: none; }
+
+/* ---- battle team */
+.poke .party-btn { margin-top: 5px; width: 100%; font-size: 11px; padding: 3px 4px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); cursor: pointer; }
+.poke .party-btn.on { border-color: var(--red); color: var(--red); font-weight: 700; }
+.dex-line { margin: 14px 0 0; font-weight: 700; }

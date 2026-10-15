@@ -20,7 +20,10 @@ const ITEMS = {
   iceheal:  { kind: 'med', cost: 3, cures: 'freeze', health: 20, mood: 5 },
   persim:   { kind: 'med', cost: 3, cures: 'confusion', health: 20, mood: 5 },
   fullheal: { kind: 'med', cost: 8, cures: 'all', health: 30, mood: 5 },
-  revive:   { kind: 'revive', cost: 8, health: 50, mood: 5 }
+  revive:   { kind: 'revive', cost: 8, health: 50, mood: 5 },
+  pokeball:  { kind: 'ball', cost: 5 },     // battle only (catching)
+  greatball: { kind: 'ball', cost: 12 },
+  ultraball: { kind: 'ball', cost: 25 }
 };
 
 const REWARD = { pomodoro: 3, todo: 1, daily: 2 };
@@ -145,6 +148,7 @@ function pay(data, itemId, item) {
 function useItem(data, id, itemId) {
   const item = ITEMS[itemId];
   if (!item) return { ok: false, reason: 'unknown' };
+  if (item.kind === 'ball') return { ok: false, reason: 'battleOnly' };
   const care = careOf(data, id);
   if (care.fainted && item.kind !== 'revive') return { ok: false, reason: 'fainted' };
   if (item.kind === 'revive' && !care.fainted) return { ok: false, reason: 'notFainted' };

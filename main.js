@@ -16,6 +16,8 @@ const Album = require('./src/main/album');
 const Fishing = require('./src/main/fishing');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
+const Battle = require('./src/main/battle');
+const Wild = require('./src/main/wild');
 const { Updater } = require('./src/main/updater');
 const AI = require('./src/main/ai');
 
@@ -188,6 +190,8 @@ function snapshot() {
     photos: d.photos,
     album: { recent: Album.RECENT, maxFavorites: Album.MAX_FAVORITES },
     fish: Fishing.FISH,
+    party: partyIds(),
+    pokedexCount: { seen: Object.keys(d.pokedex).length, caught: Object.values(d.pokedex).filter((e) => e.caught).length },
     weatherNow: d.weatherNow,
     dailyInfo: { signRewards: Daily.SIGN_REWARDS, signItem: Daily.SIGN_ITEM, allDoneBonus: Daily.ALL_DONE_BONUS },
     timer: { ...timer },
@@ -204,6 +208,7 @@ function broadcast() {
   send(petWin, 'state', snap);
   send(panelWin, 'state', snap);
   send(fishWin, 'state', snap);
+  send(wildWin, 'state', snap);
   updateTray();
 }
 
@@ -387,6 +392,7 @@ function checkExpedition() {
   if (S().pokemon === out.petId) petEvent('expedition-back', out);
   levelChanged(out.petId, before);
   if (out.companion) bringCompanion(out.petId);
+  else if (out.kind !== 'training' && Math.random() < 0.3) offerOutingEncounter(out.petId, out.kind === 'travel' ? 'grass' : out.id, out.region);
   notify(T('notif.expeditionBack'), T('notif.expeditionBackBody', { name: petName(out.petId), n: out.berries }));
   changed();
 }
@@ -733,6 +739,167 @@ function answerJoin(token, keep) {
   notify(T('notif.joined'), T('notif.joinedBody', { name: j.names[lang()] || j.names.en }));
   petEvent('joined', { name: j.names[lang()] || j.names.en });
   return { ok: true, kept: true, id };
+}
+
+// ---------- battles and catching ----------
+// The wild window has two modes: exploring the grass (16 encounters a day) and battling. A battle can
+// also start from an outing ("we met a wild Pokémon – go and battle it?"). Main keeps the battle state.
+let wildWin = null;
+let battle = null;           // { b: Battle state, ctx: { place, region, source, capture, ids, wild } }
+let pendingEncounter = null; // from an outing: { place, region, until }
+const BATTLE_ITEMS = ['pokeball', 'greatball', 'ultraball', 'oran', 'potion', 'antidote', 'parlyz', 'burnheal', 'iceheal', 'persim', 'fullheal', 'revive'];
+
+function openWild(encounter) {
+  if (!wildWin || wildWin.isDestroyed()) {
+    wildWin = new BrowserWindow({
+      width: 520, height: 560, resizable: false, show: false, title: T('wild.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) wildWin.setMenu(null);
+    if (process.env.POKEPET_TEST) wildWin.webContents.on('console-message', (e) => console.log('[wild]', e.message));
+    wildWin.loadFile(path.join(__dirname, 'src', 'wild', 'wild.html'), { query: { encounter: encounter ? '1' : '' } });
+    wildWin.once('ready-to-show', () => { wildWin.show(); wildWin.focus(); });
+    wildWin.on('closed', () => { wildWin = null; if (battle && !battle.b.over) battle = null; });
+  } else {
+    wildWin.show();
+    wildWin.focus();
+    if (encounter) send(wildWin, 'wild:encounter');
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** The Pokémon that battle: the chosen party (up to 3), or the partner alone. Not eggs, not away. */
+function partyIds() {
+  const ok = (id) => store.data.custom.some((c) => c.id === id && c.dex) && petOf(store.data, id).stage !== 'egg'
+    && !Expedition.isAway(store.data, id);
+  let ids = (S().party || []).filter(ok).slice(0, 3);
+  if (!ids.length && hasPet() && ok(S().pokemon)) ids = [S().pokemon];
+  return ids;
+}
+
+function wildEnergy() {
+  const w = store.data.wild;
+  if (w.day !== today()) { w.day = today(); w.used = 0; }
+  return Wild.DAILY_GRASS - w.used;
+}
+
+function bagForBattle() {
+  return Object.fromEntries(BATTLE_ITEMS.map((id) => [id, store.data.inventory[id] || 0]).filter(([, n]) => n > 0));
+}
+
+/** Start a battle in the grass (uses an encounter) or from an outing. */
+async function startBattle(source) {
+  if (battle && !battle.b.over) return { ok: true };
+  const ids = partyIds().filter((id) => !Care.careOf(store.data, id).fainted);
+  if (!ids.length) return { ok: false, error: 'noParty' };
+  let place = 'grass', region = null;
+  if (source === 'outing') {
+    if (!pendingEncounter || Date.now() > pendingEncounter.until) { pendingEncounter = null; return { ok: false, error: 'gone' }; }
+    ({ place, region } = pendingEncounter);
+    pendingEncounter = null;
+  } else if (wildEnergy() <= 0) return { ok: false, error: 'tired' };
+  const dir = spritesDir();
+  try {
+    const leadLevel = levelOf(petOf(store.data, ids[0]).xp);
+    const drawn = Wild.drawnDex(Sources.creditIndexCached(dir));
+    const sp = await Wild.pickSpecies({ place, region, partnerLevel: leadLevel, drawn, dir });
+    const level = Battle.wildLevel(leadLevel);
+    const shiny = Math.random() < Wild.SHINY_RATE;
+    const party = [];
+    for (const id of ids) {
+      const p = petList().find((x) => x.id === id);
+      const rec = petOf(store.data, id);
+      party.push(Battle.makeMon(await Wild.battlerFor({ key: id, dex: p.dex, names: p.names, level: levelOf(rec.xp), attrs: rec.attrs, shiny: !!(store.data.skins[id] || {}).shiny, dir })));
+    }
+    const w = await Wild.battlerFor({ key: 'wild', dex: sp.dex, names: sp.names, level, attrs: {}, shiny, dir });
+    const wild = Battle.makeMon({ ...w, wild: true });
+    if (source !== 'outing') store.data.wild.used++;
+    const seen = store.data.pokedex[sp.dex] || { seen: 0, caught: 0 };
+    store.data.pokedex[sp.dex] = { ...seen, seen: seen.seen + 1 };
+    battle = { b: Battle.create({ party, wild, bag: bagForBattle() }), ctx: { place, region, source, capture: sp.capture, ids } };
+    changed();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.code === 'not-found' ? 'none' : 'net' };
+  }
+}
+
+/** What the window needs to draw the battle. */
+function battleView() {
+  if (!battle) return null;
+  const { b, ctx } = battle;
+  const mon = (m) => ({ key: m.key, dex: m.dex, names: m.names, level: m.level, types: m.types, hp: m.hp, maxHp: m.maxHp,
+    status: m.status && m.status.id, fainted: m.fainted, shiny: m.shiny,
+    moves: m.moves.map((x) => ({ id: x.id, names: x.names, type: x.type, power: x.power, cls: x.cls })) });
+  return { party: b.party.map(mon), wild: mon(b.wild), active: b.active, bag: b.bag, over: b.over, needSwitch: b.needSwitch,
+    place: ctx.place, region: ctx.region, source: ctx.source, result: ctx.result || null };
+}
+
+async function battleAct(action) {
+  if (!battle || battle.b.over) return { events: [], view: battleView() };
+  const events = Battle.act(battle.b, action || {}, Math.random, { captureRate: battle.ctx.capture });
+  if (battle.b.over) finishBattle();
+  return { events, view: battleView() };
+}
+
+/** Apply the outcome: XP, berries, statuses brought back, the light penalty for losing, a new team member. */
+function finishBattle() {
+  const { b, ctx } = battle;
+  const d = store.data;
+  for (const [id, n] of Object.entries(b.used)) {
+    d.inventory[id] = Math.max(0, (d.inventory[id] || 0) - n);
+    if (!d.inventory[id]) delete d.inventory[id];
+  }
+  const result = { over: b.over, xp: 0, berries: 0, caughtId: null };
+  const took = [...b.seen].map((i) => ctx.ids[i]);
+  if (b.over === 'win' || b.over === 'caught') {
+    result.xp = Battle.expFor(b.wild, took.length);
+    for (const id of took) addXp(result.xp, id);
+    if (b.over === 'win') {
+      result.berries = 1 + Math.floor(Math.random() * 3);
+      d.berries += result.berries;
+      d.stats.battlesWon = (d.stats.battlesWon || 0) + 1;
+      const lead = petOf(d, ctx.ids[b.active]);
+      lead.attrs.tough += 1; lead.attrs.cool += 1;
+      taskProgress('battle');
+    }
+  }
+  if (b.over === 'caught') {
+    const w = b.wild;
+    const id = addPokemon({ dex: w.dex, names: w.names, shiny: w.shiny, from: 'caught' });
+    petOf(d, id).xp = Growth.xpFor(w.level);
+    const e = d.pokedex[w.dex] || { seen: 1, caught: 0 };
+    d.pokedex[w.dex] = { ...e, caught: e.caught + 1 };
+    d.stats.caught = (d.stats.caught || 0) + 1;
+    result.caughtId = id;
+    taskProgress('catch');
+    petEvent('joined', { name: w.names[lang()] || w.names.en });
+  }
+  if (b.over === 'lose') {
+    d.stats.battlesLost = (d.stats.battlesLost || 0) + 1;
+    for (const id of ctx.ids) {   // light penalty: tired and a bit sad, never fainted
+      const care = Care.careOf(d, id);
+      care.health = Math.max(1, care.health - 15);
+      const pet = petOf(d, id);
+      pet.mood = Math.max(0, pet.mood - 10);
+    }
+  }
+  // conditions from the battle come home with them (burns, poison, paralysis, freezing)
+  b.party.forEach((m, i) => {
+    if (m.status && m.status.id !== 'confusion') {
+      const care = Care.careOf(d, ctx.ids[i]);
+      if (!care.status) { Care.inflict(care, m.status.id); care.status.known = true; }
+    }
+  });
+  ctx.result = result;
+  changed();
+}
+
+/** An outing turned up a wild Pokémon: offer a battle for a while. */
+function offerOutingEncounter(petId, place, region) {
+  pendingEncounter = { place, region, until: Date.now() + 30 * 60e3 };
+  if (S().pokemon === petId) setTimeout(() => petEvent('encounter', { place, region }), 9000);
 }
 
 // ---------- fishing ----------
@@ -1440,6 +1607,7 @@ function buildMenu() {
     },
     expeditionMenu(),
     { label: T('menu.fishing'), click: () => openFishing() },
+    { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
     {
@@ -1659,6 +1827,7 @@ function registerIpc() {
       case 'care': useCareItem(arg); break;
       case 'diagnose': diagnosePet(); break;
       case 'signin': signIn(); break;
+      case 'battle-outing': openWild(true); break;
       case 'evolve': evolve(S().pokemon, arg).then((r) => { if (!r.ok) petEvent('evolve-failed', { error: r.error }); }); break;
       case 'evolve-later': snoozeEvolution(); break;
       case 'expedition': startExpedition(arg); break;
@@ -1699,6 +1868,13 @@ function registerIpc() {
   ipcMain.on('pomodoro:set', (_e, patch) => setPomodoro(patch || {}));
   ipcMain.on('pet:reset-pos', () => resetPetPos());
   ipcMain.on('pokemon:select', (_e, id) => selectPokemon(id));
+  ipcMain.on('party:toggle', (_e, id) => {
+    const cur = partyIds();
+    let next = cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < 3 ? [...cur, id] : cur;
+    if (!next.length) next = cur;   // keep at least one
+    S().party = next;
+    changed();
+  });
   ipcMain.on('pet:fit', (_e, fit) => {
     if (!fit || !(fit.w > 0) || !(fit.h > 0) || drag) return;
     petFit = { w: Math.min(600, fit.w), h: Math.min(600, fit.h) };
@@ -1737,6 +1913,23 @@ function registerIpc() {
   ipcMain.handle('starter:choose', (_e, id) => chooseStarter(String(id || '')));
   ipcMain.on('starter:open', () => openStarter());
   ipcMain.handle('join:answer', (_e, token, keep) => answerJoin(String(token || ''), !!keep));
+  ipcMain.handle('wild:explore', () => startBattle('grass'));
+  ipcMain.handle('wild:outing', () => startBattle('outing'));
+  ipcMain.handle('wild:state', () => ({ battle: battleView(), energy: wildEnergy(), max: Wild.DAILY_GRASS, party: partyIds(), pending: !!pendingEncounter }));
+  ipcMain.handle('battle:act', (_e, action) => battleAct(action));
+  ipcMain.on('battle:close', () => { if (battle && battle.b.over) battle = null; });
+  ipcMain.on('wild:open', () => openWild(false));
+  ipcMain.handle('battle:assets', async (_e, dex, shiny) => {
+    try {
+      const meta = await Sources.downloadSkin(Number(dex), !!shiny, spritesDir()).catch((e) => {
+        if (e.code === 'not-found' && shiny) return Sources.downloadSkin(Number(dex), false, spritesDir());
+        throw e;
+      });
+      const anims = JSON.parse(fs.readFileSync(path.join(spritesDir(), meta.dir, 'anims.json'), 'utf8'));
+      for (const a of Object.values(anims)) a.url = `data:image/png;base64,${fs.readFileSync(path.join(spritesDir(), meta.dir, a.file)).toString('base64')}`;
+      return { kind: 'pmd', anims };
+    } catch { return null; }
+  });
   ipcMain.handle('fish:bite', (_e, depth) => fishBite(depth));
   ipcMain.handle('fish:land', (_e, token) => fishLand(String(token || '')));
   ipcMain.on('fish:lost', (_e, token) => bites.delete(String(token || '')));
@@ -2142,6 +2335,56 @@ async function selfTest(dir) {
   await step('holiday', async () => petEvent('holiday', { holiday: 'midAutumn', anniv: null, gift: 3 }));
   await wait(1500);
   await shot(petWin, '34-pet-holiday');
+
+  // ---- battles: buy balls, a team of two, explore the grass, fight and try to catch
+  await step('battle-setup', async () => {
+    store.data.berries += 60;
+    shopBuy('pokeball', 5); shopBuy('potion', 1);
+    S().party = []; changed();
+    for (const id of ['pikachu', 'charmander']) { petOf(store.data, id).xp = Growth.xpFor(10); Object.assign(Care.careOf(store.data, id), { fainted: false, sick: false, status: null, health: 100 }); }
+    S().party = ['pikachu', 'charmander']; changed();
+    openWild(false);
+  });
+  await wait(4000);
+  await shot(wildWin, '35-wild-explore');
+  const wjs = (code) => wildWin.webContents.executeJavaScript(code);
+  await wjs("document.querySelector('#menu button').click(); 0");
+  await wait(9000);
+  await shot(wildWin, '36-battle-start');
+  await wjs(`window.__drive = (async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const btns = () => [...document.querySelectorAll('#menu button')];
+    for (let i = 0; i < 200; i++) {
+      await sleep(400);
+      if (!document.querySelector('#result').classList.contains('hidden')) return document.querySelector('#resTitle').textContent;
+      const list = btns();
+      if (!list.length) continue;
+      const fight = list.find((b) => b.textContent.includes('⚔'));
+      if (fight) {
+        const wildPct = parseFloat(document.querySelector('#wildBox .bar > div').style.width) || 100;
+        if (wildPct < 45) {
+          list.find((b) => b.textContent.includes('🎒')).click(); await sleep(150);
+          const ball = btns().find((b) => b.textContent.includes('🔴'));
+          if (ball) { ball.click(); continue; }
+          btns().pop().click(); await sleep(150);
+        }
+        btns().find((b) => b.textContent.includes('⚔')).click(); await sleep(150);
+        const mv = document.querySelector('#menu button.type'); if (mv) mv.click();
+        continue;
+      }
+      const any = list.find((b) => !b.disabled && b.className !== 'back'); if (any) any.click();
+    }
+    return 'timeout';
+  })(); 0`);
+  await wait(12000);
+  await shot(wildWin, '37-battle-mid');
+  console.log('[test] battle result:', await wjs('window.__drive'));
+  await wait(800);
+  await shot(wildWin, '38-battle-result');
+  console.log('[test] pokedex:', JSON.stringify(store.data.pokedex), 'team:', store.data.custom.map((c) => c.id).join(','), 'balls left:', store.data.inventory.pokeball || 0);
+  send(panelWin, 'panel:tab', 'pokemon');
+  await wait(2000);
+  await shot(panelWin, '39-panel-party');
   quitting = true;
   app.quit();
 }

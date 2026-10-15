@@ -371,7 +371,7 @@
   function renderPokemon() {
     const all = state.custom.map((c) => ({ id: c.id, builtin: false }));
     const key = JSON.stringify([L(), state.settings.pokemon, all.map((p) => p.id),
-      Object.fromEntries(Object.entries(state.pets).map(([k, v]) => [k, [v.xp, v.stage, v.attrs, v.species]])), state.skins, state.expedition]);
+      Object.fromEntries(Object.entries(state.pets).map(([k, v]) => [k, [v.xp, v.stage, v.attrs, v.species]])), state.skins, state.expedition, state.party]);
     if (key === pokeKey) return;
     pokeKey = key;
     const grid = $('#pokeGrid');
@@ -393,6 +393,10 @@
         el('div', { class: 'l' }, isEgg(p.id) ? t('egg.hatchAt', { n: lv, h: state.hatchLevel }) : t('poke.level', { n: lv })),
         el('div', { class: 'bar' }, el('div', { style: `width:${pct}%` })),
         attrLine(p.id),
+        isEgg(p.id) ? null : el('button', {
+          class: `party-btn${state.party.includes(p.id) ? ' on' : ''}`,
+          onclick: (e) => { e.stopPropagation(); api.send('party:toggle', p.id); }
+        }, state.party.includes(p.id) ? t('poke.partyOn') : t('poke.partyOff')),
 
         creditLines(state.skins[p.id]?.credits));
       grid.append(card);

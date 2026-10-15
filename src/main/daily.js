@@ -12,7 +12,9 @@ const TASKS = [
   { id: 'pat10',    kind: 'pat',      goal: 10, reward: 2, w: 2 },
   { id: 'outing1',  kind: 'outing',   goal: 1,  reward: 3, w: 2 },
   { id: 'train1',   kind: 'train',    goal: 1,  reward: 3, w: 1 },
-  { id: 'fish2',    kind: 'fish',     goal: 2,  reward: 3, w: 2 }
+  { id: 'fish2',    kind: 'fish',     goal: 2,  reward: 3, w: 2 },
+  { id: 'battle2',  kind: 'battle',   goal: 2,  reward: 3, w: 2 },
+  { id: 'catch1',   kind: 'catch',    goal: 1,  reward: 4, w: 1 }
 ];
 const PER_DAY = 4;
 const ALL_DONE_BONUS = 3;

@@ -13,10 +13,10 @@ A pixel Pokémon desktop pet for **macOS and Windows** with **QQ-Pet style raisi
 
 **Your journey starts at Professor Oak's:** choose Bulbasaur (Grass), Charmander (Fire) or Squirtle
 (Water) as your first partner – once in a while (1 in 64) it's a shiny one. New Pokémon join later by
-themselves: a fish you reel in may want to come along, and a happy Pokémon sometimes brings a wild
-friend back from an outing. (Battles and catching are planned for a later update.)
+themselves (a fish you reel in may want to come along, a happy Pokémon sometimes brings a wild friend
+back from an outing), or you **battle and catch** them in the tall grass.
 
-**Coming later:** battles and catching Pokémon.
+
 
 ## Run
 
@@ -178,6 +178,23 @@ off by default): type your city and your Pokémon mentions sun, rain, snow, heat
   much and it gets annoyed.
 - It steps aside while a fullscreen app (video, game, slides) is in front (Settings, on by default).
 
+### Battles and catching
+
+Right-click → **🌿 Explore the grass** (16 encounters a day) and walk into the tall grass to meet wild
+Pokémon – any species PMD has drawn, matched to the place (and to your partner's level). Outings to a
+dungeon or a region sometimes meet one too, and your Pokémon asks whether to go and battle it.
+
+- Turn-based battles in the style of the games: real base stats and level-up moves (from PokeAPI), the
+  18-type chart, critical hits, burns, poison, paralysis, freezing and confusion. Your contest stats
+  give small bonuses.
+- Take up to **three Pokémon** (Pokémon tab → "Add to team") and switch between them mid-battle; use
+  medicine and Revives from your bag.
+- Weaken a wild Pokémon, then throw a **Poké Ball / Great Ball / Ultra Ball** (from the shop) – it
+  joins your team. Shiny wild Pokémon appear 1 in 128.
+- Winning gives XP to every Pokémon that took part, a few berries and toughness; losing only tires
+  them out (health −15, mood −10). Burns and poison follow them home – treat them in the Care tab.
+- **Dex → Pokédex** counts the species you've seen and caught.
+
 ### Studying together
 
 Every finished Pomodoro also teaches your Pokémon something: **+1 Smart** per 25 minutes of focus.
@@ -223,6 +240,11 @@ src/main/achievements.js milestones and their berry rewards
 src/main/ai.js          optional AI chat (Anthropic SDK + OpenAI-compatible providers)
 src/main/fishing.js     fishing: species table, bites, catches, rewards
 src/main/daily.js       daily sign-in and tasks
+src/main/battle.js      the battle engine (pure, testable)
+src/main/typechart.js   the 18-type chart
+src/main/pokedata.js    base stats, moves and capture rates from PokeAPI (cached)
+src/main/wild.js        which wild Pokémon appear where
+src/wild/               grass exploring and battle window
 src/main/weather.js     holidays, anniversaries, optional weather (Open-Meteo)
 src/main/fullscreen.js  hide over fullscreen apps (Windows helper)
 src/starter/            choosing the first Pokémon

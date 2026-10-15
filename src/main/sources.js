@@ -250,4 +250,7 @@ async function portrait(dex, emotion, dir, shiny = false) {
   return buf;
 }
 
-module.exports = { SOURCES, PMD_VERSION, ALLOWED_HOSTS, fetchAllowed, lookupSpecies, evolutionOptions, randomEggSpecies, downloadSkin, portrait, pmdCredits, cachedCredits };
+/** The cached PMD artist index ({ dex: { "0025": {…} } }) – also tells which species have sprites. */
+function creditIndexCached(dir) { return loadCreditIndex(dir); }
+
+module.exports = { SOURCES, PMD_VERSION, ALLOWED_HOSTS, fetchAllowed, creditIndexCached, lookupSpecies, evolutionOptions, randomEggSpecies, downloadSkin, portrait, pmdCredits, cachedCredits };

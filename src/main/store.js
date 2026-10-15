@@ -32,6 +32,7 @@ function defaults(lang) {
       ai: { enabled: false, provider: 'anthropic', baseUrl: '', model: '' },   // optional AI chat (ai.js)
       weather: { enabled: false, city: '', place: '', lat: null, lon: null },   // off by default; city typed by the user
       greetings: true,      // holiday and anniversary greetings (local, no network)
+      party: [],            // up to 3 Pokémon ids that battle (empty: the partner alone)
       petPos: null,
       petHidden: false
     },
@@ -48,7 +49,8 @@ function defaults(lang) {
     diary: null,
     stats: {
       day: today(), todayPomos: 0, totalPomos: 0, focusMinutes: 0, todosDone: 0, todayTodos: 0,
-      expeditions: 0, travels: 0, cures: 0, hatches: 0, fishCaught: 0   // for achievements (hatches: also the hatch level)
+      expeditions: 0, travels: 0, cures: 0, hatches: 0, fishCaught: 0,   // for achievements (hatches: also the hatch level)
+      battlesWon: 0, battlesLost: 0, caught: 0
     },
 
     // ---- raising (PokePet Explorer)
@@ -62,7 +64,9 @@ function defaults(lang) {
     photos: [],         // { id, file, expId, region, petId, at } – group photos from expeditions (userData/photos)
     aiKeys: {},         // provider -> encrypted API key (never sent to the windows)
     greeted: { holiday: null, weather: null, weatherKind: null },   // last day / time something was greeted
-    weatherNow: null    // { kind, temp, isDay, at } – the last weather report
+    weatherNow: null,   // { kind, temp, isDay, at } – the last weather report
+    wild: { day: null, used: 0 },   // grass encounters today (limited per day)
+    pokedex: {}         // dex -> { seen, caught } from battles
   };
 }
 
