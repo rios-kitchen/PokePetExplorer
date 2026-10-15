@@ -13,6 +13,7 @@ const Expedition = require('./src/main/expedition');
 const Achievements = require('./src/main/achievements');
 const Secrets = require('./src/main/secrets');
 const Album = require('./src/main/album');
+const Fishing = require('./src/main/fishing');
 const { Updater } = require('./src/main/updater');
 const AI = require('./src/main/ai');
 
@@ -174,6 +175,7 @@ function snapshot() {
     souvenirs: d.souvenirs,
     photos: d.photos,
     album: { recent: Album.RECENT, maxFavorites: Album.MAX_FAVORITES },
+    fish: Fishing.FISH,
     timer: { ...timer },
     platform: process.platform
   };
@@ -187,6 +189,7 @@ function broadcast() {
   const snap = snapshot();
   send(petWin, 'state', snap);
   send(panelWin, 'state', snap);
+  send(fishWin, 'state', snap);
   updateTray();
 }
 
@@ -596,6 +599,51 @@ function setPetHidden(hidden) {
 }
 
 // ---------- panel window ----------
+// ---------- fishing ----------
+let fishWin = null;
+const bites = new Map();   // token -> hidden catch (the window only learns the species once it's landed)
+
+function openFishing() {
+  if (!fishWin || fishWin.isDestroyed()) {
+    fishWin = new BrowserWindow({
+      width: 500, height: 520, resizable: false, show: false, title: T('fish.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) fishWin.setMenu(null);
+    if (process.env.POKEPET_TEST) fishWin.webContents.on('console-message', (e) => console.log('[fish]', e.message));
+    fishWin.loadFile(path.join(__dirname, 'src', 'fishing', 'fishing.html'));
+    fishWin.once('ready-to-show', () => { fishWin.show(); fishWin.focus(); });
+    fishWin.on('closed', () => { fishWin = null; bites.clear(); });
+  } else {
+    fishWin.show();
+    fishWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+function fishBite(depth) {
+  const b = Fishing.bite(Number(depth) || 0);
+  const token = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  bites.clear();   // one line in the water at a time
+  bites.set(token, b.hidden);
+  return { token, tier: b.tier, bite: b.bite, pull: b.pull };
+}
+
+function fishLand(token) {
+  const hidden = bites.get(token);
+  bites.delete(token);
+  if (!hidden) return { ok: false };
+  const res = Fishing.land(store.data, hidden);
+  if (!res) return { ok: false };
+  // fishing together: the active Pokémon has fun and learns a little
+  const pet = activePet();
+  if (!activeAway() && pet.stage !== 'egg') { addXp(res.xp); addMood(3); }
+  if (res.isNew || res.tier >= 2) petEvent('fish-caught', { name: res.names[lang()] || res.names.en, size: res.size, isNew: res.isNew });
+  changed();
+  return { ok: true, ...res };
+}
+
 // ---------- AI chat (optional, off by default) ----------
 let chatWin = null;
 let chatHistory = [];   // this session only – not saved
@@ -1086,6 +1134,7 @@ function buildMenu() {
       ]
     },
     expeditionMenu(),
+    { label: T('menu.fishing'), click: () => openFishing() },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
     {
@@ -1358,6 +1407,10 @@ function registerIpc() {
   ipcMain.handle('shop:buy', (_e, itemId, n) => shopBuy(String(itemId || ''), n));
   ipcMain.handle('egg:adopt', () => adoptEgg());
   ipcMain.handle('settings:extra', (_e, text) => runSecret(text));
+  ipcMain.handle('fish:bite', (_e, depth) => fishBite(depth));
+  ipcMain.handle('fish:land', (_e, token) => fishLand(String(token || '')));
+  ipcMain.on('fish:lost', (_e, token) => bites.delete(String(token || '')));
+  ipcMain.on('fish:open', () => openFishing());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -1657,6 +1710,57 @@ async function selfTest(dir) {
   await panelWin.webContents.executeJavaScript("document.querySelector('#aiTitle, [data-i18n=\"ai.title\"]').scrollIntoView()");
   await wait(500);
   await shot(panelWin, '22-panel-settings-ai');
+
+  // ---- fishing: really play it – charge, cast, wait for the bite, hook, reel while watching the tension
+  await step('fishing', async () => openFishing());
+  await wait(2500);
+  await shot(fishWin, '23-fish-idle');
+  const js = (code) => fishWin.webContents.executeJavaScript(code);
+  const DRIVER = `
+    window.__fire = (type) => (type === 'mousedown' ? document.querySelector('#pond') : window)
+      .dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0 }));
+    window.__isBite = () => ['en', 'zh'].some((l) => document.querySelector('#hint').textContent === window.PokeI18N.t(l, 'fish.hint.bite'));
+    window.__reel = async () => {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      for (let i = 0; i < 400 && !window.__isBite(); i++) await sleep(50);
+      if (!window.__isBite()) return 'no-bite';
+      window.__fire('mousedown');
+      for (let i = 0; i < 600; i++) {
+        await sleep(50);
+        if (!document.querySelector('#result').classList.contains('hidden')) return 'caught';
+        if (document.querySelector('#reel').classList.contains('hidden')) {
+          await sleep(800);   // a catch shows its card a moment after the reel bars go away
+          return document.querySelector('#result').classList.contains('hidden') ? 'lost' : 'caught';
+        }
+        const tension = parseFloat(document.querySelector('#tension').style.width) || 0;
+        if (tension > 62) window.__fire('mouseup'); else if (tension < 30) window.__fire('mousedown');
+      }
+      return 'timeout';
+    };
+    0`;
+  await js(DRIVER);
+  let outcome = '';
+  for (let attempt = 0; attempt < 3 && outcome !== 'caught'; attempt++) {
+    await js("document.querySelector('#resOk').click(); window.__fire('mousedown'); 0");
+    await wait(650);
+    if (attempt === 0) await shot(fishWin, '24-fish-charging');
+    await js("window.__fire('mouseup'); 0");
+    await wait(1500);
+    if (attempt === 0) await shot(fishWin, '25-fish-waiting');
+    await js('window.__play = window.__reel(); 0');
+    await wait(9000);
+    if (attempt === 0) await shot(fishWin, '26-fish-reeling');
+    outcome = await js('window.__play');
+    console.log('[test] fishing attempt', attempt + 1, '→', outcome);
+  }
+  await wait(1500);
+  await shot(fishWin, '27-fish-result');
+  console.log('[test] fishdex:', JSON.stringify(store.data.fishdex));
+  send(panelWin, 'panel:tab', 'dex');
+  await wait(1500);
+  await panelWin.webContents.executeJavaScript("document.querySelector('#fishHead').scrollIntoView()");
+  await wait(1500);
+  await shot(panelWin, '28-panel-fishdex');
   quitting = true;
   app.quit();
 }

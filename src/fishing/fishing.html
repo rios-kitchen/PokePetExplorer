@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>PokePet Explorer</title>
+  <link rel="stylesheet" href="fishing.css">
+</head>
+<body>
+  <div class="stage">
+    <canvas id="pond" width="480" height="360"></canvas>
+    <div id="result" class="result hidden">
+      <div class="card">
+        <div class="face"><img id="resFace" alt=""></div>
+        <div class="info">
+          <div id="resTags" class="tags"></div>
+          <b id="resName"></b>
+          <div id="resSize" class="size"></div>
+          <div id="resReward" class="reward"></div>
+        </div>
+      </div>
+      <button id="resOk" class="primary"></button>
+    </div>
+  </div>
+  <div class="hud">
+    <div id="reel" class="reel hidden">
+      <div class="bar-row"><span id="lblTension"></span><div class="bar tension"><div id="tension"></div></div></div>
+      <div class="bar-row"><span id="lblCatch"></span><div class="bar progress"><div id="progress"></div></div></div>
+    </div>
+    <p id="hint"></p>
+    <p id="count" class="count"></p>
+  </div>
+  <script src="../shared/i18n.js"></script>
+  <script src="../shared/sprites.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="fishing.js"></script>
+</body>
+</html>

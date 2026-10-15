@@ -238,6 +238,12 @@
       P.happy(900);
       P.showBubble(e.text, { priority: 2, ms: Math.min(20000, 4000 + e.text.length * 90), emotion: 'Happy' });
     },
+    'fish-caught'(e) {
+      if (P.isAway()) return;
+      P.hearts(2);
+      if (!P.playAnim(['Pose', 'Hop'])) P.jump(1);
+      if (!P.bubbleBusy()) P.showBubble(say(e.isNew ? 'fishNew' : 'fishBig', { name: e.name, cm: e.size }), { ms: 3500 });
+    },
     achievement(e) {
       Sound.play('fanfare');
       P.stars(12);

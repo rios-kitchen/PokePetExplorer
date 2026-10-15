@@ -14,7 +14,7 @@ A pixel Pokémon desktop pet for **macOS and Windows** with **QQ-Pet style raisi
 **You start with an egg.** Nobody knows who's inside until it hatches – the first egg after one level,
 later eggs at Lv 5 – and once in a while (1 in 64) it's a shiny one.
 
-**Work in progress:** daily tasks and fishing are still to come.
+**Work in progress:** daily tasks and weather greetings are still to come.
 
 ## Run
 
@@ -147,6 +147,15 @@ While your Pokémon is out, a little pixel map of where it is sits on the deskto
 brings a photo of the two of you there – a random pose and a random expression – collected in
 **Dex → Photos**.
 
+### Fishing
+
+Right-click → **🎣 Fishing** (or **Dex → Go fishing**) opens a little pond where your Pokémon sits on
+the pier with you. Hold the mouse (or Space) to charge and release to cast – the farther out, the rarer
+the bites. Wait for the bobber to dip and click quickly, then hold to reel in while keeping the line
+tension out of the red. 24 water Pokémon in four rarities (from Magikarp to Dratini, Lapras and
+Gyarados), each with a random size and a rare shiny – collected in **Dex → Fishing Pokédex**, with
+berries for rare and new catches and a little XP for your partner.
+
 ### Studying together
 
 Every finished Pomodoro also teaches your Pokémon something: **+1 Smart** per 25 minutes of focus.
@@ -188,6 +197,9 @@ src/main/growth.js      levels, passive growth rate, hatching, evolution
 src/main/expedition.js  dungeons, contest training, travel
 src/main/achievements.js milestones and their berry rewards
 src/main/ai.js          optional AI chat (Anthropic SDK + OpenAI-compatible providers)
+src/main/fishing.js     fishing: species table, bites, catches, rewards
+src/main/album.js       photo album rules (3 recent + up to 20 favourites)
+src/fishing/            fishing window (pond, cast / wait / reel)
 src/main/updater.js     GitHub release check and installer download
 src/shared/maps.js      pixel-art expedition scenes
 src/chat/               AI chat window

@@ -332,3 +332,39 @@ test('at most 20 favourites; unstarring an old photo drops it', () => {
   assert.deepEqual(res.dropped.map((p) => p.id), ['p0']);
   assert.equal(Album.setFavorite(photos, 'p30', true).ok, true);
 });
+
+// ---------------------------------------------------------------- fishing
+const Fishing = require('../src/main/fishing');
+
+test('fishing table: 24 species in four tiers, names in both languages', () => {
+  assert.equal(Fishing.FISH.length, 24);
+  assert.deepEqual([0, 1, 2, 3].map((t) => Fishing.FISH.filter((f) => f.tier === t).length), [6, 9, 6, 3]);
+  for (const f of Fishing.FISH) assert.ok(f.names.en && f.names.zh && f.height > 0);
+  assert.equal(Fishing.FISH.find((f) => f.dex === 131).names.zh, '拉普拉斯');
+});
+
+test('casting farther out makes rare bites likelier', () => {
+  const near = Fishing.tierWeights(0), far = Fishing.tierWeights(1);
+  const share = (w, i) => w[i] / w.reduce((s, x) => s + x, 0);
+  assert.ok(share(far, 3) > share(near, 3) * 3);
+  assert.ok(share(far, 0) < share(near, 0));
+});
+
+test('a bite hides the species; landing records it and pays out', () => {
+  const b = Fishing.bite(0, seq(0, 0, 0.5, 0.99));   // common tier, first species, mid size, not shiny
+  assert.equal(b.tier, 0);
+  assert.equal(b.hidden.dex, 129);
+  assert.equal(b.hidden.size, Math.round(90 * (0.7 + 0.5 * 0.7)));
+  const d = fresh();
+  d.berries = 0;
+  const first = Fishing.land(d, b.hidden, 100);
+  assert.equal(first.isNew, true);
+  assert.equal(first.berries, Fishing.TIERS[0].berries + Fishing.NEW_SPECIES_BONUS);
+  assert.deepEqual(d.fishdex[129], { caught: 1, first: 100, best: b.hidden.size, shiny: false });
+  const bigger = Fishing.land(d, { dex: 129, size: 200, shiny: true }, 200);
+  assert.equal(bigger.isNew, false);
+  assert.equal(bigger.best, true);
+  assert.deepEqual(d.fishdex[129], { caught: 2, first: 100, best: 200, shiny: true });
+  assert.equal(d.stats.fishCaught, 2);
+  assert.equal(Fishing.land(d, { dex: 25, size: 40 }), null, 'not a fishing Pokémon');
+});

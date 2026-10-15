@@ -1,6 +1,7 @@
 // Achievements: milestones across focus, care and raising. Each pays out berries once.
 const { levelOf } = require('./growth');
 const { REGIONS } = require('./expedition');
+const FISH_SPECIES = require('./fishing').FISH.length;
 
 const pets = (d) => Object.values(d.pets || {});
 const maxLevel = (d) => Math.max(1, ...pets(d).map((p) => levelOf(p.xp)));
@@ -25,7 +26,10 @@ const ACHIEVEMENTS = {
   doctor:    { reward: 5,  goal: 5,   progress: (d) => d.stats.cures || 0 },
   star:      { reward: 8,  goal: 50,  progress: (d) => Math.max(0, ...pets(d).map((p) => Math.max(0, ...Object.values(p.attrs || {})))) },
   team10:    { reward: 5,  goal: 10,  progress: (d) => 6 + (d.custom || []).length },
-  shiny:     { reward: 3,  goal: 1,   progress: (d) => Object.values(d.skins || {}).filter((s) => s && s.shiny).length }
+  shiny:     { reward: 3,  goal: 1,   progress: (d) => Object.values(d.skins || {}).filter((s) => s && s.shiny).length },
+  fish1:     { reward: 2,  goal: 1,   progress: (d) => d.stats.fishCaught || 0 },
+  fishdex10: { reward: 8,  goal: 10,  progress: (d) => Object.keys(d.fishdex || {}).length },
+  fishdexAll: { reward: 20, goal: FISH_SPECIES, progress: (d) => Object.keys(d.fishdex || {}).length }
 };
 
 /** Unlock what has been reached (pays the berries). Returns the newly unlocked ids. */

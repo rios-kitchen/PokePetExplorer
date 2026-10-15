@@ -44,7 +44,7 @@ function defaults(lang) {
     diary: null,
     stats: {
       day: today(), todayPomos: 0, totalPomos: 0, focusMinutes: 0, todosDone: 0, todayTodos: 0,
-      expeditions: 0, travels: 0, cures: 0, hatches: 0   // for achievements (hatches: also the hatch level)
+      expeditions: 0, travels: 0, cures: 0, hatches: 0, fishCaught: 0   // for achievements (hatches: also the hatch level)
     },
 
     // ---- raising (PokePet Explorer)

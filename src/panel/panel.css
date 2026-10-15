@@ -427,3 +427,18 @@ img.smooth, #heroSprite.smooth { image-rendering: auto; }
 .photo-wrap .star.on { color: var(--yellow); background: rgba(0, 0, 0, 0.6); }
 .photo-wrap .star:hover { transform: scale(1.1); }
 #favHead { margin-top: 22px; }
+
+/* ---- fishing Pokédex */
+.fish-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 8px; }
+.fish-head h3 { margin: 0; }
+.fish-head .secondary { padding: 3px 10px; font-size: 12px; }
+.fishdex { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.fish { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--line); opacity: 0.55; text-align: center; min-width: 0; }
+.fish.got { opacity: 1; }
+.fish.got.tier-rare { border-color: #6aa0e0; }
+.fish.got.tier-veryRare { border-color: var(--yellow); }
+.fish b { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.fish .hint { margin: 0; font-size: 10.5px; }
+.fish-face { width: 40px; height: 40px; border-radius: 8px; background: var(--ring-bg); display: grid; place-items: center; overflow: hidden; font-size: 18px; }
+.fish-face img { width: 40px; height: 40px; image-rendering: pixelated; }

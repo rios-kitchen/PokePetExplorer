@@ -188,12 +188,35 @@ window.PanelRaising = function PanelRaising(env) {
   }
   $('#lightbox').addEventListener('click', () => $('#lightbox').classList.add('hidden'));
 
+  // the fishing Pokédex: every species that can be caught, with its portrait once caught
+  const fishFaces = {};
+  function renderFishdex(state) {
+    const caught = Object.keys(state.fishdex).length;
+    $('#fishHead').textContent = t('dex.fishdex', { n: caught, total: state.fish.length });
+    const TIER = ['common', 'uncommon', 'rare', 'veryRare'];
+    $('#fishList').replaceChildren(...state.fish.map((f) => {
+      const rec = state.fishdex[f.dex];
+      const face = el('div', { class: 'fish-face' }, rec ? '' : '❔');
+      if (rec) {
+        const k = `${f.dex}${rec.shiny ? 's' : ''}`;
+        fishFaces[k] ||= api.invoke('diary:portrait', f.dex, 'Normal', !!rec.shiny);
+        fishFaces[k].then((url) => { if (url) face.replaceChildren(el('img', { src: url, alt: '' })); });
+      }
+      return el('div', { class: `fish${rec ? ' got' : ''} tier-${TIER[f.tier]}`, title: rec ? t('dex.fishTip', { n: rec.caught, cm: rec.best }) : t(`fish.tier.${TIER[f.tier]}`) },
+        face,
+        el('b', {}, rec ? (f.names[L()] || f.names.en) + (rec.shiny ? ' ✨' : '') : '???'),
+        el('span', { class: 'hint' }, rec ? t('dex.fishBest', { cm: rec.best, n: rec.caught }) : `#${String(f.dex).padStart(3, '0')}`));
+    }));
+  }
+  $('#goFish').addEventListener('click', () => api.send('fish:open'));
+
   let dexKey = '';
   function renderDex(state) {
-    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length, state.photos.map((p) => [p.id, !!p.fav])]);
+    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length, state.photos.map((p) => [p.id, !!p.fav]), state.fishdex]);
     if (key === dexKey) return;
     dexKey = key;
     renderAlbum(state);
+    renderFishdex(state);
     const done = state.achievements.filter((a) => a.at).length;
     $('#achList').replaceChildren(
       el('p', { class: 'hint' }, t('dex.achProgress', { n: done, total: state.achievements.length })),
