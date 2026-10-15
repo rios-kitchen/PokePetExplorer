@@ -1,4 +1,4 @@
-// PokePet – main process: windows, tray, Pomodoro timer, to-dos and persistence.
+// PokePet Plus – main process: windows, tray, Pomodoro timer, to-dos, raising and persistence.
 const {
   app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, screen, Notification, powerMonitor
 } = require('electron');
@@ -8,6 +8,8 @@ const { Store, today, petOf } = require('./src/main/store');
 const Sources = require('./src/main/sources');
 const Care = require('./src/main/care');
 const Diary = require('./src/main/diary');
+const Growth = require('./src/main/growth');
+const Expedition = require('./src/main/expedition');
 const { KeyActivity } = require('./src/main/keys');
 
 const keys = new KeyActivity();
@@ -43,14 +45,18 @@ const S = () => store.data.settings;
 const lang = () => S().lang;
 const T = (k, v) => I18N.t(lang(), k, v);
 
-function levelOf(xp) { return 1 + Math.floor(Math.sqrt((xp || 0) / 25)); }
+const { levelOf } = Growth;
 
 function spritesDir() { return path.join(app.getPath('userData'), 'sprites'); }
 
 function petList() {
   const builtin = Sprites.ORDER.map((id) => ({ id, names: Sprites.DEFS[id].name, dex: Sprites.DEFS[id].dex, builtin: true }));
   const custom = store.data.custom.map((c) => ({ id: c.id, names: c.names, dex: c.dex, builtin: false }));
-  return builtin.concat(custom);
+  // an evolved Pokémon keeps its id (and records) but is now another species
+  return builtin.concat(custom).map((p) => {
+    const sp = store.data.pets[p.id] && store.data.pets[p.id].species;
+    return sp ? { ...p, dex: sp.dex, names: sp.names, evolved: true } : p;
+  });
 }
 
 /** The sprite ("skin") a Pokémon uses: its PMD sprite, or the built-in pixel art while that downloads. */
@@ -139,6 +145,9 @@ function snapshot() {
     diary: { startDay: d.diary.startDay, days: d.diary.days },
     stats: d.stats,
     mood: Math.round(activePet().mood),   // the active Pokémon's (each has its own)
+    growthRate: Growth.growthRate(activePet(), careOfActive()),
+    expeditions: Expedition.EXPEDITIONS,
+    diagnoseCost: Care.DIAGNOSE_COST,
     inventory: d.inventory,
     expedition: d.expedition,
     daily: d.daily,
@@ -180,16 +189,127 @@ function addMood(n) {
   pet.mood = Math.max(0, Math.min(100, pet.mood + n));
 }
 
-function addXp(n) {
-  const id = S().pokemon;
-  const pet = activePet();
+function addXp(n, id = S().pokemon) {
+  const pet = petOf(store.data, id);
   const before = levelOf(pet.xp);
   pet.xp += n;
-  const after = levelOf(pet.xp);
-  if (after > before) {
-    petEvent('level-up', { level: after, petId: id });
-    Diary.record(store.data, 'levelUps');
+  levelChanged(id, before);
+}
+
+function levelChanged(id, before) {
+  const after = levelOf(petOf(store.data, id).xp);
+  if (after <= before) return;
+  petEvent('level-up', { level: after, petId: id });
+  Diary.record(store.data, 'levelUps');
+  checkGrowth(id);
+}
+
+// ---------- raising: hatching, evolution, expeditions ----------
+/** Hatch an egg or offer an evolution when the level is reached. */
+function checkGrowth(id = S().pokemon) {
+  const pet = petOf(store.data, id);
+  if (Growth.readyToHatch(pet)) {
+    pet.stage = 'hatched';
+    if (S().pokemon === id) petEvent('hatched', { name: petName(id) });
+    notify(T('notif.hatched'), T('notif.hatchedBody', { name: petName(id) }));
+    changed();
+    return;
   }
+  if (Growth.evolutionDue(pet)) offerEvolution(id);
+}
+
+let evolutionLookup = null;   // in flight
+async function offerEvolution(id) {
+  if (evolutionLookup || Expedition.isAway(store.data, id)) return;
+  const pet = petOf(store.data, id);
+  const p = petList().find((x) => x.id === id);
+  if (!p) return;
+  evolutionLookup = id;
+  try {
+    const options = await Sources.evolutionOptions(p.dex);
+    if (!options.length) { pet.finalForm = true; changed(); return; }
+    pet.evolution = { options, snoozeUntil: 0 };
+    changed();
+    if (S().pokemon === id) petEvent('evolve-ready', { name: petName(id), options: options.slice(0, 3) });
+  } catch { /* offline: try again on a later check */ } finally {
+    evolutionLookup = null;
+  }
+}
+
+function snoozeEvolution(id = S().pokemon) {
+  const pet = petOf(store.data, id);
+  if (!pet.evolution) return;
+  pet.evolution.snoozeUntil = Date.now() + Growth.EVOLVE_SNOOZE_H * 3600e3;
+  changed();
+}
+
+/** Evolve into one of the offered species: same records, new sprite. */
+async function evolve(id, dex) {
+  const pet = petOf(store.data, id);
+  const option = pet.evolution && pet.evolution.options.find((o) => o.dex === Number(dex));
+  if (!option) return { ok: false, error: 'not-found' };
+  const before = petName(id);
+  try {
+    const old = store.data.skins[id];
+    const meta = await Sources.downloadSkin(option.dex, !!(old && old.shiny), spritesDir());
+    store.data.skins[id] = meta;
+    if (old) removeSkinFiles(old, id);
+  } catch (e) {
+    return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
+  }
+  pet.species = { dex: option.dex, names: option.names };
+  pet.evolutions = (pet.evolutions || 0) + 1;
+  pet.evolution = null;
+  for (const a of Object.keys(pet.attrs)) pet.attrs[a] += 5;
+  addMood(20);
+  Diary.record(store.data, 'levelUps');
+  changed();
+  if (S().pokemon === id) {
+    petEvent('skin', { id });
+    petEvent('evolved', { from: before, to: petName(id) });
+  }
+  notify(T('notif.evolved'), T('notif.evolvedBody', { from: before, to: petName(id) }));
+  return { ok: true };
+}
+
+function startExpedition(expId, id = S().pokemon) {
+  const res = Expedition.start(store.data, id, expId);
+  if (res.ok) {
+    if (S().pokemon === id) petEvent('expedition-start', { id: expId, kind: res.expedition.kind, endsAt: res.expedition.endsAt });
+    changed();
+  } else if (S().pokemon === id) {
+    petEvent('expedition-refused', { reason: res.reason });
+  }
+  return res;
+}
+
+function recallExpedition() {
+  const e = Expedition.recall(store.data);
+  if (e && S().pokemon === e.petId) petEvent('expedition-back', { petId: e.petId, id: e.id, kind: e.kind, recalled: true });
+  changed();
+}
+
+/** Bring a pet back from its expedition when its time is up (also after the app was closed). */
+function checkExpedition() {
+  const out = Expedition.finish(store.data);
+  if (!out) return;
+  const before = levelOf(petOf(store.data, out.petId).xp);
+  petOf(store.data, out.petId).xp += out.xp;
+  if (S().pokemon === out.petId) petEvent('expedition-back', out);
+  levelChanged(out.petId, before);
+  notify(T('notif.expeditionBack'), T('notif.expeditionBackBody', { name: petName(out.petId), n: out.berries }));
+  changed();
+}
+
+function diagnosePet() {
+  const res = Care.diagnose(store.data, S().pokemon);
+  if (res.ok) {
+    petEvent('diagnosed', { status: res.status.id, stage: res.status.stage, item: Care.CURE[res.status.id] });
+    changed();
+  } else {
+    petEvent('care-refused', { reason: res.reason });
+  }
+  return res;
 }
 
 // ---------- icons ----------
@@ -435,6 +555,7 @@ function completePhase(skipped) {
 
 function tick() {
   const now = Date.now();
+  checkExpedition();
   if (timer.phase !== 'idle' && !timer.paused && now >= timer.endsAt) {
     completePhase(false);
     broadcast();
@@ -477,15 +598,20 @@ function pollInput() {
 
 const lastNeedAlert = {};
 
+const activeAway = () => Expedition.isAway(store.data, S().pokemon);
+
+/** Time passes for the active Pokémon (not while it's away on an expedition). */
 function careStep(hours, asleep) {
+  if (activeAway()) return;
   const care = careOfActive();
-  const wasSick = care.sick;
   const { moodDelta, events } = Care.decay(care, hours, { asleep, poops: store.data.poops.length });
   addMood(moodDelta);
-  if (Care.rollSickness(care) || (!wasSick && care.sick)) {
+  const caught = Care.rollStatus(care, activePet().mood);   // one roll per step (offline time too, like before)
+  if (caught) {
     Diary.flag(store.data, 'sick');
     petEvent('got-sick');
   }
+  if (events.includes('worse')) petEvent('status-worse', { stage: care.status && care.status.stage });
   if (events.includes('fainted')) {
     Diary.flag(store.data, 'fainted');
     notify(T('notif.fainted'), T('notif.faintedBody', { name: petName() }));
@@ -568,6 +694,7 @@ function cleanPoop(id) {
 
 function poopTick(asleep) {
   const d = store.data;
+  if (activeAway()) return;
   const care = careOfActive();
   // now and then without a meal, too (about every 3 hours while active)
   if (!d.poopDueAt && !asleep && care.hunger > 50 && Math.random() < 1 / 180) {
@@ -584,13 +711,19 @@ function slowTick() {
   poopTick(asleep);
   careStep(1 / 60, asleep);
   const care = careOfActive();
-  Diary.sample(store.data, activePet().mood, care.health, S().pokemon);
+  if (!activeAway()) {
+    Diary.sample(store.data, activePet().mood, care.health, S().pokemon);
+    // QQ Pet grows while it's online: a little XP every minute, slower when it's not well
+    const before = levelOf(activePet().xp);
+    if (Growth.grow(activePet(), care, 1 / 60)) levelChanged(S().pokemon, before);
+    checkGrowth();
 
-  // complain about the most urgent need, at most every 20 minutes per need
-  const need = Care.urgentNeed(care);
-  if (need && !asleep && timer.phase !== 'focus' && Date.now() - (lastNeedAlert[need] || 0) > 20 * 60000) {
-    lastNeedAlert[need] = Date.now();
-    petEvent('need', { need });
+    // complain about the most urgent need, at most every 20 minutes per need
+    const need = Care.urgentNeed(care);
+    if (need && !asleep && timer.phase !== 'focus' && Date.now() - (lastNeedAlert[need] || 0) > 20 * 60000) {
+      lastNeedAlert[need] = Date.now();
+      petEvent('need', { need, item: Care.remedyFor(care, need), diagnose: need === 'sick' && !!care.status && !care.status.known });
+    }
   }
 
   store.rollDay();
@@ -611,16 +744,17 @@ function offlineCare() {
 }
 
 function useCareItem(itemId) {
+  if (activeAway()) return { ok: false, reason: 'away' };
   const res = Care.useItem(store.data, S().pokemon, itemId);
   if (res.ok) {
-    const field = { food: 'fed', bath: 'baths', med: 'meds' }[res.kind];
+    const field = { food: 'fed', bath: 'baths', med: 'meds', revive: 'meds' }[res.kind];
     if (res.kind === 'food' && !store.data.poopDueAt && Math.random() < 0.6) {
       store.data.poopDueAt = Date.now() + (20 + Math.random() * 25) * 60000;
     }
     Diary.record(store.data, field);
     addMood(res.item.mood || 0);
     if (res.item.xp) addXp(res.item.xp);
-    petEvent('care', { item: itemId, kind: res.kind });
+    petEvent('care', { item: itemId, kind: res.kind, cured: !!res.cured, wrong: !!res.wrong, fainted: (res.events || []).includes('fainted') });
     changed();
   } else {
     petEvent('care-refused', { item: itemId, reason: res.reason });
@@ -689,16 +823,25 @@ function buildMenu() {
     {
       label: `${T('menu.care')}  ·  🍓 ${store.data.berries}`,
       submenu: [
-        ...Object.entries(Care.ITEMS).map(([itemId, item]) => ({
-          label: `${T(`item.${itemId}`)}${item.cost ? `  (${item.cost} 🍓)` : ''}`,
-          enabled: store.data.berries >= item.cost,
-          click: () => useCareItem(itemId)
-        })),
+        ...Object.entries(Care.ITEMS).map(([itemId, item]) => {
+          const have = store.data.inventory[itemId] || 0;
+          return {
+            label: `${T(`item.${itemId}`)}${have ? `  ×${have}` : item.cost ? `  (${item.cost} 🍓)` : ''}`,
+            enabled: !activeAway() && (have > 0 || store.data.berries >= item.cost),
+            click: () => useCareItem(itemId)
+          };
+        }),
+        {
+          label: T('menu.diagnose', { n: Care.DIAGNOSE_COST }),
+          enabled: !!careOfActive().status && !careOfActive().status.known,
+          click: () => diagnosePet()
+        },
         { label: T('menu.cleanPoops', { n: store.data.poops.length }), enabled: store.data.poops.length > 0, click: () => cleanPoop('*') },
         { type: 'separator' },
         { label: T('menu.careOpen'), click: () => openPanel('care') }
       ]
     },
+    expeditionMenu(),
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
     {
@@ -734,6 +877,37 @@ function buildMenu() {
     { type: 'separator' },
     { label: T('menu.quit'), click: () => app.quit() }
   ]);
+}
+
+function expeditionMenu() {
+  const e = store.data.expedition;
+  if (e) {
+    return {
+      label: T('menu.expeditionAway', { name: petName(e.petId), time: fmtTime(e.endsAt - Date.now()) }),
+      submenu: [{ label: T('menu.recall'), click: () => recallExpedition() }]
+    };
+  }
+  const id = S().pokemon;
+  const item = ([expId, exp]) => {
+    const why = Expedition.blocker(store.data, id, expId);
+    const req = why === 'level' ? ` · Lv.${exp.level}+`
+      : why === 'stats' ? ` · ${Object.entries(exp.need).map(([a, v]) => `${T(`attr.${a}`)} ${v}+`).join(' ')}` : '';
+    return { label: `${T(`exp.${expId}`)}  (${exp.min} ${T('unit.min')})${req}`, enabled: !why, click: () => startExpedition(expId) };
+  };
+  const all = Object.entries(Expedition.EXPEDITIONS);
+  const group = (kind) => all.filter(([, x]) => x.kind === kind).map(item);
+  const why = Expedition.blocker(store.data, id, 'woods');
+  return {
+    label: T('menu.expedition'),
+    submenu: [
+      ...(why && why !== 'level' && why !== 'stats' ? [{ label: T(`exp.blocked.${why}`), enabled: false }, { type: 'separator' }] : []),
+      { label: T('exp.kind.dungeon'), enabled: false }, ...group('dungeon'),
+      { type: 'separator' },
+      { label: T('exp.kind.training'), enabled: false }, ...group('training'),
+      { type: 'separator' },
+      ...group('travel')
+    ]
+  };
 }
 
 function updateTrayTitle() {
@@ -854,6 +1028,11 @@ function registerIpc() {
       case 'start-break': timerCmd('break'); break;
       case 'open': openPanel(arg); break;
       case 'care': useCareItem(arg); break;
+      case 'diagnose': diagnosePet(); break;
+      case 'evolve': evolve(S().pokemon, arg).then((r) => { if (!r.ok) petEvent('evolve-failed', { error: r.error }); }); break;
+      case 'evolve-later': snoozeEvolution(); break;
+      case 'expedition': startExpedition(arg); break;
+      case 'recall': recallExpedition(); break;
       default: break;
     }
   });
@@ -952,6 +1131,11 @@ function registerIpc() {
     return Sprites.DEFS[id] ? { kind: 'grid', hd: true } : null;
   });
   ipcMain.handle('care:use', (_e, itemId) => useCareItem(itemId));
+  ipcMain.handle('care:diagnose', () => diagnosePet());
+  ipcMain.handle('expedition:start', (_e, expId) => startExpedition(String(expId || '')));
+  ipcMain.on('expedition:recall', () => recallExpedition());
+  ipcMain.handle('evolution:choose', (_e, dex) => evolve(S().pokemon, dex));
+  ipcMain.on('evolution:later', () => snoozeEvolution());
   ipcMain.on('poop:clean', (_e, id) => cleanPoop(String(id || '')));
   ipcMain.handle('diary:portrait', async (_e, dex, emotion) => {
     try {
@@ -1038,9 +1222,10 @@ async function selfTest(dir) {
 
   await step('needs', async () => {
     const c = careOfActive();
-    Object.assign(c, { hunger: 12, clean: 10, health: 40, sick: true });
+    Object.assign(c, { hunger: 12, clean: 10, health: 40 });
+    Care.inflict(c, 'poison');
     changed();
-    petEvent('need', { need: 'sick' });
+    petEvent('need', { need: 'sick', item: null, diagnose: true });
   });
   await wait(1500);
   await shot(petWin, '03-pet-sick-dirty');
@@ -1049,7 +1234,14 @@ async function selfTest(dir) {
   await wait(1500);
   await shot(panelWin, '04-panel-care');
 
-  await step('potion', async () => { store.data.berries = 20; useCareItem('potion'); });
+  await step('diagnose+antidote', async () => {
+    store.data.berries = 20;
+    useCareItem('parlyz');                       // wrong medicine: poison gets a stage worse
+    console.log('[test] after wrong medicine, stage:', careOfActive().status && careOfActive().status.stage);
+    diagnosePet();
+    useCareItem('antidote');
+    console.log('[test] after antidote, status:', careOfActive().status);
+  });
   await wait(2500);
   await shot(petWin, '05-pet-healed');
   await step('bath', async () => useCareItem('bath'));
@@ -1070,7 +1262,7 @@ async function selfTest(dir) {
   });
   await wait(1200);
   await shot(petWin, '09-pet-fainted');
-  await step('revive', async () => useCareItem('potion'));
+  await step('revive', async () => useCareItem('revive'));
   await wait(2500);
 
   await step('pmd', async () => {
@@ -1088,6 +1280,33 @@ async function selfTest(dir) {
   await wait(2300);
   await shot(petWin, "10c-pet-pmd-levelup");
   await wait(3000);
+
+  // ---- raising: expedition (leave → away pill → back with loot), evolution offer → evolve
+  await step('expedition', async () => {
+    Object.assign(careOfActive(), { hunger: 90, clean: 90 });
+    console.log('[test] expedition start:', JSON.stringify(startExpedition('woods')));
+  });
+  await wait(4000);
+  await shot(petWin, '10d-pet-expedition-away');
+  await step('expedition-back', async () => { store.data.expedition.endsAt = Date.now(); });
+  await wait(3000);
+  await shot(petWin, '10e-pet-expedition-back');
+  await wait(6000);
+  await step('evolution', async () => {
+    const pet = activePet();
+    pet.xp = Growth.xpFor(Growth.EVOLVE_LEVELS[0]);
+    await offerEvolution(S().pokemon);
+    console.log('[test] evolution options:', JSON.stringify((pet.evolution || {}).options));
+  });
+  await wait(1500);
+  await shot(petWin, '10f-pet-evolve-ready');
+  await step('evolve', async () => {
+    const opt = activePet().evolution && activePet().evolution.options[0];
+    console.log('[test] evolve:', JSON.stringify(opt && await evolve(S().pokemon, opt.dex)));
+  });
+  await wait(4000);
+  await shot(petWin, '10g-pet-evolved');
+  await wait(4000);
 
   await step('add-gengar', async () => {
     const sp = await Sources.lookupSpecies('gengar');

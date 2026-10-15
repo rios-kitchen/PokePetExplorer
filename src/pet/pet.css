@@ -50,7 +50,8 @@ html, body {
   border-bottom: 2px solid #2a2a2a;
   transform: rotate(45deg) scaleY(0.8);
 }
-.bubble .actions { display: flex; gap: 6px; margin-top: 6px; justify-content: center; }
+.bubble .text { white-space: pre-line; }
+.bubble .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; justify-content: center; }
 .bubble .actions:empty { display: none; }
 .bubble button {
   font: inherit;
@@ -81,6 +82,7 @@ html, body {
 }
 .pill.focus { background: rgba(214, 64, 52, 0.92); }
 .pill.break { background: rgba(46, 140, 90, 0.92); }
+.pill.away { background: rgba(70, 110, 170, 0.92); }
 .pill.paused { opacity: 0.75; }
 
 @keyframes pop {

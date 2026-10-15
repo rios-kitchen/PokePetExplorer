@@ -58,7 +58,12 @@ function freshPet(stage = 'hatched') {
     mood: 80,
     stage,
     attrs: Object.fromEntries(ATTRS.map((a) => [a, 0])),
-    born: Date.now()
+    born: Date.now(),
+    growAcc: 0,          // fraction of an XP point from passive growth (growth.js)
+    species: null,       // after evolving: { dex, names } – the id keeps its records, the species changes
+    evolutions: 0,
+    evolution: null,     // pending: { options: [{ dex, names }], snoozeUntil }
+    finalForm: false     // no further evolution exists
     // care: added by care.js (careOf)
   };
 }

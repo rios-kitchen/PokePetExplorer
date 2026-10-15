@@ -110,7 +110,7 @@
   function hitTest(x, y) {
     const el = document.elementFromPoint(x, y);
     if (el && el.closest('.bubble, .pill')) return true;
-    if (x < 0 || y < 0 || x >= P.W || y >= P.H) return false;
+    if (x < 0 || y < 0 || x >= P.W || y >= P.H || P.isAway()) return false;
     const a = ctx.getImageData(Math.floor(x * P.DPR), Math.floor(y * P.DPR), 1, 1).data[3];
     if (a > 10) return true;
     const g = P.geometry();
@@ -181,7 +181,10 @@
     api.send('pet:menu');
   });
 
-  pillEl.addEventListener('click', () => api.send('panel:open', 'focus'));
+  pillEl.addEventListener('click', () => {
+    if (P.isAway() && P.phase() === 'idle') api.send('pet:menu');
+    else api.send('panel:open', 'focus');
+  });
   bubbleEl.addEventListener('click', (e) => {
     if (e.target.closest('button')) return;
     P.hideBubble(false);

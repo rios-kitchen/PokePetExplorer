@@ -45,10 +45,24 @@
     return work;
   }
 
+  /** 0…1 – the pet fades out when it leaves on an expedition and in when it comes back. */
+  function petAlpha(now) {
+    const f = pet.fade;
+    if (f) {
+      const k = Math.min(1, (now - f.start) / f.ms);
+      if (k >= 1) pet.fade = null;
+      return f.from + (f.to - f.from) * k;
+    }
+    return P.isAway() ? 0 : 1;
+  }
+
   function draw(now) {
     const sprite = P.sprite;
     ctx.clearRect(0, 0, P.W, P.H);
     if (!sprite) return;
+    const alpha = petAlpha(now);
+    if (alpha <= 0) { P.drawParticles(ctx); return; }
+    ctx.globalAlpha = alpha;
     const g = P.geometry();
     const fu = P.fx();
     const cur = P.currentImage(now);
@@ -104,6 +118,7 @@
       ctx.drawImage(t, Math.round(g.left - t.width * s * 0.2), Math.round(g.bottom - t.height * s), t.width * s, t.height * s);
     }
 
+    ctx.globalAlpha = 1;
     P.drawParticles(ctx);
   }
 

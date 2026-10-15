@@ -9,10 +9,30 @@
   const NEED = {
     hungry: { line: 'needHungry', item: 'oran', btn: 'btn.feed' },
     dirty: { line: 'needDirty', item: 'bath', btn: 'btn.bath' },
-    sick: { line: 'needSick', item: 'potion', btn: 'btn.potion' },
+    sick: { line: 'needSick' },
     pooped: { line: 'needPooped', item: 'bath', btn: 'btn.bath' },
-    fainted: { line: 'needFainted', item: 'potion', btn: 'btn.potion' }
+    fainted: { line: 'needFainted', item: 'revive' }
   };
+
+  /** Buttons for a sick pet: the right medicine once diagnosed, else a trip to the doctor. */
+  function sickActions(item, diagnose) {
+    if (item) return [P.careAction(item, tr(`item.${item}`)), P.laterAction()];
+    if (diagnose) {
+      return [{ label: tr('btn.diagnose', { n: P.state.diagnoseCost }), primary: true, run: () => api.send('pet:action', 'diagnose') },
+        { label: tr('btn.openCare'), run: () => api.send('pet:action', 'open', 'care') }];
+    }
+    return [{ label: tr('btn.openCare'), primary: true, run: () => api.send('pet:action', 'open', 'care') }, P.laterAction()];
+  }
+
+  /** "+3 🍓 · +2 Tough · Antidote" – what an expedition brought back. */
+  function loot(e) {
+    const parts = [];
+    if (e.berries) parts.push(`+${e.berries} 🍓`);
+    if (e.xp) parts.push(`+${e.xp} XP`);
+    for (const [a, v] of Object.entries(e.gain || {})) parts.push(`${tr(`attr.${a}`)} +${v}`);
+    for (const it of e.items || []) parts.push(tr(`item.${it}`));
+    return parts.join(' · ');
+  }
 
   const handlers = {
     'focus-start'(e) {
@@ -133,29 +153,106 @@
     // ---- care
     need(e) {
       const n = NEED[e.need];
-      if (!n || P.bubbleBusy()) return;
+      if (!n || P.bubbleBusy() || P.isAway()) return;
       if (pet.mode === 'sleep') P.wake(false);
       if (e.need === 'hungry') P.sweat();
-      P.showBubble(say(n.line), { priority: 2, ms: 30000, actions: [P.careAction(n.item, tr(n.btn)), P.laterAction()] });
+      const actions = e.need === 'sick' ? sickActions(e.item, e.diagnose)
+        : [P.careAction(e.item || n.item, n.btn ? tr(n.btn) : tr(`item.${e.item || n.item}`)), P.laterAction()];
+      P.showBubble(say(n.line), { priority: 2, ms: 30000, actions });
     },
     'got-sick'() {
       Sound.play('alarm');
       P.playAnim(['Cringe', 'Pain']);
       P.sweat();
-      P.showBubble(say('gotSick'), { priority: 2, ms: 30000, actions: [P.careAction('potion', tr('btn.potion')), P.laterAction()] });
+      P.showBubble(say('gotSick'), { priority: 2, ms: 30000, actions: sickActions(null, true) });
+    },
+    diagnosed(e) {
+      const name = tr(`status.${e.status}`);
+      P.showBubble(say('diagnosed', { status: name, stage: e.stage }), {
+        priority: 2, ms: 30000, actions: [P.careAction(e.item, tr(`item.${e.item}`)), P.laterAction()]
+      });
+    },
+    'status-worse'(e) {
+      Sound.play('alarm');
+      P.playAnim(['Pain', 'Cringe']);
+      P.sweat();
+      if (!P.bubbleBusy()) P.showBubble(say('statusWorse', { stage: e.stage }), { priority: 2, ms: 8000 });
     },
     care(e) {
       P.interacted();
       P.hideBubble(true);
       if (e.kind === 'bath') { P.bath(); return; }
-      const glyph = { oran: 'berry', puff: 'puff', candy: 'candy', potion: 'pill' }[e.item] || 'berry';
+      const glyph = { oran: 'berry', puff: 'puff', candy: 'candy' }[e.item] || (e.kind === 'food' ? 'berry' : 'pill');
       P.dropTreat(glyph, () => {
-        if (e.kind === 'med') {
-          setTimeout(() => { P.stars(10); P.showBubble(say('healed'), { ms: 3000 }); }, 500);
+        if (e.wrong) {
+          setTimeout(() => {
+            P.playAnim(['Pain', 'Cringe']);
+            P.sweat();
+            P.showBubble(say(e.fainted ? 'needFainted' : 'wrongMedicine'), { priority: 2, ms: 5000 });
+          }, 500);
+        } else if (e.kind === 'med' || e.kind === 'revive') {
+          setTimeout(() => { P.stars(10); P.showBubble(say(e.kind === 'revive' ? 'revived' : 'healed'), { ms: 3000 }); }, 500);
         } else {
           P.showBubble(say('eat'), { ms: 1800 });
         }
       });
+    },
+
+    // ---- growth
+    hatched(e) {
+      Sound.play('levelup');
+      P.stars(20);
+      P.jump(2);
+      P.showBubble(say('hatched', { name: e.name }), { priority: 2, ms: 6000 });
+    },
+    'evolve-ready'(e) {
+      if (P.isAway()) return;
+      if (pet.mode === 'sleep') P.wake(false);
+      P.stars(8);
+      P.playAnim(['Charge', 'DeepBreath', 'Pose']);
+      const names = e.options.map((o) => ({
+        label: `✨ ${o.names[P.L()] || o.names.en}`, primary: true, run: () => api.send('pet:action', 'evolve', o.dex)
+      }));
+      P.showBubble(say('evolveReady', { name: e.name }), {
+        priority: 3, ms: 120000,
+        actions: [...names, { label: tr('btn.later'), run: () => api.send('pet:action', 'evolve-later') }]
+      });
+    },
+    evolved(e) {
+      Sound.play('fanfare');
+      P.stars(24);
+      setTimeout(() => P.stars(16), 500);
+      if (!P.playAnim(['Pose', 'Hop'], { times: 2 })) P.jump(3);
+      P.showBubble(say('evolved', { from: e.from, to: e.to }), { priority: 3, ms: 7000 });
+    },
+    'evolve-failed'(e) {
+      P.showBubble(say(e.error === 'net' ? 'evolveOffline' : 'evolveNoSprite'), { priority: 2, ms: 5000 });
+    },
+
+    // ---- expeditions
+    'expedition-start'(e) {
+      P.hideBubble(true);
+      Sound.play('switch');
+      pet.mode = 'idle';
+      P.showBubble(say(`expStart_${e.kind}`, { place: tr(`exp.${e.id}`) }), { priority: 2, ms: 2500 });
+      setTimeout(() => { pet.fade = { from: 1, to: 0, start: Date.now(), ms: 1200 }; }, 1500);
+    },
+    'expedition-refused'(e) {
+      P.showBubble(tr(`exp.blocked.${e.reason}`), { ms: 3000 });
+      P.playAnim(['Cringe', 'Nod']);
+    },
+    'expedition-back'(e) {
+      pet.fade = { from: 0, to: 1, start: Date.now(), ms: 900 };
+      Sound.play('switch');
+      P.interacted();
+      if (e.recalled) { P.showBubble(say('expRecalled'), { ms: 3000 }); return; }
+      setTimeout(() => {
+        P.stars(12);
+        if (e.status) { P.playAnim(['Pain', 'Cringe']); P.sweat(); } else if (!P.playAnim(['Pose', 'Hop'])) P.jump(2);
+        const key = e.status ? 'expBackHurt' : e.kind === 'travel' ? 'expBackTravel' : e.kind === 'training' ? 'expBackTraining' : 'expBack';
+        const text = say(key, { region: e.region ? tr(`region.${e.region}`) : '', status: e.status ? tr(`status.${e.status}`) : '' });
+        P.showBubble(`${text}\n${loot(e)}`, { priority: 2, ms: 9000 });
+      }, 900);
     },
     'poop-start'() {
       if (pet.mode === 'sleep') P.wake(false);
@@ -183,7 +280,7 @@
       if (!P.bubbleBusy()) P.showBubble(say('poopCleaned'), { ms: 2500 });
     },
     'care-refused'(e) {
-      const key = { full: 'refusedFull', clean: 'refusedClean', healthy: 'refusedHealthy', berries: 'refusedBerries', fainted: 'refusedFainted' }[e.reason];
+      const key = { full: 'refusedFull', clean: 'refusedClean', healthy: 'refusedHealthy', berries: 'refusedBerries', fainted: 'refusedFainted', notFainted: 'refusedHealthy' }[e.reason];
       if (key) P.showBubble(say(key), { ms: 2500 });
       P.playAnim(['Cringe', 'Nod']);
     },

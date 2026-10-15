@@ -5,10 +5,10 @@ const SEND = new Set([
   'pet:ignore', 'pet:fit', 'pet:drag-start', 'pet:drag-end', 'pet:menu', 'pet:action',
   'panel:open', 'timer:cmd', 'todo:add', 'todo:set-done', 'todo:edit', 'todo:delete',
   'todo:clear-done', 'todo:reorder', 'settings:set', 'pomodoro:set', 'pet:reset-pos',
-  'pokemon:select', 'pokemon:remove', 'poop:clean'
+  'pokemon:select', 'pokemon:remove', 'poop:clean', 'expedition:recall', 'evolution:later'
 ]);
 const INVOKE = new Set(['state:get', 'pet:move-by', 'pet:pat', 'pokemon:fetch', 'pokemon:skin', 'pokemon:assets',
-  'care:use', 'diary:portrait', 'diary:week']);
+  'care:use', 'care:diagnose', 'diary:portrait', 'diary:week', 'expedition:start', 'evolution:choose']);
 const ON = new Set(['state', 'pet:event', 'panel:tab', 'input']);
 
 contextBridge.exposeInMainWorld('api', {

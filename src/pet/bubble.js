@@ -16,7 +16,11 @@
     gotSick: 'Pain', eat: 'Happy', bathDone: 'Joyous', healed: 'Happy',
     refusedFull: 'Normal', refusedClean: 'Normal', refusedHealthy: 'Happy', refusedBerries: 'Sad', refusedFainted: 'Pain',
     dailyBerries: 'Happy', weekly_happy: 'Joyous', weekly_okay: 'Normal', weekly_sad: 'Crying',
-    poopStart: 'Pain', poopDone: 'Worried', poopCleaned: 'Joyous'
+    poopStart: 'Pain', poopDone: 'Worried', poopCleaned: 'Joyous',
+    diagnosed: 'Worried', statusWorse: 'Pain', wrongMedicine: 'Pain', revived: 'Joyous',
+    hatched: 'Joyous', evolveReady: 'Surprised', evolved: 'Inspired', evolveOffline: 'Sad', evolveNoSprite: 'Sad',
+    expStart_dungeon: 'Determined', expStart_training: 'Determined', expStart_travel: 'Happy', expRecalled: 'Normal',
+    expBack: 'Happy', expBackTraining: 'Happy', expBackTravel: 'Joyous', expBackHurt: 'Pain'
   };
 
   /** The face also depends on how the pet is doing right now. */
@@ -32,6 +36,8 @@
 
   const faceCache = {};
   function dexOf(id) {
+    const sp = P.state && P.state.pets[id] && P.state.pets[id].species;   // evolved
+    if (sp) return sp.dex;
     if (SP.DEFS[id]) return SP.DEFS[id].dex;
     const c = P.state && P.state.custom.find((x) => x.id === id);
     return c ? c.dex : null;
@@ -100,7 +106,8 @@
   let lastPillText = '';
   function fmt(ms) {
     const s = Math.max(0, Math.ceil(ms / 1000));
-    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    const mm = `${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    return s >= 3600 ? `${Math.floor(s / 3600)}:${mm}` : mm;
   }
 
   function timeLeft() {
@@ -126,6 +133,18 @@
 
   function updatePill() {
     const ph = P.phase();
+    const exp = P.isAway() ? P.state.expedition : null;
+    if (exp && ph === 'idle') {
+      const text = `🧭 ${fmt(exp.endsAt - Date.now())}`;
+      if (text !== lastPillText) {
+        pillEl.textContent = text;
+        pillEl.className = 'pill away';
+        pillEl.title = P.tr(`exp.${exp.id}`);
+        lastPillText = text;
+        layoutOverlays();
+      }
+      return;
+    }
     if (ph === 'idle') {
       if (!pillEl.classList.contains('hidden')) { pillEl.classList.add('hidden'); layoutOverlays(); }
       lastPillText = '';
@@ -137,6 +156,7 @@
     if (text !== lastPillText) {
       pillEl.textContent = text;
       pillEl.className = `pill ${ph === 'focus' ? 'focus' : 'break'}${paused ? ' paused' : ''}`;
+      pillEl.title = '';
       lastPillText = text;
       layoutOverlays();
     }

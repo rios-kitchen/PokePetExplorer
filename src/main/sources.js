@@ -13,17 +13,29 @@ const SOURCES = ['pmd'];
 // Version of the PMD download format: 2 = every animation listed in AnimData.xml
 const PMD_VERSION = 2;
 
+// The only hosts this app ever contacts (downloads only – nothing about the user is sent).
+// URLs that come back in responses (e.g. PokeAPI's evolution-chain links) are checked too.
+const ALLOWED_HOSTS = new Set(['pokeapi.co', 'raw.githubusercontent.com']);
+
+function fetchAllowed(url) {
+  const u = new URL(url);
+  if (u.protocol !== 'https:' || !ALLOWED_HOSTS.has(u.hostname)) {
+    return Promise.reject(new Error(`blocked host: ${u.hostname}`));
+  }
+  return net.fetch(u.href);
+}
+
 const notFound = () => Object.assign(new Error('not-found'), { code: 'not-found' });
 
 async function getJson(url) {
-  const res = await net.fetch(url);
+  const res = await fetchAllowed(url);
   if (res.status === 404) throw notFound();
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 async function getBuffer(url) {
-  const res = await net.fetch(url);
+  const res = await fetchAllowed(url);
   if (!res.ok) return null;
   return Buffer.from(await res.arrayBuffer());
 }
@@ -43,6 +55,25 @@ async function lookupSpecies(query) {
       zh: pick('zh-hans') || pick('zh-hant') || pick('en') || species.name
     }
   };
+}
+
+/**
+ * What a species can evolve into: [{ dex, names }] (empty for a final form). Uses PokeAPI's
+ * evolution chain; branching species (Eevee …) have several options.
+ */
+async function evolutionOptions(dex) {
+  const species = await getJson(`${API}/pokemon-species/${dex}`);
+  if (!species.evolution_chain) return [];
+  const chain = await getJson(species.evolution_chain.url);
+  const idOf = (node) => Number(node.species.url.match(/\/(\d+)\/?$/)[1]);
+  const find = (node) => (idOf(node) === Number(dex) ? node : node.evolves_to.map(find).find(Boolean));
+  const node = find(chain.chain);
+  if (!node) return [];
+  const out = [];
+  for (const next of node.evolves_to.slice(0, 8)) {
+    try { out.push(await lookupSpecies(idOf(next))); } catch { /* skip */ }
+  }
+  return out;
 }
 
 /** Parse PMD AnimData.xml → { Name: { fw, fh, durs: [ticks], copyOf } } */
@@ -111,7 +142,7 @@ function loadCreditIndex(dir) {
 function refreshCreditIndex(dir) {
   if (!creditFetch) {
     creditFetch = (async () => {
-      const [tracker, namesRes] = await Promise.all([getJson(`${PMD}/tracker.json`), net.fetch(`${PMD}/credit_names.txt`)]);
+      const [tracker, namesRes] = await Promise.all([getJson(`${PMD}/tracker.json`), fetchAllowed(`${PMD}/credit_names.txt`)]);
       if (!namesRes.ok) throw new Error(`HTTP ${namesRes.status}`);
       creditIndex = buildCreditIndex(tracker, parseCreditNames(await namesRes.text()));
       fs.mkdirSync(dir, { recursive: true });
@@ -183,4 +214,4 @@ async function portrait(dex, emotion, dir) {
   return buf;
 }
 
-module.exports = { SOURCES, PMD_VERSION, lookupSpecies, downloadSkin, portrait, pmdCredits, cachedCredits };
+module.exports = { SOURCES, PMD_VERSION, ALLOWED_HOSTS, lookupSpecies, evolutionOptions, downloadSkin, portrait, pmdCredits, cachedCredits };

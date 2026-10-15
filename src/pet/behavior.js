@@ -76,6 +76,7 @@
   }
 
   function decide(now) {
+    if (P.isAway()) return;
     if (pet.held || pet.lift !== 0 || pet.eating || pet.pooping || now < pet.bathUntil) return;
     const ph = P.phase();
     if (P.isFainted()) { pet.mode = 'idle'; return; }
@@ -140,7 +141,7 @@
   }
 
   function walkStep() {
-    if (P.bubbleBusy()) return;   // stand still while asking something
+    if (P.bubbleBusy() || P.isAway()) return;   // stand still while asking something
     const walkOn = P.state.settings.walk;
     if (pet.mode !== 'walk' || pet.held || !walkOn || P.phase() === 'focus' || P.isFainted()) {
       if (pet.mode === 'walk' && (P.phase() === 'focus' || !walkOn || P.isFainted())) pet.mode = 'idle';

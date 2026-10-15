@@ -57,20 +57,32 @@ window.PanelExt = function PanelExt(env) {
   let careKey = '';
   function renderCare(state) {
     const id = state.settings.pokemon;
-    const key = JSON.stringify([L(), id, state.pets[id], state.berries, state.poops, Math.round(state.mood)]);
+    const key = JSON.stringify([L(), id, state.pets[id], state.berries, state.inventory, state.expedition, state.poops, Math.round(state.mood)]);
     if (key === careKey) return;
     careKey = key;
     const care = (state.pets[id] && state.pets[id].care) || { hunger: 80, clean: 85, health: 100 };
     const status = care.fainted ? 'fainted' : care.sick ? 'sick' : care.pooped ? 'pooped'
       : care.hunger < 25 ? 'hungry' : care.clean < 25 ? 'dirty' : 'ok';
     const icon = { ok: '😊', hungry: '🍽️', dirty: '🫧', pooped: '💩', sick: '🤒', fainted: '💫' }[status];
+    // a status condition: its name and stage once diagnosed, else "sick (not diagnosed)"
+    const st = !care.fainted && care.status;
+    const chipText = st
+      ? (st.known ? t('care.status.condition', { status: t(`status.${st.id}`), stage: st.stage }) : t('care.status.undiagnosed'))
+      : t(`care.status.${status}`);
+    const diagnoseBtn = st && !st.known
+      ? el('button', { class: 'ghost', onclick: async () => {
+        const res = await api.invoke('care:diagnose');
+        if (!res.ok) $('#careMsg').textContent = t(`care.refused.${res.reason}`);
+      } }, t('btn.diagnose', { n: state.diagnoseCost }))
+      : null;
     const face = el('div', { class: 'care-face' });
     const emotion = moodEmotion(state);
     portraitFor(id, emotion).then((url) => { if (url) face.replaceChildren(el('img', { src: url, alt: emotion, title: emotion })); });
     $('#careStatus').replaceChildren(
       face,
       el('div', { class: 'care-status-text' },
-        el('span', { class: `care-chip ${status}` }, `${icon} ${t(`care.status.${status}`)}`),
+        el('span', { class: `care-chip ${status}` }, `${icon} ${chipText}`),
+        diagnoseBtn,
         state.poops ? el('div', { class: 'care-poops' },
           el('span', {}, t('care.poops', { n: state.poops })),
           el('button', { class: 'ghost', onclick: () => api.send('poop:clean', '*') }, t('care.cleanPoops'))) : null),
@@ -82,9 +94,10 @@ window.PanelExt = function PanelExt(env) {
       bar(t('care.mood'), state.mood, '😊'));
 
     const items = $('#careItems');
+    const away = !!(state.expedition && state.expedition.petId === id);
     items.replaceChildren(...Object.entries(state.items).map(([itemId, item]) => el('button', {
       class: 'care-item',
-      disabled: state.berries < item.cost ? true : null,
+      disabled: away || (!(state.inventory[itemId] > 0) && state.berries < item.cost) ? true : null,
       onclick: async () => {
         const res = await api.invoke('care:use', itemId);
         clearTimeout(careMsgTimer);
@@ -94,7 +107,8 @@ window.PanelExt = function PanelExt(env) {
     },
     el('span', { class: 'ci-name' }, t(`item.${itemId}`)),
     el('span', { class: 'ci-desc' }, t(`itemdesc.${itemId}`)),
-    el('span', { class: 'ci-cost' }, item.cost ? `${item.cost} 🍓` : t('care.free')))));
+    el('span', { class: 'ci-cost' }, state.inventory[itemId] > 0 ? `×${state.inventory[itemId]}`
+      : item.cost ? `${item.cost} 🍓` : t('care.free')))));
     $('#careEarn').textContent = t('care.earn', { p: state.reward.pomodoro, t: state.reward.todo, d: state.reward.daily });
   }
 
@@ -104,6 +118,8 @@ window.PanelExt = function PanelExt(env) {
   const portraitCache = {};
 
   function dexOf(state, petId) {
+    const sp = state.pets[petId] && state.pets[petId].species;   // evolved
+    if (sp) return sp.dex;
     if (SP.DEFS[petId]) return SP.DEFS[petId].dex;
     const c = state.custom.find((x) => x.id === petId);
     return c ? c.dex : null;
@@ -148,7 +164,8 @@ window.PanelExt = function PanelExt(env) {
     if (day.pats >= 5) out.push(s('pats', { n: day.pats }));
     if (day.levelUps > 0) out.push(s('level'));
     const petId = day.petId || state.settings.pokemon;
-    const cry = SP.DEFS[petId] ? SP.DEFS[petId].cry[L()] : `${env.petName(petId)}!`;
+    const evolved = env.getState().pets[petId] && env.getState().pets[petId].species;
+    const cry = SP.DEFS[petId] && !evolved ? SP.DEFS[petId].cry[L()] : `${env.petName(petId)}!`;
     out.push(s('close', { cry }));
     return out.join(L() === 'zh' ? '' : ' ');
   }

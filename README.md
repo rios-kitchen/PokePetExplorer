@@ -74,18 +74,33 @@ and scrolling never count as typing, and the keyboard never appears during baths
 
 ### Care (QQ-Pet style)
 
-Each Pokémon has **hunger, cleanliness and health** (plus mood). They drop over time – more slowly
+Each Pokémon has **hunger, cleanliness, health and its own mood**. They drop over time – more slowly
 while you're away or the app is closed (max. 12 h are counted).
 
 - **Hungry** → the pet asks for food. **Dirty** → dirt spots and a fly; it wants a bath.
-- Neglected for long (health < 60) it can **catch a cold**: green tint, sweat drops, droopy eyes,
-  it barely walks. At 0 health it **faints** and only a Potion helps.
-- **Berries 🍓 are the currency**: +3 per Pomodoro, +1 per finished to-do, +2 per day.
-  Spend them in **Care**: Oran Berry, Poké Puff, Rare Candy, Potion. Bathing is free.
+- **Status conditions** (QQ Pet's disease chains, Pokémon style): a dirty pet can get **poisoned**, a
+  hungry one **paralyzed**, a sad one **confused**; dungeons can **burn** or **freeze** it. Untreated,
+  a condition gets worse every 6 h (stages 1–3) and then the pet **faints**.
+  **Diagnose** it (1 🍓) to learn which one it is, then give the matching medicine (Antidote, Paralyze
+  Heal, Burn Heal, Ice Heal, Persim Berry – or the pricier Full Heal). **The wrong medicine makes it a
+  stage worse.** A fainted Pokémon needs a **Revive**; Potions only restore health.
+- **Berries 🍓 are the currency**: +3 per Pomodoro, +1 per finished to-do, +2 per day, plus
+  expeditions. Items found on expeditions go to the inventory and are used before berries are spent.
 - Feed/bath/heal from the Care tab, the right-click menu or directly in the pet's speech bubble.
 - **Droppings 💩**: some time after a meal (and now and then anyway) the pet poops on your screen.
   Click the dropping to clean it up. Until the pet is **bathed** it smells and its mood drops; if
   it stays unbathed its health sinks and it gets sick. Droppings left on screen also cost mood.
+
+### Growing up (QQ-Pet style)
+
+- The pet **grows while the app runs** (a few XP per hour) on top of Pomodoros and to-dos – at full
+  speed when it's happy, healthy, fed and clean, slower otherwise (QQ Pet's growth penalties).
+- Eggs hatch at **Lv 5**. At **Lv 12** and **Lv 24** the pet can **evolve**: it asks first (you can say
+  "later"), and branching species let you pick. It keeps its level, stats and diary.
+- **Expeditions** (right-click → 🧭): explore a mystery dungeon, take a contest class or travel to a
+  region. The pet **leaves the desktop** (a 🧭 countdown shows where it was) and comes back with
+  berries, XP, contest stats (Cool / Cute / Smart / Tough), sometimes items or a souvenir – and
+  hungrier, dirtier, maybe with a status condition. The timer keeps running while the app is closed.
 
 ### Emotions
 
@@ -117,11 +132,25 @@ Add any species PMD has drawn by English name or Pokédex number in **Pokémon �
 (optionally shiny), and switch any card between normal and shiny with its dropdown. Names (incl.
 Chinese) come from [PokeAPI](https://pokeapi.co); diary portraits from PMD SpriteCollab.
 
+## Privacy
+
+- The app only ever contacts **pokeapi.co** (species names, evolutions) and **raw.githubusercontent.com**
+  (PMD sprites, portraits, artist credits) – both downloads only; other hosts are blocked in code
+  (`src/main/sources.js`, `ALLOWED_HOSTS`). No telemetry, analytics, update checks or accounts.
+- The keyboard helper only knows *when* a key was pressed, never which one. The clipboard, the screen
+  and other apps' windows are never read. Everything stays in one local JSON file.
+- The QQ Pet projects used as design references (AnkioTomas/qqpet, xuemian168/qqpet_automation) were
+  only read, not used: none of their code or assets is included. Things they do that this app
+  deliberately doesn't: IP-based weather lookups via the author's server, polling the clipboard,
+  watching the foreground app, collecting a machine ID and system info, running a LAN server.
+
 ## Project layout
 
 ```
 main.js                 main process: windows, tray, timer, to-dos, persistence
-src/main/care.js        hunger / cleanliness / health / sickness, items, berries
+src/main/care.js        hunger / cleanliness / health, status conditions, medicine, items, berries
+src/main/growth.js      levels, passive growth rate, hatching, evolution
+src/main/expedition.js  dungeons, contest training, travel
 src/main/diary.js       daily records, weekly report
 src/main/store.js       data file: defaults, pet records, migration from PokePet's data
 test/                   unit tests (node --test)

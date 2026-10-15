@@ -118,7 +118,11 @@
     }
     if (!built) built = await buildGrid('pikachu', true);
     let cry, name;
-    if (SP.DEFS[id]) {
+    const sp = P.state.pets[id] && P.state.pets[id].species;   // evolved
+    if (sp) {
+      name = sp.names;
+      cry = { en: `${name.en}!`, zh: `${name.zh}！` };
+    } else if (SP.DEFS[id]) {
       cry = SP.DEFS[id].cry; name = SP.DEFS[id].name;
     } else {
       const c = P.state.custom.find((x) => x.id === id);

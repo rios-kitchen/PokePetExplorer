@@ -66,6 +66,7 @@
 
   /** Effects that come from the pet's condition: z's while asleep, sweat when sick, stink, flies. */
   function ambient(now) {
+    if (P.isAway()) return;
     const g = P.geometry();
     const care = P.care();
     if (pet.mode === 'sleep' && now > (pet.nextZ || 0)) {

@@ -50,7 +50,8 @@ window.Pet = (() => {
     nextChatter: Date.now() + P.rand(3, 6) * 60e3,
     nextLonely: Date.now() + 4 * 60e3,
     eating: null, walkAcc: 0, moving: false,
-    anim: null, animStart: 0, nextSweat: 0, nextFly: 0, action: null, nextFun: Date.now() + 20e3
+    anim: null, animStart: 0, nextSweat: 0, nextFly: 0, action: null, nextFun: Date.now() + 20e3,
+    fade: null              // { from, to, start, ms } – fading out to leave / in to come back
   };
 
   // The main process sends the cursor position (relative to this window), how far it moved and the
@@ -69,6 +70,11 @@ window.Pet = (() => {
   };
   P.isSick = () => P.care().sick;
   P.isFainted = () => P.care().fainted;
+  /** On an expedition: the pet has left the desktop (see pet.js expedition handlers). */
+  P.isAway = () => {
+    const s = P.state;
+    return !!(s && s.expedition && s.expedition.petId === s.settings.pokemon);
+  };
 
   /** Where the pet is drawn right now (window coordinates). */
   P.geometry = () => {

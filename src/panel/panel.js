@@ -34,17 +34,20 @@
   }
 
   function petName(id) {
+    const sp = state.pets[id] && state.pets[id].species;   // evolved
+    if (sp) return sp.names[L()] || sp.names.en;
     if (SP.DEFS[id]) return SP.DEFS[id].name[L()];
     const c = state.custom.find((x) => x.id === id);
     return c ? c.names[L()] || c.names.en : id;
   }
 
   // ---------------------------------------------------------------- sprites in the panel
-  const assetCache = {};   // "id|source|shiny" -> promise of asset
+  const assetCache = {};   // "id|source|shiny|species" -> promise of asset
 
   function assets(id) {
     const sk = state.skins[id] || {};
-    const key = `${id}|${sk.source}|${sk.shiny}`;
+    const sp = state.pets[id] && state.pets[id].species;   // evolving changes the sprite, too
+    const key = `${id}|${sk.source}|${sk.shiny}|${sp ? sp.dex : ''}`;
     if (!assetCache[key]) assetCache[key] = api.invoke('pokemon:assets', id);
     return assetCache[key];
   }
