@@ -1,4 +1,4 @@
-/* PokePet Plus – pet window: particles (hearts, stars, z's, sweat, flies, falling treats …). */
+/* PokePet Explorer – pet window: particles (hearts, stars, z's, sweat, flies, falling treats …). */
 (() => {
   const P = window.Pet;
   const { pet, rand } = P;

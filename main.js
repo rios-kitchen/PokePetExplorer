@@ -1,16 +1,21 @@
-// PokePet Plus – main process: windows, tray, Pomodoro timer, to-dos, raising and persistence.
+// PokePet Explorer – main process: windows, tray, Pomodoro timer, to-dos, raising and persistence.
 const {
   app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, screen, Notification, powerMonitor
 } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { Store, today, petOf, freshPet } = require('./src/main/store');
+const { Store, today, petOf, addEgg } = require('./src/main/store');
 const Sources = require('./src/main/sources');
 const Care = require('./src/main/care');
 const Diary = require('./src/main/diary');
 const Growth = require('./src/main/growth');
 const Expedition = require('./src/main/expedition');
 const Achievements = require('./src/main/achievements');
+const Secrets = require('./src/main/secrets');
+const { Updater } = require('./src/main/updater');
+const AI = require('./src/main/ai');
+
+let updater = null;   // created when the app is ready
 const { KeyActivity } = require('./src/main/keys');
 
 const keys = new KeyActivity();
@@ -50,11 +55,11 @@ const { levelOf } = Growth;
 
 function spritesDir() { return path.join(app.getPath('userData'), 'sprites'); }
 
+/** The team. Every Pokémon came from an egg (or, for old saves, was one of PokePet's built-ins). */
 function petList() {
-  const builtin = Sprites.ORDER.map((id) => ({ id, names: Sprites.DEFS[id].name, dex: Sprites.DEFS[id].dex, builtin: true }));
-  const custom = store.data.custom.map((c) => ({ id: c.id, names: c.names, dex: c.dex, builtin: false }));
+  const team = store.data.custom.map((c) => ({ id: c.id, names: c.names, dex: c.dex, builtin: false }));
   // an evolved Pokémon keeps its id (and records) but is now another species
-  return builtin.concat(custom).map((p) => {
+  return team.map((p) => {
     const rec = store.data.pets[p.id];
     if (rec && rec.stage === 'egg') return { ...p, names: { en: I18N.t('en', 'egg.name'), zh: I18N.t('zh', 'egg.name') }, egg: true };
     const sp = rec && rec.species;
@@ -88,6 +93,7 @@ function migrate() {
  */
 async function ensurePmdSkins() {
   for (const p of petList()) {
+    if (!p.dex) continue;   // still an egg
     const skin = store.data.skins[p.id];
     const missing = !skin || skin.style !== 'pmd';
     const outdated = skin && skin.style === 'pmd' && skin.v !== Sources.PMD_VERSION;
@@ -149,6 +155,14 @@ function snapshot() {
     stats: d.stats,
     mood: Math.round(activePet().mood),   // the active Pokémon's (each has its own)
     growthRate: Growth.growthRate(activePet(), careOfActive()),
+    hatchLevel: Growth.hatchLevel(d),
+    ai: {
+      providers: Object.fromEntries(Object.entries(AI.PROVIDERS).map(([k, p]) => [k, { url: p.url, models: p.models || [], noKey: !!p.noKey }])),
+      hasKey: !!d.aiKeys[d.settings.ai.provider],
+      busy: aiBusy
+    },
+    update: updater ? { ...updater.state } : null,
+    version: app.getVersion(),
     expeditions: Expedition.EXPEDITIONS,
     diagnoseCost: Care.DIAGNOSE_COST,
     inventory: d.inventory,
@@ -157,6 +171,7 @@ function snapshot() {
     achievements: Achievements.list(d),
     fishdex: d.fishdex,
     souvenirs: d.souvenirs,
+    photos: d.photos,
     timer: { ...timer },
     platform: process.platform
   };
@@ -220,15 +235,52 @@ function levelChanged(id, before) {
 /** Hatch an egg or offer an evolution when the level is reached. */
 function checkGrowth(id = S().pokemon) {
   const pet = petOf(store.data, id);
-  if (Growth.readyToHatch(pet)) {
+  if (Growth.readyToHatch(pet, Growth.hatchLevel(store.data))) { hatchEgg(id); return; }
+  if (Growth.evolutionDue(pet)) offerEvolution(id);
+}
+
+/**
+ * Hatch an egg: its species (a random unevolved one) and whether it's shiny (1/64) are decided now,
+ * unless the hidden hatch command planned them. Needs the internet for the species and its sprite;
+ * offline it simply tries again on a later check.
+ */
+let hatching = null;
+async function hatchEgg(id) {
+  const pet = petOf(store.data, id);
+  const entry = store.data.custom.find((c) => c.id === id);
+  if (hatching || pet.stage !== 'egg' || !entry) return { ok: false, error: 'busy' };
+  hatching = id;
+  try {
+    const plan = (pet.egg && pet.egg.plan) || {};
+    const shiny = plan.shiny ?? Math.random() < Growth.SHINY_RATE;
+    let sp;
+    if (plan.dex) {
+      const found = await Sources.lookupSpecies(plan.dex);
+      let skin;
+      try { skin = await Sources.downloadSkin(found.dex, shiny, spritesDir()); } catch (e) {
+        if (e.code !== 'not-found' || !shiny) throw e;
+        skin = await Sources.downloadSkin(found.dex, false, spritesDir());
+      }
+      sp = { ...found, skin };
+    } else {
+      const taken = new Set(petList().map((p) => p.dex).filter(Boolean));
+      sp = await Sources.randomEggSpecies(spritesDir(), { exclude: taken, shiny });
+    }
+    Object.assign(entry, { dex: sp.dex, names: sp.names });
+    store.data.skins[id] = sp.skin;
     pet.stage = 'hatched';
     pet.hatchedAt = Date.now();
-    if (S().pokemon === id) petEvent('hatched', { name: petName(id) });
-    notify(T('notif.hatched'), T('notif.hatchedBody', { name: petName(id) }));
+    delete pet.egg;
+    store.data.stats.hatches = (store.data.stats.hatches || 0) + 1;
     changed();
-    return;
+    if (S().pokemon === id) petEvent('hatched', { name: petName(id), shiny: !!sp.skin.shiny });
+    notify(T('notif.hatched'), T('notif.hatchedBody', { name: petName(id) }));
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
+  } finally {
+    hatching = null;
   }
-  if (Growth.evolutionDue(pet)) offerEvolution(id);
 }
 
 let evolutionLookup = null;   // in flight
@@ -328,30 +380,81 @@ function shopBuy(itemId, n = 1) {
   return { ok: true };
 }
 
-/**
- * Adopt a mystery egg: a random unevolved species, hidden until it hatches at Lv5.
- * One egg at a time. Needs the internet (PokeAPI + its PMD sprite).
- */
-let adopting = false;
-async function adoptEgg() {
-  if (adopting) return { ok: false, error: 'busy' };
-  if (Object.values(store.data.pets).some((p) => p.stage === 'egg')) return { ok: false, error: 'hasEgg' };
-  adopting = true;
+/** The app was called "PokePet Plus" before: bring its save, sprites and photos over once. */
+function carryOverOldData() {
+  if (process.env.POKEPET_DATA_DIR) return;
+  const dir = app.getPath('userData');
+  const old = path.join(path.dirname(dir), 'PokePet Plus');
+  const file = path.join(dir, 'pokepetexplorer-data.json');
+  const oldFile = path.join(old, 'pokepetplus-data.json');
+  if (fs.existsSync(file) || !fs.existsSync(oldFile)) return;
   try {
-    const taken = new Set(petList().map((p) => p.dex));
-    const sp = await Sources.randomEggSpecies(spritesDir(), taken);
-    const id = `egg-${Date.now().toString(36)}`;
-    store.data.custom.push({ id, dex: sp.dex, names: sp.names });
-    store.data.skins[id] = sp.skin;
-    store.data.pets[id] = freshPet('egg');
-    selectPokemon(id);
-    changed();
-    return { ok: true, id };
+    fs.mkdirSync(dir, { recursive: true });
+    fs.copyFileSync(oldFile, file);
+    for (const sub of ['sprites', 'photos']) {
+      if (fs.existsSync(path.join(old, sub))) fs.cpSync(path.join(old, sub), path.join(dir, sub), { recursive: true });
+    }
   } catch (e) {
-    return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
-  } finally {
-    adopting = false;
+    console.error('Could not copy the old data:', e);
   }
+}
+
+// ---------- photo album ----------
+const MAX_PHOTOS = 60;
+function photosDir() { return path.join(app.getPath('userData'), 'photos'); }
+
+/** Save a group photo from an expedition (PNG data URL from the pet window). */
+function savePhoto({ dataUrl, expId, region, petId }) {
+  const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
+  if (!m || !Expedition.EXPEDITIONS[expId]) return { ok: false };
+  const buf = Buffer.from(m[1], 'base64');
+  if (buf.length > 3e6) return { ok: false };
+  const id = `ph${Date.now().toString(36)}`;
+  fs.mkdirSync(photosDir(), { recursive: true });
+  fs.writeFileSync(path.join(photosDir(), `${id}.png`), buf);
+  store.data.photos.push({ id, file: `${id}.png`, expId, region: region || null, petId, at: Date.now() });
+  while (store.data.photos.length > MAX_PHOTOS) {
+    const old = store.data.photos.shift();
+    try { fs.unlinkSync(path.join(photosDir(), old.file)); } catch { /* gone */ }
+  }
+  changed();
+  return { ok: true, id };
+}
+
+/** The hidden command box (settings). Returns { ok } only – nothing that would explain it. */
+async function runSecret(text) {
+  const { cmd, args } = Secrets.parse(text);
+  if (!cmd) return { ok: false };
+  if (cmd === 'berries') {
+    store.data.berries += 10;
+    changed();
+    petEvent('daily-berries', { n: 10 });
+    return { ok: true };
+  }
+  // hatch the egg now – optionally as a given species (name or dex) and/or shiny
+  const eggId = () => store.data.custom.find((c) => store.data.pets[c.id] && store.data.pets[c.id].stage === 'egg')?.id;
+  let id = petOf(store.data, S().pokemon).stage === 'egg' ? S().pokemon : eggId();
+  if (!id) id = adoptEgg().id;
+  const pet = petOf(store.data, id);
+  const plan = pet.egg ? pet.egg.plan || {} : {};
+  const words = args.filter((a) => a !== 'shiny');
+  if (cmd === 'shiny' || args.includes('shiny')) plan.shiny = true;
+  if (cmd === 'hatch' && words.length) {
+    try { plan.dex = (await Sources.lookupSpecies(words.join('-'))).dex; } catch { return { ok: false }; }
+  }
+  pet.egg = { plan };
+  if (S().pokemon !== id) selectPokemon(id);
+  const res = await hatchEgg(id);
+  return { ok: res.ok };
+}
+
+/** Adopt a mystery egg (one at a time). Who's inside is decided when it hatches. */
+function adoptEgg() {
+  if (Object.values(store.data.pets).some((p) => p.stage === 'egg')) return { ok: false, error: 'hasEgg' };
+  const id = addEgg(store.data);
+  selectPokemon(id);
+  changed();
+  return { ok: true, id };
 }
 
 function diagnosePet() {
@@ -436,7 +539,7 @@ function createPetWindow() {
     skipTaskbar: true,
     hasShadow: false,
     show: false,
-    title: 'PokePet Plus',
+    title: 'PokePet Explorer',
     webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true, backgroundThrottling: false }
   });
   petWin.setAlwaysOnTop(true, 'floating');
@@ -476,6 +579,71 @@ function setPetHidden(hidden) {
 }
 
 // ---------- panel window ----------
+// ---------- AI chat (optional, off by default) ----------
+let chatWin = null;
+let chatHistory = [];   // this session only – not saved
+let aiBusy = false;
+
+function openChat() {
+  if (!S().ai.enabled) { openPanel('settings'); return; }
+  if (!chatWin || chatWin.isDestroyed()) {
+    chatWin = new BrowserWindow({
+      width: 360, height: 500, minWidth: 300, minHeight: 360, show: false,
+      title: T('chat.title', { name: petName() }), icon: appIcon(256), backgroundColor: '#f6f4ef', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) chatWin.setMenu(null);
+    chatWin.loadFile(path.join(__dirname, 'src', 'chat', 'chat.html'));
+    chatWin.once('ready-to-show', () => { chatWin.show(); chatWin.focus(); });
+  } else {
+    chatWin.show();
+    chatWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** What the pet knows about itself for the AI persona. */
+function aiPetState() {
+  const pet = activePet();
+  const care = careOfActive();
+  const p = petList().find((x) => x.id === S().pokemon);
+  return {
+    lang: lang(), name: petName(), species: p && p.names ? p.names.en : null, egg: pet.stage === 'egg',
+    level: levelOf(pet.xp), mood: Math.round(pet.mood), hunger: Math.round(care.hunger), clean: Math.round(care.clean),
+    health: Math.round(care.health), fainted: !!care.fainted,
+    status: care.status && care.status.known ? care.status.id : care.sick ? 'unwell' : null,
+    attrs: pet.attrs, focus: timer.phase === 'focus'
+  };
+}
+
+async function aiChat(text) {
+  text = String(text || '').trim().slice(0, 1000);
+  if (!text || aiBusy) return { ok: false, error: 'busy' };
+  if (!S().ai.enabled) return { ok: false, error: 'off' };
+  chatHistory.push({ role: 'user', content: text, at: Date.now() });
+  aiBusy = true;
+  broadcastChat();
+  try {
+    const key = AI.decryptKey(store.data.aiKeys[S().ai.provider]);
+    const res = await AI.chat(S().ai, key, aiPetState(), chatHistory.map(({ role, content }) => ({ role, content })));
+    const reply = res.refused || !res.text ? T('chat.refused') : res.text;
+    chatHistory.push({ role: 'assistant', content: reply, at: Date.now() });
+    chatHistory = chatHistory.slice(-40);
+    petEvent('ai-reply', { text: reply });
+    return { ok: true, text: reply };
+  } catch (e) {
+    chatHistory.pop();   // let the user send it again
+    return { ok: false, error: e.code || 'other' };
+  } finally {
+    aiBusy = false;
+    broadcastChat();
+  }
+}
+
+function broadcastChat() {
+  send(chatWin, 'chat', { history: chatHistory, busy: aiBusy, name: petName(), lang: lang() });
+}
+
 function openPanel(tab) {
   if (!panelWin || panelWin.isDestroyed()) {
     panelWin = new BrowserWindow({
@@ -579,11 +747,15 @@ function completePhase(skipped) {
       Diary.addSession(d, timer.startedAt || Date.now() - d.pomodoro.focus * 60000, d.pomodoro.focus);
       addMood(15);
       addXp(20);
+      // studying together: the pet learns too (+1 Smart per 25 minutes of focus)
+      const smart = Math.max(1, Math.round(d.pomodoro.focus / 25));
+      if (!activeAway() && activePet().stage !== 'egg') activePet().attrs.smart += smart;
       notify(T('notif.focusEnd'), T('notif.focusEndBody', { name: petName() }));
       petEvent('focus-end', {
         min: d.pomodoro.focus,
         n: d.stats.todayPomos,
         berries: Care.REWARD.pomodoro,
+        smart: !activeAway() && activePet().stage !== 'egg' ? Math.max(1, Math.round(d.pomodoro.focus / 25)) : 0,
         task: task && !task.done ? task.text : null,
         taskId: task && !task.done ? task.id : null
       });
@@ -695,7 +867,7 @@ function createPoopWindow(p) {
     width: POOP_W, height: POOP_H, x: Math.round(p.x), y: Math.round(p.y),
     transparent: true, backgroundColor: '#00000000', frame: false, resizable: false,
     minimizable: false, maximizable: false, fullscreenable: false, focusable: false,
-    alwaysOnTop: true, skipTaskbar: true, hasShadow: false, show: false, title: 'PokePet Plus',
+    alwaysOnTop: true, skipTaskbar: true, hasShadow: false, show: false, title: 'PokePet Explorer',
     webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
   });
   win.setAlwaysOnTop(true, 'floating');
@@ -871,6 +1043,7 @@ function buildMenu() {
     { label: status, enabled: false },
     ...timerItems,
     { type: 'separator' },
+    ...(s.ai.enabled ? [{ label: T('menu.chat'), click: () => openChat() }] : []),
     { label: T('menu.todos'), click: () => openPanel('todos') },
     { label: T('menu.pomodoro'), click: () => openPanel('focus') },
     { type: 'separator' },
@@ -927,6 +1100,8 @@ function buildMenu() {
     { label: T('menu.sound'), type: 'checkbox', checked: s.sound, click: (m) => setSettings({ sound: m.checked }) },
     { label: T('menu.reactInput'), type: 'checkbox', checked: s.reactInput, click: (m) => setSettings({ reactInput: m.checked }) },
     { label: s.petHidden ? T('menu.show') : T('menu.hide'), click: () => setPetHidden(!s.petHidden) },
+    ...(updater && updater.state.status === 'available'
+      ? [{ label: T('menu.update', { v: updater.state.version }), click: () => openPanel('settings') }] : []),
     { label: T('menu.settings'), click: () => openPanel('settings') },
     { type: 'separator' },
     { label: T('menu.quit'), click: () => app.quit() }
@@ -1001,7 +1176,17 @@ function setSettings(patch) {
   const s = S();
   const oldScale = s.scale;
   for (const [k, v] of Object.entries(patch || {})) {
-    if (k in s && k !== 'petPos') s[k] = v;
+    if (k in s && k !== 'petPos' && k !== 'ai') s[k] = v;
+  }
+  if (patch && patch.ai && typeof patch.ai === 'object') {
+    const a = patch.ai;
+    s.ai = {
+      enabled: !!a.enabled,
+      provider: AI.PROVIDERS[a.provider] ? a.provider : s.ai.provider,
+      baseUrl: String(a.baseUrl || '').trim().slice(0, 300),
+      model: String(a.model || '').trim().slice(0, 120)
+    };
+    if (!s.ai.enabled) chatHistory = [];
   }
   s.scale = Math.max(2, Math.min(5, Number(s.scale) || 3));
   if (s.scale !== oldScale) resizePet();
@@ -1128,48 +1313,15 @@ function registerIpc() {
     petFit = { w: Math.min(600, fit.w), h: Math.min(600, fit.h) };
     resizePet();
   });
-  ipcMain.handle('pokemon:fetch', async (_e, query, shiny) => {
-    try {
-      const sp = await Sources.lookupSpecies(query);
-      const builtin = Sprites.ORDER.find((id) => Sprites.DEFS[id].dex === sp.dex);
-      let entry = builtin ? null : store.data.custom.find((c) => c.dex === sp.dex);
-      const id = builtin || (entry ? entry.id : `dex-${sp.dex}`);
-      const meta = await Sources.downloadSkin(sp.dex, shiny, spritesDir());
-      if (!builtin && !entry) {
-        entry = { id, dex: sp.dex, names: sp.names };
-        store.data.custom.push(entry);
-      }
-      const old = store.data.skins[id];
-      store.data.skins[id] = meta;
-      if (old) removeSkinFiles(old, id);
-      if (S().pokemon === id) petEvent('skin', { id });
-      selectPokemon(id);
-      changed();
-      return { ok: true, id };
-    } catch (e) {
-      return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
-    }
-  });
-  ipcMain.handle('pokemon:skin', async (_e, id, shiny) => {
-    const p = petList().find((x) => x.id === id);
-    if (!p) return { ok: false, error: 'not-found' };
-    try {
-      const old = store.data.skins[id];
-      store.data.skins[id] = await Sources.downloadSkin(p.dex, shiny, spritesDir());
-      if (old) removeSkinFiles(old, id);
-      changed();
-      if (S().pokemon === id) petEvent('skin', { id });
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
-    }
-  });
+  // release a Pokémon (never the last one)
   ipcMain.on('pokemon:remove', (_e, id) => {
-    if (!store.data.custom.some((x) => x.id === id)) return;
+    if (!store.data.custom.some((x) => x.id === id) || store.data.custom.length < 2) return;
+    if (Expedition.isAway(store.data, id)) Expedition.recall(store.data);
     removeSkinFiles(store.data.skins[id], id);
     delete store.data.skins[id];
+    delete store.data.pets[id];
     store.data.custom = store.data.custom.filter((x) => x.id !== id);
-    if (S().pokemon === id) S().pokemon = 'pikachu';
+    if (S().pokemon === id) S().pokemon = store.data.custom[0].id;
     changed();
   });
   ipcMain.handle('pokemon:assets', (_e, id) => {
@@ -1188,6 +1340,36 @@ function registerIpc() {
   ipcMain.handle('care:diagnose', () => diagnosePet());
   ipcMain.handle('shop:buy', (_e, itemId, n) => shopBuy(String(itemId || ''), n));
   ipcMain.handle('egg:adopt', () => adoptEgg());
+  ipcMain.handle('settings:extra', (_e, text) => runSecret(text));
+  ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
+  ipcMain.handle('photo:get', (_e, id) => {
+    const ph = store.data.photos.find((x) => x.id === id);
+    try { return ph ? `data:image/png;base64,${fs.readFileSync(path.join(photosDir(), ph.file)).toString('base64')}` : null; } catch { return null; }
+  });
+  ipcMain.handle('ai:chat', (_e, text) => aiChat(text));
+  ipcMain.handle('ai:history', () => ({ history: chatHistory, busy: aiBusy, name: petName(), lang: lang() }));
+  ipcMain.on('ai:clear', () => { chatHistory = []; broadcastChat(); });
+  ipcMain.on('ai:open', () => openChat());
+  ipcMain.handle('ai:set-key', (_e, provider, key) => {
+    if (!AI.PROVIDERS[provider]) return { ok: false };
+    const k = String(key || '').trim();
+    if (k) store.data.aiKeys[provider] = AI.encryptKey(k); else delete store.data.aiKeys[provider];
+    changed();
+    return { ok: true };
+  });
+  ipcMain.handle('ai:models', async () => {
+    try { return { ok: true, models: await AI.listModels(S().ai, AI.decryptKey(store.data.aiKeys[S().ai.provider])) }; } catch (e) { return { ok: false, error: e.code || 'other' }; }
+  });
+  ipcMain.handle('ai:test', async () => {
+    try {
+      const key = AI.decryptKey(store.data.aiKeys[S().ai.provider]);
+      const res = await AI.chat(S().ai, key, aiPetState(), [{ role: 'user', content: lang() === 'zh' ? '你好！' : 'Hi!' }]);
+      return { ok: true, text: res.text || T('chat.refused') };
+    } catch (e) { return { ok: false, error: e.code || 'other' }; }
+  });
+  ipcMain.handle('update:check', () => updater.check());
+  ipcMain.handle('update:download', () => updater.download());
+  ipcMain.on('update:show', () => updater.openDownloaded());
   ipcMain.handle('expedition:start', (_e, expId) => startExpedition(String(expId || '')));
   ipcMain.on('expedition:recall', () => recallExpedition());
   ipcMain.handle('evolution:choose', (_e, dex) => evolve(S().pokemon, dex));
@@ -1216,6 +1398,12 @@ async function selfTest(dir) {
     try { await fn(); } catch (e) { console.error(`self-test step ${name} failed:`, e); }
   };
   fs.mkdirSync(dir, { recursive: true });
+  // a new player only has an egg; the test needs a hatched Pokémon too (Pikachu, built-in art first)
+  await wait(1500);
+  await shot(petWin, '00-pet-first-egg');
+  store.data.custom.unshift({ id: 'pikachu', dex: 25, names: Sprites.DEFS.pikachu.name });
+  petOf(store.data, 'pikachu');
+  selectPokemon('pikachu');
   await wait(2500);
   await shot(petWin, '01-pet-hd');
   // phase sounds: run all four through the real event handlers
@@ -1348,6 +1536,7 @@ async function selfTest(dir) {
   await wait(3000);
   await shot(petWin, '10e-pet-expedition-back');
   await wait(6000);
+  console.log('[test] photos:', store.data.photos.length);
   await step('evolution', async () => {
     const pet = activePet();
     pet.xp = Growth.xpFor(Growth.EVOLVE_LEVELS[0]);
@@ -1401,18 +1590,35 @@ async function selfTest(dir) {
   send(panelWin, 'panel:tab', 'dex');
   await wait(1200);
   await shot(panelWin, '17-panel-dex');
-  await step('adopt-egg', async () => console.log('[test] adopt egg:', JSON.stringify(await adoptEgg())));
+  await step('egg', async () => {
+    const id = store.data.custom.find((c) => store.data.pets[c.id].stage === 'egg').id;
+    selectPokemon(id);
+  });
   send(panelWin, 'panel:tab', 'pokemon');
-  await wait(4000);
+  await wait(3000);
   await shot(petWin, '18-pet-egg');
   await shot(panelWin, '19-panel-pokemon-egg');
-  await step('hatch', async () => {
-    activePet().xp = Growth.xpFor(Growth.HATCH_LEVEL);
-    checkGrowth();
-    console.log('[test] hatched:', activePet().stage, petName());
+  // hidden commands (words from the untracked test/secrets.local.json): +10 berries, then a shiny Bulbasaur
+  await step('secret', async () => {
+    let words = null;
+    try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* not on this machine */ }
+    console.log('[test] wrong code:', JSON.stringify(await runSecret('nope')));
+    if (!words) { console.log('[test] hidden commands: skipped (no test/secrets.local.json)'); return; }
+    const before = store.data.berries;
+    console.log('[test] berries code:', JSON.stringify(await runSecret(words.berries)), store.data.berries - before);
+    console.log('[test] hatch code:', JSON.stringify(await runSecret(`${words.hatch} bulbasaur shiny`)), petName(), !!store.data.skins[S().pokemon].shiny);
   });
   await wait(3500);
-  await shot(petWin, '20-pet-hatched');
+  await shot(petWin, '20-pet-hatched-shiny');
+  send(panelWin, 'panel:tab', 'dex');
+  await wait(2000);
+  await shot(panelWin, '21-panel-dex-album');
+  await step('settings-ai', async () => setSettings({ ai: { enabled: true, provider: 'deepseek', baseUrl: '', model: 'deepseek-chat' } }));
+  send(panelWin, 'panel:tab', 'settings');
+  await wait(1500);
+  await panelWin.webContents.executeJavaScript("document.querySelector('#aiTitle, [data-i18n=\"ai.title\"]').scrollIntoView()");
+  await wait(500);
+  await shot(panelWin, '22-panel-settings-ai');
   quitting = true;
   app.quit();
 }
@@ -1427,6 +1633,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     const sysLang = (app.getLocale() || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    carryOverOldData();
     store = new Store(app.getPath('userData'), sysLang);
     migrate();
     offlineCare();
@@ -1443,6 +1650,16 @@ if (!app.requestSingleInstanceLock()) {
     setInterval(tick, 1000);
     setInterval(slowTick, 60000);
     setInterval(pollInput, 60);
+    // new release on GitHub? (checked once at startup; settings can turn it off)
+    let announced = null;
+    updater = new Updater((st) => {
+      broadcast();
+      if (st.status === 'available' && announced !== st.version) {
+        announced = st.version;
+        notify(T('notif.update'), T('notif.updateBody', { v: st.version }));
+      }
+    });
+    if (S().checkUpdates && !process.env.POKEPET_TEST) setTimeout(() => updater.check(), 8000);
     if (process.env.POKEPET_TEST) selfTest(process.env.POKEPET_TEST).catch((e) => { console.error(e); app.exit(1); });
     screen.on('display-removed', () => {
       if (petWin && !validPos({ x: petWin.getBounds().x, y: petWin.getBounds().y }, petSize())) resetPetPos();

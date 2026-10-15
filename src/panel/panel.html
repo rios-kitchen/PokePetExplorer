@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
-  <title>PokePet Plus</title>
+  <title>PokePet Explorer</title>
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
@@ -119,6 +119,8 @@
 
     <!-- DEX: achievements and collections -->
     <section id="tab-dex" class="tab">
+      <h3 data-i18n="dex.album"></h3>
+      <div id="albumList" class="album"></div>
       <h3 data-i18n="dex.achievements"></h3>
       <div id="achList" class="ach-list"></div>
       <h3 data-i18n="dex.souvenirs"></h3>
@@ -152,15 +154,8 @@
         <button id="adoptEgg" class="secondary" data-i18n="egg.adopt"></button>
         <span id="eggStatus" class="hint" data-i18n="egg.hint"></span>
       </div>
-      <h3 data-i18n="poke.builtin"></h3>
+      <h3 data-i18n="poke.team"></h3>
       <div id="pokeGrid" class="poke-grid"></div>
-      <h3 data-i18n="poke.more"></h3>
-      <p class="hint" data-i18n="poke.moreHint"></p>
-      <form id="pokeForm" class="poke-form">
-        <input id="pokeQuery" type="text" placeholder="gengar / 94" autocomplete="off">
-        <label class="check"><input type="checkbox" id="pokeShiny"> <span data-i18n="poke.shiny"></span></label>
-        <button type="submit" class="primary" data-i18n="poke.fetch"></button>
-      </form>
       <p id="pokeStatus" class="hint"></p>
     </section>
 
@@ -189,6 +184,40 @@
       <label class="check"><input type="checkbox" id="setLogin"> <span data-i18n="set.login"></span></label>
       <button id="resetPos" class="secondary" data-i18n="set.resetPos"></button>
 
+      <h3 data-i18n="ai.title"></h3>
+      <div class="ai-box">
+        <label class="check"><input type="checkbox" id="aiEnabled"> <span data-i18n="ai.enable"></span></label>
+        <p class="hint" data-i18n="ai.hint"></p>
+        <div id="aiFields" class="ai-fields">
+          <label class="field row"><span data-i18n="ai.provider"></span><select id="aiProvider"></select></label>
+          <label class="field" id="aiUrlRow"><span data-i18n="ai.url"></span><input id="aiUrl" type="text" spellcheck="false" placeholder="https://…/v1"></label>
+          <label class="field"><span data-i18n="ai.model"></span>
+            <div class="ai-model"><input id="aiModel" type="text" list="aiModelList" spellcheck="false"><button id="aiFetch" class="secondary" type="button" data-i18n="ai.fetch"></button></div>
+            <datalist id="aiModelList"></datalist>
+          </label>
+          <label class="field" id="aiKeyRow"><span data-i18n="ai.key"></span>
+            <div class="ai-model"><input id="aiKey" type="password" spellcheck="false" autocomplete="off"><button id="aiSaveKey" class="secondary" type="button" data-i18n="ai.saveKey"></button></div>
+          </label>
+          <div class="ai-actions">
+            <button id="aiTest" class="secondary" type="button" data-i18n="ai.test"></button>
+            <button id="aiOpen" class="primary" type="button" data-i18n="ai.open"></button>
+          </div>
+          <p id="aiStatus" class="hint"></p>
+        </div>
+      </div>
+
+      <h3 data-i18n="upd.title"></h3>
+      <div class="update-box">
+        <div class="update-row">
+          <span id="updVersion" class="hint"></span>
+          <button id="updCheck" class="secondary" data-i18n="upd.check"></button>
+        </div>
+        <p id="updStatus" class="hint"></p>
+        <div id="updProgress" class="meter hidden"><div></div></div>
+        <button id="updDownload" class="primary hidden"></button>
+        <label class="check"><input type="checkbox" id="setUpdates"> <span data-i18n="upd.auto"></span></label>
+      </div>
+
       <h3 data-i18n="set.stats"></h3>
       <div class="stats">
         <div><b id="stToday"></b><span data-i18n="stat.today"></span></div>
@@ -198,7 +227,8 @@
       </div>
       <p class="hint" data-i18n="set.data"></p>
 
-      <h3 data-i18n="about.title"></h3>
+      <h3 id="aboutTitle" data-i18n="about.title"></h3>
+      <form id="extraForm" class="extra hidden" autocomplete="off"><input id="extraInput" type="text" spellcheck="false"></form>
       <div class="about">
         <p><b>PMD SpriteCollab</b> – <span data-i18n="about.pmd"></span></p>
         <p><b>PokéAPI</b> – <span data-i18n="about.pokeapi"></span></p>
@@ -207,6 +237,7 @@
       </div>
     </section>
   </main>
+  <div id="lightbox" class="lightbox hidden"><img alt=""></div>
 
   <script src="../shared/i18n.js"></script>
   <script src="../shared/sprites.js"></script>

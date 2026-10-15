@@ -1,4 +1,4 @@
-/* PokePet Plus – raising parts of the control panel: shop (Care tab), Expedition tab, Dex tab. */
+/* PokePet Explorer – raising parts of the control panel: shop (Care tab), Expedition tab, Dex tab. */
 window.PanelRaising = function PanelRaising(env) {
   const { api, el, t, L } = env;
   const $ = (sel) => document.querySelector(sel);
@@ -140,11 +140,34 @@ window.PanelRaising = function PanelRaising(env) {
   }
 
   // ================================================================ DEX
+  const photoCache = {};
+  const photoUrl = (id) => (photoCache[id] ||= api.invoke('photo:get', id));
+
+  function renderAlbum(state) {
+    const photos = [...state.photos].reverse();
+    $('#albumList').replaceChildren(...photos.map((ph) => {
+      const img = el('img', { alt: '' });
+      photoUrl(ph.id).then((url) => { if (url) img.src = url; });
+      const place = ph.region ? t(`region.${ph.region}`) : t(`exp.${ph.expId}`);
+      return el('button', {
+        class: 'photo', title: `${env.petName(ph.petId)} · ${place}`,
+        onclick: async () => {
+          const url = await photoUrl(ph.id);
+          if (!url) return;
+          $('#lightbox img').src = url;
+          $('#lightbox').classList.remove('hidden');
+        }
+      }, img);
+    }), ...(photos.length ? [] : [el('p', { class: 'hint full' }, t('dex.noPhotos'))]));
+  }
+  $('#lightbox').addEventListener('click', () => $('#lightbox').classList.add('hidden'));
+
   let dexKey = '';
   function renderDex(state) {
-    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length]);
+    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length, state.photos.length]);
     if (key === dexKey) return;
     dexKey = key;
+    renderAlbum(state);
     const done = state.achievements.filter((a) => a.at).length;
     $('#achList').replaceChildren(
       el('p', { class: 'hint' }, t('dex.achProgress', { n: done, total: state.achievements.length })),
@@ -167,7 +190,7 @@ window.PanelRaising = function PanelRaising(env) {
         el('span', {}, count[r] ? '🎐' : '❔'),
         el('b', {}, t(`region.${r}`)),
         el('span', { class: 'hint' }, count[r] ? `×${count[r]}` : ''))),
-      state.souvenirs.length ? null : el('p', { class: 'hint full' }, t('dex.noSouvenirs')));
+      ...(state.souvenirs.length ? [] : [el('p', { class: 'hint full' }, t('dex.noSouvenirs'))]));
   }
 
   return {

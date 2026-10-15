@@ -1,4 +1,4 @@
-/* PokePet Plus – pet window: behaviour (deciding what to do, walking, jumping, sleeping, eating, bathing). */
+/* PokePet Explorer – pet window: behaviour (deciding what to do, walking, jumping, sleeping, eating, bathing). */
 (() => {
   const P = window.Pet;
   const { api, Sound, pet, input, rand, say } = P;

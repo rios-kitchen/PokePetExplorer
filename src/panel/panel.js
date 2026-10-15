@@ -1,4 +1,4 @@
-/* PokePet Plus – control panel. Tabs: work (Pomodoro + to-dos) | care, expedition, dex, Pokémon,
+/* PokePet Explorer – control panel. Tabs: work (Pomodoro + to-dos) | care, expedition, dex, Pokémon,
  * diary (raising & fun, see care-diary.js and raising.js) | settings. */
 (() => {
   const api = window.api;
@@ -48,6 +48,9 @@
     return c ? c.names[L()] || c.names.en : id;
   }
 
+  /** The egg's spot colour comes from its id – its species isn't known yet. */
+  const eggSeed = (id) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+
   function dexOf(id) {
     if (SP.DEFS[id]) return SP.DEFS[id].dex;
     const c = state.custom.find((x) => x.id === id);
@@ -94,7 +97,7 @@
     const cv = el('canvas', { width: String(size), height: String(size) });
     const holder = el('div', { class: 'sprite-box', style: `width:${size}px;height:${size}px` }, cv);
     if (isEgg(id)) {
-      const img = SP.eggRgba(dexOf(id) || 0, 0);
+      const img = SP.eggRgba(eggSeed(id), 0);
       const c = document.createElement('canvas');
       c.width = img.width; c.height = img.height;
       c.getContext('2d').putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
@@ -366,7 +369,7 @@
   // ---------------------------------------------------------------- pokémon tab
   let pokeKey = '';
   function renderPokemon() {
-    const all = SP.ORDER.map((id) => ({ id, builtin: true })).concat(state.custom.map((c) => ({ id: c.id, builtin: false })));
+    const all = state.custom.map((c) => ({ id: c.id, builtin: false }));
     const key = JSON.stringify([L(), state.settings.pokemon, all.map((p) => p.id),
       Object.fromEntries(Object.entries(state.pets).map(([k, v]) => [k, [v.xp, v.stage, v.attrs, v.species]])), state.skins, state.expedition]);
     if (key === pokeKey) return;
@@ -381,16 +384,16 @@
       const selected = state.settings.pokemon === p.id;
       const card = el('div', { class: `poke${selected ? ' selected' : ''}`, onclick: () => api.send('pokemon:select', p.id) },
         selected ? el('span', { class: 'badge' }, t('poke.selected')) : null,
-        !p.builtin ? el('button', {
+        all.length > 1 ? el('button', {
           class: 'rm', title: t('poke.remove'),
           onclick: (e) => { e.stopPropagation(); api.send('pokemon:remove', p.id); }
         }, '✕') : null,
         cv,
-        el('div', { class: 'n' }, petName(p.id)),
-        el('div', { class: 'l' }, t('poke.level', { n: lv })),
+        el('div', { class: 'n' }, petName(p.id), state.skins[p.id]?.shiny && !isEgg(p.id) ? el('span', { class: 'shiny', title: t('poke.shiny') }, ' ✨') : null),
+        el('div', { class: 'l' }, isEgg(p.id) ? t('egg.hatchAt', { n: lv, h: state.hatchLevel }) : t('poke.level', { n: lv })),
         el('div', { class: 'bar' }, el('div', { style: `width:${pct}%` })),
         attrLine(p.id),
-        isEgg(p.id) ? null : skinSelect(p),
+
         creditLines(state.skins[p.id]?.credits));
       grid.append(card);
     }
@@ -418,50 +421,15 @@
       lines.map((l) => el('div', {}, l)));
   }
 
-  function skinSelect(p) {
-    const sel = el('select', { class: 'skin', title: t('poke.sprite'), onclick: (e) => e.stopPropagation() });
-    for (const v of ['normal', 'shiny']) sel.append(el('option', { value: v }, t(`skin.${v}`)));
-    sel.value = (state.skins[p.id] || {}).shiny ? 'shiny' : 'normal';
-    sel.addEventListener('change', async (e) => {
-      e.stopPropagation();
-      const card = sel.closest('.poke');
-      card.classList.add('loading');
-      $('#pokeStatus').textContent = t('skin.loading');
-      const res = await api.invoke('pokemon:skin', p.id, sel.value === 'shiny');
-      card.classList.remove('loading');
-      $('#pokeStatus').textContent = res.ok ? '' : t(res.error === 'not-found' ? 'poke.notFound' : 'poke.netError');
-      if (res.ok) { pokeKey = ''; heroId = null; }
-      render();
-    });
-    return sel;
-  }
-
   $('#adoptEgg').addEventListener('click', async () => {
     const btn = $('#adoptEgg');
     btn.disabled = true;
-    $('#eggStatus').textContent = t('egg.searching');
     const res = await api.invoke('egg:adopt');
     btn.disabled = false;
     $('#eggStatus').textContent = res.ok ? t('egg.adopted') : t(`egg.error.${res.error}`);
   });
 
-  $('#pokeForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const q = $('#pokeQuery').value.trim();
-    if (!q) return;
-    const status = $('#pokeStatus');
-    const btn = e.submitter || $('#pokeForm button');
-    btn.disabled = true;
-    status.textContent = t('poke.loading');
-    const res = await api.invoke('pokemon:fetch', q, $('#pokeShiny').checked);
-    btn.disabled = false;
-    if (res.ok) {
-      status.textContent = '';
-      $('#pokeQuery').value = '';
-    } else {
-      status.textContent = t(res.error === 'not-found' ? 'poke.notFound' : 'poke.netError');
-    }
-  });
+
 
   // ---------------------------------------------------------------- settings tab
   function renderSettings() {
@@ -478,6 +446,9 @@
     $('#setSound').checked = s.sound;
     $('#setReact').checked = s.reactInput;
     $('#setLogin').checked = s.launchAtLogin;
+    $('#setUpdates').checked = s.checkUpdates;
+    renderUpdate();
+    renderAI();
     $('#stToday').textContent = state.stats.todayPomos;
     $('#stPomos').textContent = state.stats.totalPomos;
     $('#stMinutes').textContent = state.stats.focusMinutes;
@@ -492,6 +463,108 @@
   $('#setReact').addEventListener('change', (e) => api.send('settings:set', { reactInput: e.target.checked }));
   $('#setLogin').addEventListener('change', (e) => api.send('settings:set', { launchAtLogin: e.target.checked }));
   $('#resetPos').addEventListener('click', () => api.send('pet:reset-pos'));
+
+  // ---------------------------------------------------------------- AI chat (optional)
+  const AI_PROVIDERS = ['anthropic', 'openai', 'gemini', 'deepseek', 'moonshot', 'qwen', 'zhipu', 'siliconflow',
+    'openrouter', 'groq', 'mistral', 'xai', 'ollama', 'lmstudio', 'custom'];
+  let aiKey = '';
+  function renderAI() {
+    const a = state.settings.ai;
+    const info = state.ai.providers[a.provider] || {};
+    $('#aiEnabled').checked = a.enabled;
+    $('#aiFields').classList.toggle('hidden', !a.enabled);
+    const sel = $('#aiProvider');
+    const key = `${L()}|${a.provider}`;
+    if (sel.dataset.key !== key) {
+      sel.dataset.key = key;
+      sel.replaceChildren(...AI_PROVIDERS.map((p) => el('option', { value: p }, t(`ai.p.${p}`))));
+      sel.value = a.provider;
+      $('#aiUrl').value = a.baseUrl || info.url || '';
+      $('#aiModel').value = a.model || (info.models[0] || '');
+      $('#aiModelList').replaceChildren(...info.models.map((m) => el('option', { value: m })));
+    }
+    $('#aiUrlRow').classList.toggle('hidden', a.provider === 'anthropic');
+    $('#aiKeyRow').classList.toggle('hidden', !!info.noKey);
+    $('#aiKey').placeholder = state.ai.hasKey ? t('ai.keySaved') : t('ai.keyPlaceholder');
+  }
+  const aiPatch = (patch) => api.send('settings:set', { ai: { ...state.settings.ai, ...patch } });
+  const aiMsg = (text) => { $('#aiStatus').textContent = text; };
+  $('#aiEnabled').addEventListener('change', (e) => aiPatch({ enabled: e.target.checked }));
+  $('#aiProvider').addEventListener('change', (e) => {
+    const info = state.ai.providers[e.target.value] || {};
+    aiPatch({ provider: e.target.value, baseUrl: info.url || '', model: (info.models || [])[0] || '' });
+    aiMsg('');
+  });
+  $('#aiUrl').addEventListener('change', (e) => aiPatch({ baseUrl: e.target.value }));
+  $('#aiModel').addEventListener('change', (e) => aiPatch({ model: e.target.value }));
+  $('#aiKey').addEventListener('input', (e) => { aiKey = e.target.value; });
+  $('#aiSaveKey').addEventListener('click', async () => {
+    await api.invoke('ai:set-key', state.settings.ai.provider, aiKey);
+    $('#aiKey').value = ''; aiKey = '';
+    aiMsg(t('ai.keyStored'));
+  });
+  $('#aiFetch').addEventListener('click', async () => {
+    aiMsg(t('ai.working'));
+    const res = await api.invoke('ai:models');
+    if (!res.ok) { aiMsg(t(`chat.error.${res.error}`)); return; }
+    $('#aiModelList').replaceChildren(...res.models.map((m) => el('option', { value: m })));
+    aiMsg(t('ai.models', { n: res.models.length }));
+    $('#aiModel').focus();
+  });
+  $('#aiTest').addEventListener('click', async () => {
+    aiMsg(t('ai.working'));
+    const res = await api.invoke('ai:test');
+    aiMsg(res.ok ? `✓ ${res.text}` : t(`chat.error.${res.error}`));
+  });
+  $('#aiOpen').addEventListener('click', () => api.send('ai:open'));
+
+  // ---------------------------------------------------------------- updates
+  function renderUpdate() {
+    const u = state.update || { status: 'idle' };
+    $('#updVersion').textContent = t('upd.current', { v: state.version });
+    $('#updCheck').disabled = u.status === 'checking' || u.status === 'downloading';
+    const msg = {
+      idle: '', checking: t('upd.checking'), none: t('upd.none'),
+      available: u.canDownload ? t('upd.available', { v: u.version }) : t('upd.availableNoFile', { v: u.version }),
+      downloading: t('upd.downloading', { n: Math.round((u.progress || 0) * 100) }),
+      downloaded: t('upd.downloaded'), error: t('upd.error')
+    }[u.status] || '';
+    $('#updStatus').textContent = u.error && u.status === 'available' ? `${msg} ${t('upd.error')}` : msg;
+    const bar = $('#updProgress');
+    bar.classList.toggle('hidden', u.status !== 'downloading');
+    bar.firstElementChild.style.width = `${Math.round((u.progress || 0) * 100)}%`;
+    const dl = $('#updDownload');
+    dl.classList.toggle('hidden', !(u.status === 'available' && u.canDownload) && u.status !== 'downloaded');
+    dl.textContent = u.status === 'downloaded' ? t('upd.show') : t('upd.download', { v: u.version });
+  }
+  $('#updCheck').addEventListener('click', () => api.invoke('update:check'));
+  $('#updDownload').addEventListener('click', () => {
+    if ((state.update || {}).status === 'downloaded') api.send('update:show');
+    else api.invoke('update:download');
+  });
+  $('#setUpdates').addEventListener('change', (e) => api.send('settings:set', { checkUpdates: e.target.checked }));
+
+  // a small box that appears after a few quick clicks on the "About" heading
+  let aboutClicks = 0, aboutTimer = null;
+  $('#aboutTitle').addEventListener('click', () => {
+    clearTimeout(aboutTimer);
+    aboutTimer = setTimeout(() => { aboutClicks = 0; }, 1500);
+    if (++aboutClicks >= 7) {
+      aboutClicks = 0;
+      $('#extraForm').classList.remove('hidden');
+      $('#extraInput').focus();
+    }
+  });
+  $('#extraForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = $('#extraInput');
+    input.disabled = true;
+    const res = await api.invoke('settings:extra', input.value);
+    input.disabled = false;
+    input.classList.add(res.ok ? 'ok' : 'no');
+    setTimeout(() => input.classList.remove('ok', 'no'), 900);
+    if (res.ok) { input.value = ''; $('#extraForm').classList.add('hidden'); }
+  });
 
   // ---------------------------------------------------------------- state
   let lastLang = null;

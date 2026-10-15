@@ -15,7 +15,11 @@ const PMD_VERSION = 2;
 
 // The only hosts this app ever contacts (downloads only – nothing about the user is sent).
 // URLs that come back in responses (e.g. PokeAPI's evolution-chain links) are checked too.
-const ALLOWED_HOSTS = new Set(['pokeapi.co', 'raw.githubusercontent.com']);
+//   pokeapi.co                 species names, evolutions
+//   raw.githubusercontent.com  PMD sprites, portraits, artist credits
+//   api.github.com, github.com the app's own releases (update check / installer download)
+// The optional AI chat talks to the endpoint the user enters – see ai.js.
+const ALLOWED_HOSTS = new Set(['pokeapi.co', 'raw.githubusercontent.com', 'api.github.com', 'github.com']);
 
 function fetchAllowed(url) {
   const u = new URL(url);
@@ -80,7 +84,7 @@ async function evolutionOptions(dex) {
  * A random unevolved, non-legendary species that PMD has drawn – for adopting an egg.
  * Downloads its sprite on the way. Returns { dex, names, skin } (throws when nothing was found).
  */
-async function randomEggSpecies(dir, exclude = new Set(), tries = 12) {
+async function randomEggSpecies(dir, { exclude = new Set(), shiny = false, tries = 12 } = {}) {
   for (let i = 0; i < tries; i++) {
     const dex = 1 + Math.floor(Math.random() * 1025);
     if (exclude.has(dex)) continue;
@@ -88,7 +92,11 @@ async function randomEggSpecies(dir, exclude = new Set(), tries = 12) {
     try { species = await getJson(`${API}/pokemon-species/${dex}`); } catch (e) { if (e.code === 'not-found') continue; throw e; }
     if (species.evolves_from_species || species.is_legendary || species.is_mythical) continue;
     let skin;
-    try { skin = await downloadSkin(dex, false, dir); } catch (e) { if (e.code === 'not-found') continue; throw e; }
+    try { skin = await downloadSkin(dex, shiny, dir); } catch (e) {
+      if (e.code !== 'not-found') throw e;
+      if (!shiny) continue;
+      try { skin = await downloadSkin(dex, false, dir); } catch { continue; }   // no shiny sprite drawn yet
+    }
     const pick = (lang) => species.names.find((n) => n.language.name === lang)?.name;
     const names = { en: pick('en') || species.name, zh: pick('zh-hans') || pick('zh-hant') || pick('en') || species.name };
     return { dex, names, skin };
@@ -234,4 +242,4 @@ async function portrait(dex, emotion, dir) {
   return buf;
 }
 
-module.exports = { SOURCES, PMD_VERSION, ALLOWED_HOSTS, lookupSpecies, evolutionOptions, randomEggSpecies, downloadSkin, portrait, pmdCredits, cachedCredits };
+module.exports = { SOURCES, PMD_VERSION, ALLOWED_HOSTS, fetchAllowed, lookupSpecies, evolutionOptions, randomEggSpecies, downloadSkin, portrait, pmdCredits, cachedCredits };

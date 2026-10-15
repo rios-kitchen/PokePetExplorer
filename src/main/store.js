@@ -7,8 +7,10 @@ function today() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// 1 = PokePet; 2 = PokePet Plus (mood per pet, raising fields)
-const VERSION = 2;
+const Sprites = require('../shared/sprites');
+
+// 1 = PokePet; 2 = PokePet Explorer (mood per pet, raising fields); 3 = start from an egg (no built-ins)
+const VERSION = 3;
 
 const ATTRS = ['cool', 'cute', 'smart', 'tough'];   // contest-style stats, raised by expeditions and items
 
@@ -17,20 +19,22 @@ function defaults(lang) {
     version: VERSION,
     settings: {
       lang,
-      pokemon: 'pikachu',
+      pokemon: null,      // id of the active Pokémon (every Pokémon comes from an egg)
       scale: 3,
       walk: true,
       sound: true,
       reactInput: true,
       reminderMin: 30,
       launchAtLogin: false,
+      checkUpdates: true,   // look for a new release on GitHub at startup
+      ai: { enabled: false, provider: 'anthropic', baseUrl: '', model: '' },   // optional AI chat (ai.js)
       petPos: null,
       petHidden: false
     },
     pomodoro: { focus: 25, short: 5, long: 15, longEvery: 4, autoBreak: true },
     todos: [],
     pets: {},     // id -> pet record, see freshPet()
-    custom: [],   // added Pokémon: { id, dex, names: {en, zh} }
+    custom: [],   // the team: { id, dex, names: {en, zh} } – dex/names are null while it's an egg
     skins: {},    // id -> sprite source meta (see sources.js)
     berries: 10,
     poops: [],    // droppings on the screen: { id, x, y, at }
@@ -40,17 +44,19 @@ function defaults(lang) {
     diary: null,
     stats: {
       day: today(), todayPomos: 0, totalPomos: 0, focusMinutes: 0, todosDone: 0, todayTodos: 0,
-      expeditions: 0, travels: 0, cures: 0   // for achievements
+      expeditions: 0, travels: 0, cures: 0, hatches: 0   // for achievements (hatches: also the hatch level)
     },
 
-    // ---- raising (PokePet Plus)
+    // ---- raising (PokePet Explorer)
     inventory: {},      // itemId -> count (bought in the shop, used later)
     expedition: null,   // { petId, kind: 'dungeon' | 'travel', dest, startAt, endsAt } while a pet is away
     daily: { day: null, signedIn: false, streak: 0, lastSignDay: null, tasks: [] },
                         // tasks: [{ id, kind, goal, progress, reward, claimed }], rolled each day
     achievements: {},   // id -> time unlocked (ms)
     fishdex: {},        // dex -> { caught, first (ms), best (size) }
-    souvenirs: []       // { id, region, at } brought back from travels
+    souvenirs: [],      // { id, region, at } brought back from travels
+    photos: [],         // { id, file, expId, region, petId, at } – group photos from expeditions (userData/photos)
+    aiKeys: {}          // provider -> encrypted API key (never sent to the windows)
   };
 }
 
@@ -81,6 +87,15 @@ function petOf(data, id) {
   return pet;
 }
 
+/** A new egg on the team (one at a time). Its species is decided when it hatches. */
+function addEgg(data, now = Date.now()) {
+  const id = `egg-${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  data.custom.push({ id, dex: null, names: null });
+  data.pets[id] = freshPet('egg');
+  data.pets[id].egg = { plan: null };   // plan: { dex?, shiny? } – set by the hidden hatch command
+  return id;
+}
+
 /** Bring data saved by an older version up to date. Mutates and returns `data`. */
 function migrate(data) {
   if ((data.version || 1) < 2) {
@@ -89,7 +104,19 @@ function migrate(data) {
     for (const id of Object.keys(data.pets)) petOf(data, id).mood = mood;
   }
   delete data.mood;
+  if ((data.version || 1) < 3) {
+    // the six built-in Pokémon are gone: the ones already raised join the team as normal entries
+    for (const id of Sprites.ORDER) {
+      const def = Sprites.DEFS[id];
+      const rec = data.pets[id];
+      if (!rec || data.custom.some((c) => c.id === id)) continue;
+      data.custom.unshift({ id, dex: def.dex, names: def.name });
+    }
+  }
   for (const id of Object.keys(data.pets)) petOf(data, id);
+  // every player starts with an egg
+  if (!data.custom.length) addEgg(data);
+  if (!data.custom.some((c) => c.id === data.settings.pokemon)) data.settings.pokemon = data.custom[0].id;
   data.version = VERSION;
   return data;
 }
@@ -107,7 +134,7 @@ function merge(base, saved) {
 class Store {
   constructor(dir, lang) {
     this.dir = dir;
-    this.file = path.join(dir, 'pokepetplus-data.json');
+    this.file = path.join(dir, 'pokepetexplorer-data.json');
     let saved = null;
     try { saved = JSON.parse(fs.readFileSync(this.file, 'utf8')); } catch { /* first run */ }
     this.data = migrate(merge(defaults(lang), saved));
@@ -142,4 +169,4 @@ class Store {
   }
 }
 
-module.exports = { Store, today, defaults, merge, migrate, freshPet, petOf, ATTRS, VERSION };
+module.exports = { Store, today, defaults, merge, migrate, freshPet, petOf, addEgg, ATTRS, VERSION };

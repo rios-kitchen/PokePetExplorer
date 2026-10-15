@@ -70,7 +70,7 @@ test('version 2 data is not migrated again', () => {
 });
 
 test('Store saves and loads the new fields', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pokepetplus-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pokepetexplorer-'));
   try {
     const a = new Store(dir, 'en');
     petOf(a.data, 'pikachu').attrs.cute = 3;

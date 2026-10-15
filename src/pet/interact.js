@@ -1,4 +1,4 @@
-/* PokePet Plus – pet window: reactions to keyboard and mouse, dragging, patting, click-through. */
+/* PokePet Explorer – pet window: reactions to keyboard and mouse, dragging, patting, click-through. */
 (() => {
   const P = window.Pet;
   const { api, Sound, ctx, pet, input, bubbleEl, pillEl, say } = P;

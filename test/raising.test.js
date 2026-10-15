@@ -253,3 +253,59 @@ test('achievements unlock once and pay berries', () => {
   assert.equal(travel.progress, 1);
   assert.equal(travel.at, null);
 });
+
+// ---------------------------------------------------------------- eggs, hidden commands, scenes
+const { addEgg } = require('../src/main/store');
+const Secrets = require('../src/main/secrets');
+const Maps = require('../src/shared/maps');
+
+test('a new player starts with one egg; the first hatches at Lv2, later ones at Lv5', () => {
+  const d = fresh();
+  assert.equal(d.custom.length, 1);
+  const egg = d.custom[0];
+  assert.equal(egg.dex, null);
+  assert.equal(d.pets[egg.id].stage, 'egg');
+  assert.equal(d.settings.pokemon, egg.id);
+  assert.equal(Growth.hatchLevel(d), 2);
+  d.stats.hatches = 1;
+  assert.equal(Growth.hatchLevel(d), 5);
+  const pet = d.pets[egg.id];
+  pet.xp = Growth.xpFor(2);
+  assert.equal(Growth.readyToHatch(pet, 2), true);
+  assert.equal(Growth.readyToHatch(pet, 5), false);
+  const id2 = addEgg(d);
+  assert.notEqual(id2, egg.id);
+  assert.equal(d.custom.length, 2);
+});
+
+test('old saves keep the built-in Pokémon they raised', () => {
+  const d = migrate(merge(defaults('en'), { version: 2, settings: { pokemon: 'eevee' }, pets: { eevee: { xp: 50 } } }));
+  assert.deepEqual(d.custom.map((c) => c.id), ['eevee']);
+  assert.equal(d.custom[0].dex, 133);
+  assert.equal(d.settings.pokemon, 'eevee');
+});
+
+// the words themselves aren't in the repository: put them in test/secrets.local.json to run this fully
+let localWords = null;
+try { localWords = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'secrets.local.json'), 'utf8')); } catch { /* none */ }
+
+test('hidden commands are recognised only by their exact word', { skip: !localWords && 'no test/secrets.local.json' }, () => {
+  assert.equal(Secrets.parse('hello').cmd, null);
+  assert.equal(Secrets.parse('').cmd, null);
+  const found = [localWords.berries, `${localWords.hatch} pikachu shiny`, localWords.shiny.toUpperCase()].map((t) => Secrets.parse(t));
+  assert.deepEqual(found.map((f) => f.cmd), ['berries', 'hatch', 'shiny']);
+  assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
+});
+
+test('unknown words are not commands', () => {
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat']) assert.equal(Secrets.parse(w).cmd, null);
+});
+
+test('every expedition has a pixel scene', () => {
+  for (const id of Object.keys(Exp.EXPEDITIONS)) {
+    const s = Maps.sceneRgba(id);
+    assert.equal(s.data.length, Maps.W * Maps.H * 4);
+    assert.ok(s.data.some((v, i) => i % 4 === 3 && v === 255), `${id} is drawn`);
+  }
+  for (const r of Exp.REGIONS) assert.equal(Maps.sceneRgba('travel', { region: r }).width, Maps.W);
+});

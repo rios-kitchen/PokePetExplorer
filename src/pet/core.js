@@ -1,4 +1,4 @@
-/* PokePet Plus – pet window, shared core: DOM, helpers and the pet/input models.
+/* PokePet Explorer – pet window, shared core: DOM, helpers and the pet/input models.
  * The pet window is split into plain scripts that share this one object (the renderer is sandboxed,
  * so there is no require). Each module adds its functions to it; calls between modules go through
  * `P.name(...)`, so the load order in pet.html only matters for top-level code. */

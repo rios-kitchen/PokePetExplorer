@@ -1,4 +1,4 @@
-/* PokePet Plus – pet window: drawing the pet, its shadow, overlays and particles. */
+/* PokePet Explorer – pet window: drawing the pet, its shadow, overlays and particles. */
 (() => {
   const P = window.Pet;
   const { canvas, ctx, pet, GLYPH } = P;
@@ -61,7 +61,7 @@
     ctx.clearRect(0, 0, P.W, P.H);
     if (!sprite) return;
     const alpha = petAlpha(now);
-    if (alpha <= 0) { P.drawParticles(ctx); return; }
+    if (alpha <= 0) { P.drawAwayMap(ctx, now); P.drawParticles(ctx); return; }
     ctx.globalAlpha = alpha;
     const g = P.geometry();
     const fu = P.fx();

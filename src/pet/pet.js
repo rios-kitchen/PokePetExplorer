@@ -1,4 +1,4 @@
-/* PokePet Plus – the pet window: events from the main process, the main loop and boot.
+/* PokePet Explorer – the pet window: events from the main process, the main loop and boot.
  * The rest lives in core.js (shared object), sprite.js, pose.js, effects.js, bubble.js,
  * behavior.js, render.js and interact.js. */
 (() => {
@@ -49,6 +49,7 @@
       if (!P.playRandom(P.CELEBRATE, { times: 2 })) P.jump(3);
       P.happy(2500);
       if (e.berries) setTimeout(() => P.floatText(say('earned', { n: e.berries })), 600);
+      if (e.smart) setTimeout(() => P.floatText(`📚 +${e.smart}`), 1400);
       P.showBubble(say('focusEnd', { min: e.min, n: e.n }), { priority: 2, ms: 5000 });
       if (e.taskId) {
         setTimeout(() => {
@@ -204,7 +205,8 @@
       Sound.play('levelup');
       P.stars(20);
       P.jump(2);
-      P.showBubble(say('hatched', { name: e.name }), { priority: 2, ms: 6000 });
+      if (e.shiny) setTimeout(() => P.stars(24), 600);
+      P.showBubble(say(e.shiny ? 'hatchedShiny' : 'hatched', { name: e.name }), { priority: 2, ms: 6000 });
     },
     'evolve-ready'(e) {
       if (P.isAway()) return;
@@ -230,6 +232,12 @@
       P.showBubble(say(e.error === 'net' ? 'evolveOffline' : 'evolveNoSprite'), { priority: 2, ms: 5000 });
     },
 
+    'ai-reply'(e) {
+      if (P.isAway()) return;
+      P.interacted();
+      P.happy(900);
+      P.showBubble(e.text, { priority: 2, ms: Math.min(20000, 4000 + e.text.length * 90), emotion: 'Happy' });
+    },
     achievement(e) {
       Sound.play('fanfare');
       P.stars(12);
@@ -260,6 +268,11 @@
         const text = say(key, { region: e.region ? tr(`region.${e.region}`) : '', status: e.status ? tr(`status.${e.status}`) : '' });
         P.showBubble(`${text}\n${loot(e)}`, { priority: 2, ms: 9000 });
       }, 900);
+      // a photo together at the place it came back from (random pose and expression)
+      setTimeout(async () => {
+        const res = await P.takePhoto(e).catch(() => null);
+        if (res && res.ok) { Sound.play('blip'); P.floatText('📸'); }
+      }, 2500);
     },
     'poop-start'() {
       if (pet.mode === 'sleep') P.wake(false);

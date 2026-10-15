@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>PokePet Explorer</title>
+  <link rel="stylesheet" href="chat.css">
+</head>
+<body>
+  <header>
+    <b id="title"></b>
+    <button id="clear" class="ghost"></button>
+  </header>
+  <main id="log"></main>
+  <form id="form" autocomplete="off">
+    <input id="text" type="text" maxlength="1000">
+    <button type="submit" id="send" class="primary"></button>
+  </form>
+  <p id="note"></p>
+  <script src="../shared/i18n.js"></script>
+  <script src="chat.js"></script>
+</body>
+</html>

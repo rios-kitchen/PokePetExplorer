@@ -1,4 +1,4 @@
-/* PokePet Plus – pet window: speech bubble with PMD portrait, and the timer pill. */
+/* PokePet Explorer – pet window: speech bubble with PMD portrait, and the timer pill. */
 (() => {
   const P = window.Pet;
   const { api, SP, bubbleEl, bubbleText, bubbleActions, faceEl, pillEl } = P;
@@ -20,7 +20,7 @@
     diagnosed: 'Worried', statusWorse: 'Pain', wrongMedicine: 'Pain', revived: 'Joyous',
     hatched: 'Joyous', evolveReady: 'Surprised', evolved: 'Inspired', evolveOffline: 'Sad', evolveNoSprite: 'Sad',
     expStart_dungeon: 'Determined', expStart_training: 'Determined', expStart_travel: 'Happy', expRecalled: 'Normal',
-    expBack: 'Happy', expBackTraining: 'Happy', expBackTravel: 'Joyous', expBackHurt: 'Pain', achievement: 'Joyous'
+    expBack: 'Happy', expBackTraining: 'Happy', expBackTravel: 'Joyous', expBackHurt: 'Pain', achievement: 'Joyous', hatchedShiny: 'Joyous'
   };
 
   /** The face also depends on how the pet is doing right now. */
@@ -163,5 +163,5 @@
     }
   }
 
-  Object.assign(P, { showBubble, hideBubble, bubbleBusy, careAction, laterAction, fmt, timeLeft, layoutOverlays, updatePill });
+  Object.assign(P, { portrait, showBubble, hideBubble, bubbleBusy, careAction, laterAction, fmt, timeLeft, layoutOverlays, updatePill });
 })();

@@ -1,4 +1,4 @@
-/* PokePet Plus – pet window: building the sprite from PMD sheets (or the built-in pixel art). */
+/* PokePet Explorer – pet window: building the sprite from PMD sheets (or the built-in pixel art). */
 (() => {
   const P = window.Pet;
   const { api, SP } = P;
@@ -116,9 +116,9 @@
 
   async function loadSprite(id) {
     if (P.state.pets[id] && P.state.pets[id].stage === 'egg') {
-      const c = P.state.custom.find((x) => x.id === id);
       const name = { en: P.I18N.t('en', 'egg.name'), zh: P.I18N.t('zh', 'egg.name') };
-      P.sprite = { id, cry: { en: '…', zh: '……' }, name, ...buildEgg(c ? c.dex : 0) };
+      const seed = [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);   // same as the panel
+      P.sprite = { id, cry: { en: '…', zh: '……' }, name, ...buildEgg(seed) };
       P.pet.anim = null;
       P.pet.action = null;
       updateUnit();

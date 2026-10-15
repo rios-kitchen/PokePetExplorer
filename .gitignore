@@ -3,3 +3,4 @@ install/
 dist/
 .DS_Store
 sprite-preview.png
+test/secrets.local.json

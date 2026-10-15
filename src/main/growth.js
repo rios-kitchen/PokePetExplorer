@@ -4,7 +4,9 @@
 // hungry or dirty one more slowly (the penalties are QQ Pet's, out of its base rate of 260).
 
 const BASE_XP_PER_HOUR = 4;        // passive growth at full speed, on top of Pomodoros and to-dos
-const HATCH_LEVEL = 5;             // an egg hatches at this level (QQ Pet: egg → kid at Lv5)
+const HATCH_LEVEL = 5;             // an egg hatches at this level (QQ Pet: egg → kid at Lv5) …
+const FIRST_HATCH_LEVEL = 2;       // … except the very first egg, which hatches after one level
+const SHINY_RATE = 1 / 64;
 const EVOLVE_LEVELS = [12, 24];    // first and second evolution (asked, never forced)
 const EVOLVE_SNOOZE_H = 6;         // "later" → ask again after this many hours
 
@@ -45,9 +47,14 @@ function grow(pet, care, hours) {
   return whole;
 }
 
+/** The level eggs hatch at: Lv2 for the first egg ever, Lv5 after that. */
+function hatchLevel(data) {
+  return (data.stats.hatches || 0) > 0 ? HATCH_LEVEL : FIRST_HATCH_LEVEL;
+}
+
 /** An egg old enough to hatch? */
-function readyToHatch(pet) {
-  return pet.stage === 'egg' && levelOf(pet.xp) >= HATCH_LEVEL;
+function readyToHatch(pet, level = HATCH_LEVEL) {
+  return pet.stage === 'egg' && levelOf(pet.xp) >= level;
 }
 
 /**
@@ -62,6 +69,6 @@ function evolutionDue(pet, now = Date.now()) {
 }
 
 module.exports = {
-  BASE_XP_PER_HOUR, HATCH_LEVEL, EVOLVE_LEVELS, EVOLVE_SNOOZE_H,
-  levelOf, xpFor, growthRate, grow, readyToHatch, evolutionDue
+  BASE_XP_PER_HOUR, HATCH_LEVEL, FIRST_HATCH_LEVEL, SHINY_RATE, EVOLVE_LEVELS, EVOLVE_SNOOZE_H,
+  levelOf, xpFor, growthRate, grow, hatchLevel, readyToHatch, evolutionDue
 };

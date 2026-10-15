@@ -382,3 +382,37 @@ img.smooth, #heroSprite.smooth { image-rendering: auto; }
 .egg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .egg-row .hint { margin: 0; }
 .poke .attrs { margin-top: 4px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+.extra.hidden { display: none; }
+.extra input { width: 100%; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.extra input.ok { border-color: var(--green); }
+.extra input.no { border-color: var(--red); }
+.poke .n .shiny { font-size: 12px; }
+
+/* ---- updates */
+.update-box { display: flex; flex-direction: column; gap: 6px; }
+.update-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.update-row .hint { margin: 0; }
+#updStatus { margin: 0; }
+#updStatus:empty { display: none; }
+#updProgress.hidden, #updDownload.hidden { display: none; }
+#updProgress > div { background: var(--blue); }
+
+/* ---- photo album */
+.album { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.album .photo { padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--card); cursor: zoom-in; aspect-ratio: 304 / 200; }
+.album .photo img { width: 100%; height: 100%; object-fit: cover; display: block; image-rendering: pixelated; }
+.album .full { grid-column: 1 / -1; }
+.lightbox { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.72); display: grid; place-items: center; cursor: zoom-out; }
+.lightbox.hidden { display: none; }
+.lightbox img { max-width: 94%; max-height: 90%; image-rendering: pixelated; border-radius: 6px; box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4); }
+
+/* ---- AI chat settings */
+.ai-box { display: flex; flex-direction: column; gap: 6px; }
+.ai-fields { display: flex; flex-direction: column; gap: 8px; }
+.ai-fields.hidden, .ai-fields .hidden { display: none; }
+.ai-model { display: flex; gap: 6px; }
+.ai-model input { flex: 1; min-width: 0; }
+.ai-model .secondary { white-space: nowrap; }
+.ai-actions { display: flex; gap: 8px; }
+#aiStatus { margin: 0; overflow-wrap: anywhere; }

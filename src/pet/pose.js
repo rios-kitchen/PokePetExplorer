@@ -1,4 +1,4 @@
-/* PokePet Plus – pet window: which PMD animation (or pixel-art frame) shows what the pet is doing. */
+/* PokePet Explorer – pet window: which PMD animation (or pixel-art frame) shows what the pet is doing. */
 (() => {
   const P = window.Pet;
   const { pet, input } = P;

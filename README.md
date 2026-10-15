@@ -1,17 +1,20 @@
-# PokePet Plus 🐭⚡🥚
+# 宝可宠探索 · PokePet Explorer 🥚🧭
 
 A pixel Pokémon desktop pet for **macOS and Windows** with **QQ-Pet style raising**, plus the
 **Pomodoro timer** and **to-do list** from PokePet. English / 中文. Everything is stored locally.
 
 > **Which one should I use?**
 > - **PokePet** – a simple desktop pet with a timer and light care. Pick it if that's all you want.
-> - **PokePet Plus** (this repo) – everything in PokePet, plus a deeper raising game: growth stages and
->   evolution, status conditions with matching medicine, a shop, expeditions, fishing, daily tasks and
->   achievements. It only uses PMD SpriteCollab sprites, because they have enough animations for all of it.
+> - **PokePet Explorer** (this repo) – everything in PokePet, plus a deeper raising game: growth stages and
+>   evolution, status conditions with matching medicine, a shop, expeditions with photos, achievements
+>   and an optional AI chat. It only uses PMD SpriteCollab sprites, because they have enough animations for all of it.
 >
 > Both can be installed side by side; they keep separate data.
 
-**Work in progress:** the raising features above are being added step by step.
+**You start with an egg.** Nobody knows who's inside until it hatches – the first egg after one level,
+later eggs at Lv 5 – and once in a while (1 in 64) it's a shiny one.
+
+**Work in progress:** daily tasks and fishing are still to come.
 
 ## Run
 
@@ -24,7 +27,7 @@ npm test     # data model unit tests
 ## Build an installer
 
 ```bash
-npm run dist       # both → install/PokePetPlus-<version>-macOS.dmg + install/PokePetPlus-<version>-Windows-Setup.exe
+npm run dist       # both → install/PokePetExplorer-<version>-macOS.dmg + install/PokePetExplorer-<version>-Windows-Setup.exe
 npm run dist:mac   # only macOS (universal: Apple Silicon + Intel)
 npm run dist:win   # only Windows (x64 installer)
 ```
@@ -108,7 +111,7 @@ Tabs are grouped: **💼 Work** (Pomodoro timer and to-do list together) | **�
 **🧭 Outing** (expeditions), **📖 Dex** (achievements, souvenirs), **🐾 Pokémon** (team, adopt an egg),
 **📔 Diary** | **⚙️ Settings**.
 
-- **Adopt an egg** in the Pokémon tab: a random unevolved species, kept secret until it hatches at Lv 5.
+- **Adopt an egg** in the Pokémon tab: who is inside stays a surprise until it hatches (first egg at Lv 2, later ones at Lv 5).
 - **Achievements** pay berries once (focus, to-dos, levels, hatching, evolving, outings, travel, cures…).
 
 ### Emotions
@@ -132,20 +135,43 @@ All sprites come from **PMD** ([SpriteCollab](https://github.com/PMDCollab/Sprit
 with *all* their animations (~35: idle, walk in 8 directions, sleep, eat, hurt, faint, hop, attacks,
 charge, trip, look-up …). State animations follow the pet's behaviour; attacks celebrate finished focus
 sessions, the rest play as random idle actions. Other sprite sources (Showdown, HOME, B/W) only have one
-animation each, so PokePet Plus doesn't use them.
+animation each, so PokePet Explorer doesn't use them.
 
-Six built-in Pokémon (Pikachu, Charmander, Bulbasaur, Squirtle, Eevee, Jigglypuff) have hand-made pixel
-art that is shown only until their PMD sprite has been downloaded.
+Every Pokémon comes from an egg: when it hatches, a random unevolved species (that PMD has drawn) is
+picked, normal or shiny. Adopt another egg in the **Pokémon** tab (one at a time). Names (incl. Chinese)
+come from [PokeAPI](https://pokeapi.co); diary portraits from PMD SpriteCollab.
 
-Add any species PMD has drawn by English name or Pokédex number in **Pokémon → Add any Pokémon**
-(optionally shiny), and switch any card between normal and shiny with its dropdown. Names (incl.
-Chinese) come from [PokeAPI](https://pokeapi.co); diary portraits from PMD SpriteCollab.
+### Expedition photos
+
+While your Pokémon is out, a little pixel map of where it is sits on the desktop. When it comes home it
+brings a photo of the two of you there – a random pose and a random expression – collected in
+**Dex → Photos**.
+
+### Studying together
+
+Every finished Pomodoro also teaches your Pokémon something: **+1 Smart** per 25 minutes of focus.
+
+### AI chat (optional)
+
+Off by default. In **Settings → AI chat** pick a provider – Anthropic (Claude), OpenAI, Google Gemini,
+DeepSeek, Moonshot (Kimi), Qwen, Zhipu GLM, SiliconFlow, OpenRouter, Groq, Mistral, xAI, a local Ollama /
+LM Studio, or any other OpenAI-compatible endpoint – enter your own API key and a model, then chat from
+the right-click menu. Your Pokémon answers in character, coloured by its mood, hunger and health.
+
+### Updates
+
+The app checks GitHub for a new release when it starts (can be turned off in Settings). **Settings →
+Updates** downloads the installer for your system to your Downloads folder and opens it.
 
 ## Privacy
 
-- The app only ever contacts **pokeapi.co** (species names, evolutions) and **raw.githubusercontent.com**
-  (PMD sprites, portraits, artist credits) – both downloads only; other hosts are blocked in code
-  (`src/main/sources.js`, `ALLOWED_HOSTS`). No telemetry, analytics, update checks or accounts.
+- The app only ever contacts **pokeapi.co** (species names, evolutions), **raw.githubusercontent.com**
+  (PMD sprites, portraits, artist credits) and **api.github.com / github.com** (this app's releases, for
+  the update check) – downloads only; other hosts are blocked in code (`src/main/sources.js`,
+  `ALLOWED_HOSTS`). No telemetry, analytics or accounts.
+- **AI chat is off unless you turn it on.** Then the chat and your Pokémon's state (name, level, mood,
+  needs) go to the provider you chose – nothing else. Your API key is stored with the system keychain
+  (Electron `safeStorage`) and never shown to the app's windows. The conversation isn't saved.
 - The keyboard helper only knows *when* a key was pressed, never which one. The clipboard, the screen
   and other apps' windows are never read. Everything stays in one local JSON file.
 - The QQ Pet projects used as design references (AnkioTomas/qqpet, xuemian168/qqpet_automation) were
@@ -161,6 +187,10 @@ src/main/care.js        hunger / cleanliness / health, status conditions, medici
 src/main/growth.js      levels, passive growth rate, hatching, evolution
 src/main/expedition.js  dungeons, contest training, travel
 src/main/achievements.js milestones and their berry rewards
+src/main/ai.js          optional AI chat (Anthropic SDK + OpenAI-compatible providers)
+src/main/updater.js     GitHub release check and installer download
+src/shared/maps.js      pixel-art expedition scenes
+src/chat/               AI chat window
 src/main/diary.js       daily records, weekly report
 src/main/store.js       data file: defaults, pet records, migration from PokePet's data
 test/                   unit tests (node --test)
@@ -176,8 +206,8 @@ tools/                  sprite preview + icon generator
 
 Edit sprites in `src/shared/sprites.js`, then `npm run preview-sprites` to render `sprite-preview.png`.
 
-Data file: `~/Library/Application Support/PokePet Plus/pokepetplus-data.json` (macOS) or
-`%APPDATA%\PokePet Plus\pokepetplus-data.json` (Windows).
+Data file: `~/Library/Application Support/PokePet Explorer/pokepetexplorer-data.json` (macOS) or
+`%APPDATA%\PokePet Explorer\pokepetexplorer-data.json` (Windows).
 
 ## Credits
 
