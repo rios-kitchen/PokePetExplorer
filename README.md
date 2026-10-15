@@ -16,6 +16,8 @@ A pixel Pokémon desktop pet for **macOS and Windows** with **QQ-Pet style raisi
 themselves (a fish you reel in may want to come along, a happy Pokémon sometimes brings a wild friend
 back from an outing), or you **battle and catch** them in the tall grass.
 
+📖 **[Feature guide / 功能与玩法说明](GUIDE.md)** – every feature, how to use it, battle and catch rules, daily limits (中文 / English).
+
 
 
 ## Run
