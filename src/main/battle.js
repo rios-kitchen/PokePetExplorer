@@ -243,7 +243,7 @@ function act(b, action, rnd = Math.random, options = {}) {
 
 /** Experience for beating (or catching) a wild Pokémon, shared by the party members that took part. */
 function expFor(wild, participants) {
-  return Math.max(1, Math.round((8 + wild.level * 3) / Math.max(1, participants)));
+  return Math.max(1, Math.round((10 + wild.level * 2.5) / Math.max(1, participants)));
 }
 
 module.exports = { BALLS, STATUS_CATCH, WILD_IV, wildLevel, statsFor, makeMon, create, act, tryCatch, wildMove, expFor };

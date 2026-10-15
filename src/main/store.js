@@ -11,7 +11,7 @@ const Sprites = require('../shared/sprites');
 
 // 1 = PokePet; 2 = mood per pet, raising fields; 3 = no built-ins;
 // 4 = the first Pokémon is a starter picked at the professor's (no free Poké Balls)
-const VERSION = 4;
+const VERSION = 5;
 
 const ATTRS = ['cool', 'cute', 'smart', 'tough'];   // contest-style stats, raised by expeditions and items
 
@@ -42,6 +42,7 @@ function defaults(lang) {
     custom: [],   // the team: { id, dex, names: {en, zh} } – dex/names are null while it's an egg
     skins: {},    // id -> sprite source meta (see sources.js)
     berries: 10,
+    shiny: { since: Date.now() },   // when the last shiny joined (or the save began) – see shiny.js
     poops: [],    // droppings on the screen: { id, x, y, at }
     poopDueAt: null,
     lastRewardDay: null,
@@ -84,7 +85,9 @@ function freshPet(stage = 'hatched') {
     evolutions: 0,
     evolution: null,     // pending: { options: [{ dex, names }], snoozeUntil }
     finalForm: false,    // no further evolution exists
-    hatchedAt: null      // when it came out of its egg (pets adopted as eggs)
+    hatchedAt: null,     // when it came out of its egg / joined the team
+    evolveAt: null,      // the level its next evolution needs (looked up from PokeAPI), null = not known yet
+    evolvedAt: null      // when it last evolved
     // care: added by care.js (careOf)
   };
 }
@@ -132,6 +135,22 @@ function migrate(data) {
       for (const c of data.custom) { delete data.pets[c.id]; delete data.skins[c.id]; }
       data.custom = [];
     }
+  }
+  if ((data.version || 1) < 5) {
+    // levels moved to the games' curve (level³): keep every Pokémon's level and its progress towards the next one;
+    // evolutions are now asked at the games' levels, so pending offers are looked up again
+    const oldAt = (l) => 25 * (l - 1) * (l - 1);
+    const newAt = (l) => l * l * l - 1;
+    for (const pet of Object.values(data.pets)) {
+      const xp = pet.xp || 0;
+      const l = Math.min(100, 1 + Math.floor(Math.sqrt(xp / 25)));
+      const frac = Math.min(0.99, (xp - oldAt(l)) / Math.max(1, oldAt(l + 1) - oldAt(l)));
+      pet.xp = Math.round(newAt(l) + frac * (newAt(l + 1) - newAt(l)));
+      pet.evolution = null;
+      pet.evolveAt = null;
+      if (!pet.finalForm) pet.finalForm = false;
+    }
+    data.shiny = { since: Date.now() };
   }
   // no team yet: the starter is chosen at the professor's (main.js openStarter)
   if (!data.custom.some((c) => c.id === data.settings.pokemon)) data.settings.pokemon = data.custom.length ? data.custom[0].id : null;

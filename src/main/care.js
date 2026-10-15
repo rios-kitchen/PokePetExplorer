@@ -11,7 +11,7 @@ const { petOf } = require('./store');
 const ITEMS = {
   oran:     { kind: 'food', cost: 1, hunger: 25, mood: 3 },
   puff:     { kind: 'food', cost: 2, hunger: 15, mood: 15 },
-  candy:    { kind: 'food', cost: 5, hunger: 5, mood: 5, xp: 40 },
+  candy:    { kind: 'food', cost: 20, hunger: 5, mood: 5, xp: 50 },
   bath:     { kind: 'bath', cost: 0, mood: 6 },
   potion:   { kind: 'med', cost: 3, health: 45, mood: 5 },                       // health only
   antidote: { kind: 'med', cost: 3, cures: 'poison', health: 20, mood: 5 },
@@ -21,9 +21,9 @@ const ITEMS = {
   persim:   { kind: 'med', cost: 3, cures: 'confusion', health: 20, mood: 5 },
   fullheal: { kind: 'med', cost: 8, cures: 'all', health: 30, mood: 5 },
   revive:   { kind: 'revive', cost: 8, health: 50, mood: 5 },
-  pokeball:  { kind: 'ball', cost: 5 },     // battle only (catching)
-  greatball: { kind: 'ball', cost: 12 },
-  ultraball: { kind: 'ball', cost: 25 }
+  pokeball:  { kind: 'ball', cost: 10 },    // battle only (catching)
+  greatball: { kind: 'ball', cost: 20 },
+  ultraball: { kind: 'ball', cost: 40 }
 };
 
 const REWARD = { pomodoro: 3, todo: 1, daily: 2 };

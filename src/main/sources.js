@@ -64,7 +64,8 @@ async function lookupSpecies(query) {
 }
 
 /**
- * What a species can evolve into: [{ dex, names }] (empty for a final form). Uses PokeAPI's
+ * What a species can evolve into: [{ dex, names, level }] (empty for a final form); level is the games' level-up
+ * level, or null for stones, trades, friendship and the like. Uses PokeAPI's
  * evolution chain; branching species (Eevee …) have several options.
  */
 async function evolutionOptions(dex) {
@@ -77,7 +78,8 @@ async function evolutionOptions(dex) {
   if (!node) return [];
   const out = [];
   for (const next of node.evolves_to.slice(0, 8)) {
-    try { out.push(await lookupSpecies(idOf(next))); } catch { /* skip */ }
+    const levels = (next.evolution_details || []).map((d) => d.min_level).filter(Boolean);
+    try { out.push({ ...(await lookupSpecies(idOf(next))), level: levels.length ? Math.min(...levels) : null }); } catch { /* skip */ }
   }
   return out;
 }

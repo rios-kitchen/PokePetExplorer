@@ -11,15 +11,6 @@ A pixel Pokémon desktop pet for **macOS and Windows** with **QQ-Pet style raisi
 >
 > Both can be installed side by side; they keep separate data.
 
-**Your journey starts at Professor Oak's:** choose Bulbasaur (Grass), Charmander (Fire) or Squirtle
-(Water) as your first partner – once in a while (1 in 64) it's a shiny one. New Pokémon join later by
-themselves (a fish you reel in may want to come along, a happy Pokémon sometimes brings a wild friend
-back from an outing), or you **battle and catch** them in the tall grass.
-
-📖 **[Feature guide / 功能与玩法说明](GUIDE.md)** – every feature, how to use it, battle and catch rules, daily limits (中文 / English).
-
-
-
 ## Run
 
 ```bash
@@ -41,178 +32,11 @@ npm run dist:win   # only Windows (x64 installer)
 The builds are unsigned: on macOS right-click the app → *Open* the first time; on Windows click
 *More info → Run anyway* in the SmartScreen dialog.
 
-## How to play
+## Features
 
-| Action | Result |
-| --- | --- |
-| Click the pet | Pat it (hearts, mood ↑, a bit of XP) |
-| Drag the pet | Carry it anywhere on screen |
-| Double-click | Open the to-do list |
-| Right-click / tray icon | Menu: timer, switch Pokémon, size, language, … |
-| Click the timer pill | Open the Pomodoro view |
-
-### How the pet, timer and to-dos work together
-
-- **Focus session**: the pet stops wandering, shows a 🍅 countdown above its head and cheers you on
-  when you pat it. Pick a to-do as the task you're working on (or press ▶ next to a to-do).
-- **Session finished**: fanfare, stars, +20 XP. The pet then asks *“Did you finish …?”* – answer
-  in the speech bubble to tick the task off.
-- **Break**: the pet gets playful, walks around and suggests stretching / drinking water. When the
-  break ends it asks whether to start the next round.
-- **To-do done**: a berry drops from the sky and the pet eats it (+10 XP, mood ↑). Finishing all
-  tasks triggers a celebration.
-- **Reminders**: every N minutes (configurable, never during focus) the pet reminds you of open
-  to-dos with a one-click “Start” button. To-dos with a due time ring an alarm when they're due.
-- **Mood & levels**: each Pokémon levels up separately. Mood drops slowly if you ignore your pet;
-  when it's lonely it will tell you.
-
-### Reacting to your keyboard & mouse
-
-No keyboard hook and no special permissions. The app only learns *when* a key was pressed, never which:
-on macOS via `CGEventSourceSecondsSinceLastEventType`, on Windows via `GetAsyncKeyState`. Mouse clicks
-and scrolling never count as typing, and the keyboard never appears during baths, meals, sleep etc.
-
-- **Typing** → the pet sits down and types along on a tiny keyboard. After 15 min of typing
-  without a focus session it suggests starting one.
-- **Moving the mouse** → the pet looks towards the cursor (eyes for the built-ins, whole body for
-  downloaded Pokémon). During breaks it sometimes chases the cursor.
-- **Hovering over the pet** → it gets shy and happy. **Shaking the mouse fast** → it gets dizzy.
-- **Away for 3 min** → it naps; when you come back it says hello.
-
-### Care (QQ-Pet style)
-
-Each Pokémon has **hunger, cleanliness, health and its own mood**. They drop over time – more slowly
-while you're away or the app is closed (max. 12 h are counted).
-
-- **Hungry** → the pet asks for food. **Dirty** → dirt spots and a fly; it wants a bath.
-- **Status conditions** (QQ Pet's disease chains, Pokémon style): a dirty pet can get **poisoned**, a
-  hungry one **paralyzed**, a sad one **confused**; dungeons can **burn** or **freeze** it. Untreated,
-  a condition gets worse every 6 h (stages 1–3) and then the pet **faints**.
-  **Diagnose** it (1 🍓) to learn which one it is, then give the matching medicine (Antidote, Paralyze
-  Heal, Burn Heal, Ice Heal, Persim Berry – or the pricier Full Heal). **The wrong medicine makes it a
-  stage worse.** A fainted Pokémon needs a **Revive**; Potions only restore health.
-- **Berries 🍓 are the currency**: +3 per Pomodoro, +1 per finished to-do, +2 per day, plus
-  expeditions. Items found on expeditions go to the inventory and are used before berries are spent.
-- Feed/bath/heal from the Care tab, the right-click menu or directly in the pet's speech bubble.
-- **Droppings 💩**: some time after a meal (and now and then anyway) the pet poops on your screen.
-  Click the dropping to clean it up. Until the pet is **bathed** it smells and its mood drops; if
-  it stays unbathed its health sinks and it gets sick. Droppings left on screen also cost mood.
-
-### Growing up (QQ-Pet style)
-
-- The pet **grows while the app runs** (a few XP per hour) on top of Pomodoros and to-dos – at full
-  speed when it's happy, healthy, fed and clean, slower otherwise (QQ Pet's growth penalties).
-- Eggs hatch at **Lv 5**. At **Lv 12** and **Lv 24** the pet can **evolve**: it asks first (you can say
-  "later"), and branching species let you pick. It keeps its level, stats and diary.
-- **Expeditions** (right-click → 🧭): explore a mystery dungeon, take a contest class or travel to a
-  region. The pet **leaves the desktop** (a 🧭 countdown shows where it was) and comes back with
-  berries, XP, contest stats (Cool / Cute / Smart / Tough), sometimes items or a souvenir – and
-  hungrier, dirtier, maybe with a status condition. The timer keeps running while the app is closed.
-
-### The panel
-
-Tabs are grouped: **💼 Work** (Pomodoro timer and to-do list together) | **📅 Today** (sign-in, daily tasks), **🍓 Care** (bag and shop),
-**🧭 Outing** (expeditions), **📖 Dex** (achievements, souvenirs), **🐾 Pokémon** (your team),
-**📔 Diary** | **⚙️ Settings**.
-
-- **Achievements** pay berries once (focus, to-dos, levels, hatching, evolving, outings, travel, cures…).
-
-### Emotions
-
-Speech bubbles show the Pokémon’s **PMD portrait with a matching emotion** (happy, joyous,
-determined, worried, sad, pain, surprised, dizzy, crying …) – also depending on how it is doing
-(sick, pooped, lonely). The control panel header, the Care tab and each diary entry show the
-face for the current / that day’s mood.
-
-### Diary
-
-The pet writes a diary entry every day (in its own words, English or Chinese) from what happened:
-focus sessions, finished tasks, meals, baths, sickness, pats. Every 7 days it tells you whether it
-was **happy, okay or sad** that week (happiness score from mood, sick days and focus). The **Diary**
-tab shows each week with focus minutes per day and a timeline of *when* you focused (hover for
-details), plus the pet's portrait in a matching emotion.
-
-### Pokémon & sprites
-
-All sprites come from **PMD** ([SpriteCollab](https://github.com/PMDCollab/SpriteCollab)): pixel sprites
-with *all* their animations (~35: idle, walk in 8 directions, sleep, eat, hurt, faint, hop, attacks,
-charge, trip, look-up …). State animations follow the pet's behaviour; attacks celebrate finished focus
-sessions, the rest play as random idle actions. Other sprite sources (Showdown, HOME, B/W) only have one
-animation each, so PokePet Explorer doesn't use them.
-
-Your first Pokémon is a Kanto starter; later ones join from fishing and outings (you decide whether
-they stay). Shiny Pokémon use PMD's shiny sprites and portraits. Names (incl. Chinese) come from
-[PokeAPI](https://pokeapi.co); diary portraits from PMD SpriteCollab.
-
-### Expedition photos
-
-While your Pokémon is out, a little pixel map of where it is sits on the desktop. When it comes home it
-brings a photo of the two of you there – a random pose and a random expression – collected in
-**Dex → Photos**.
-
-### Fishing
-
-Right-click → **🎣 Fishing** (or **Dex → Go fishing**) opens a little pond where your Pokémon sits on
-the pier with you. Hold the mouse (or Space) to charge and release to cast. The colour of the cast sets
-the difficulty: **green** is easy, **yellow** normal, **red** hard – but red casts reach the deep water
-where the rare Pokémon are. Wait for the bobber to dip and click quickly, then hold to reel in: ease off
-when the fish tugs hard (the line snaps in the red), but don't let the line go slack, or it swims away
-fast. Some catches would rather come along with you than swim off. 24 water Pokémon in four rarities (from Magikarp to Dratini, Lapras and
-Gyarados), each with a random size and a rare shiny – collected in **Dex → Fishing Pokédex**, with
-berries for rare and new catches and a little XP for your partner.
-
-### Every day
-
-**📅 Today** has the daily sign-in (a 7-day streak, with a Rare Candy on day 7) and four daily tasks
-that mix work and play – finish a Pomodoro, check off to-dos, feed or bathe your Pokémon, go on an
-outing, catch something fishing… Collect each reward; finishing all four adds a bonus. On holidays
-(New Year, Spring Festival, Mid-Autumn, Pokémon Day, Christmas …) and on anniversaries with your
-partner, it greets you with a little gift. Weather talk is optional (Settings → Weather & holidays,
-off by default): type your city and your Pokémon mentions sun, rain, snow, heat or cold.
-
-### Playing on the desktop
-
-- **Fling it**: drag your Pokémon and let go mid-swing – it flies, bounces off the screen edges and
-  lands a bit dizzy (and happy).
-- **Peekaboo**: drop it right at the left or right screen edge and it hides halfway, peeking out;
-  click it to bring it back.
-- **Poke it**: a pat on the head, a giggle when you poke its belly, a squeak at its feet – but poke too
-  much and it gets annoyed.
-- It steps aside while a fullscreen app (video, game, slides) is in front (Settings, on by default).
-
-### Battles and catching
-
-Right-click → **🌿 Explore the grass** (or the button in the panel's Dex and Pokémon tabs; 16 encounters a day, at most 3
-an hour) and walk into the tall grass to meet wild Pokémon – any species PMD has drawn, matched to the place (and to your
-partner's level). Outings to a dungeon or a region sometimes bring one back: your Pokémon asks right away whether to
-battle it, and it waits 30 minutes before it leaves.
-
-- Turn-based battles in the style of the games: real base stats and level-up moves (from PokeAPI), the
-  18-type chart, critical hits, burns, poison, paralysis, freezing and confusion. Your contest stats
-  give small bonuses.
-- Take up to **three Pokémon** (Pokémon tab → "Add to team") and switch between them mid-battle; use
-  medicine and Revives from your bag.
-- Weaken a wild Pokémon, then throw a **Poké Ball / Great Ball / Ultra Ball** (from the shop) – it
-  joins your team. Shiny wild Pokémon appear 1 in 128.
-- Winning gives XP to every Pokémon that took part, a few berries and toughness. Losing to a Pokémon from an
-  outing only tires them out (health −15, mood −10); losing in the grass costs more (health −30, mood −20, 3 berries). Burns and poison follow them home – treat them in the Care tab.
-- **Dex → Pokédex** counts the species you've seen and caught.
-
-### Studying together
-
-Every finished Pomodoro also teaches your Pokémon something: **+1 Smart** per 25 minutes of focus.
-
-### AI chat (optional)
-
-Off by default. In **Settings → AI chat** pick a provider – Anthropic (Claude), OpenAI, Google Gemini,
-DeepSeek, Moonshot (Kimi), Qwen, Zhipu GLM, SiliconFlow, OpenRouter, Groq, Mistral, xAI, a local Ollama /
-LM Studio, or any other OpenAI-compatible endpoint – enter your own API key and a model, then chat from
-the right-click menu. Your Pokémon answers in character, coloured by its mood, hunger and health.
-
-### Updates
-
-The app checks GitHub for a new release when it starts (can be turned off in Settings). **Settings →
-Updates** downloads the installer for your system to your Downloads folder and opens it.
+What the app can do, how to use it and all the rules (care, growth and evolution, outings, fishing, battles and
+catching, daily limits) are in the **[feature guide / 功能与玩法说明](GUIDE.md)** (中文 / English).
+功能、玩法和规则（照顾、成长进化、外出、钓鱼、对战与捕捉、每日限制）都写在 **[功能与玩法说明](GUIDE.md)** 里。
 
 ## Privacy
 
@@ -247,6 +71,7 @@ src/main/battle.js      the battle engine (pure, testable)
 src/main/typechart.js   the 18-type chart
 src/main/pokedata.js    base stats, moves and capture rates from PokeAPI (cached)
 src/main/wild.js        which wild Pokémon appear where
+src/main/shiny.js       shiny rate and the 90-day guarantee
 src/wild/               grass exploring and battle window
 src/main/weather.js     holidays, anniversaries, optional weather (Open-Meteo)
 src/main/fullscreen.js  hide over fullscreen apps (Windows helper)

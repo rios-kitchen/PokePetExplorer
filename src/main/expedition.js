@@ -126,7 +126,7 @@ function finish(data, now = Date.now(), { force = false, rnd = Math.random } = {
 }
 
 /** Chance (0…1) that a wild Pokémon follows the pet home, from its mood 0…100. */
-const companionChance = (mood) => 0.03 + 0.17 * Math.max(0, Math.min(100, mood)) / 100;
+const companionChance = (mood) => 0.01 + 0.07 * Math.max(0, Math.min(100, mood)) / 100;
 
 /** Call off an expedition early: the pet comes straight back, without rewards. */
 function recall(data) {

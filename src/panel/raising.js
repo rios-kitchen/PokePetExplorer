@@ -4,7 +4,9 @@ window.PanelRaising = function PanelRaising(env) {
   const $ = (sel) => document.querySelector(sel);
 
   const ATTR_ICON = { cool: '😎', cute: '🎀', smart: '📚', tough: '💪' };
-  const levelOf = (xp) => 1 + Math.floor(Math.sqrt((xp || 0) / 25));
+  // the games' "medium fast" curve, as in src/main/growth.js: Lv n needs n³ − 1 XP, up to Lv100
+  const xpAt = (lv) => Math.min(100, lv) ** 3 - 1;
+  const levelOf = (xp) => { let l = 1; while (l < 100 && xpAt(l + 1) <= (xp || 0)) l++; return l; };
 
   function fmt(ms) {
     const s = Math.max(0, Math.ceil(ms / 1000));

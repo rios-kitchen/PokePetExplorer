@@ -185,6 +185,7 @@
     shown = JSON.parse(JSON.stringify(view));
     actors.wild = null;
     renderBoxes();
+    restFace('me'); restFace('wild');
     actors.wild = actor(await wildSprite(view.wild), 7, 345, 150);
     actors.me = actor(await ownSprite(view.party[view.active].key), 3, 140, 262);
     if (view.over) return;   // already decided (a test code): the caller shows the result
@@ -283,6 +284,39 @@
   const sideMon = (side) => (side === 'me' ? shown.party[shown.active] : shown.wild);
   const sideActor = (side) => (side === 'me' ? actors.me : actors.wild);
 
+  // ---------------------------------------------------------------- faces (PMD portraits with emotions)
+  const faceCache = {};
+  function faceUrl(m, emotion) {
+    const k = `${m.dex}:${!!m.shiny}:${emotion}`;
+    faceCache[k] ||= api.invoke('diary:portrait', m.dex, emotion, !!m.shiny)
+      .then((u) => u || (emotion !== 'Normal' ? faceUrl(m, 'Normal') : null));
+    return faceCache[k];
+  }
+  /** Show a side's face with an emotion; with hold, it goes back to its resting face afterwards. */
+  function setFace(side, emotion, hold) {
+    const m = sideMon(side);
+    const img = $(side === 'me' ? '#meFace' : '#wildFace');
+    if (!m || !img) return;
+    const want = `${m.dex}:${emotion}:${Date.now()}`;
+    img.dataset.want = want;
+    faceUrl(m, emotion).then((u) => {
+      if (img.dataset.want !== want) return;
+      if (u) { img.src = u; img.classList.remove('hidden'); } else img.classList.add('hidden');
+    });
+    if (hold) setTimeout(() => { if (img.dataset.want === want) restFace(side); }, hold);
+  }
+  /** The face that fits how it's doing: worried when low, dizzy when confused … */
+  function restFace(side) {
+    const m = sideMon(side);
+    if (!m) return;
+    if (m.fainted || m.hp <= 0) return setFace(side, side === 'me' ? 'Crying' : 'Pain');
+    if (m.status === 'confusion' || m.status === 'paralysis') return setFace(side, 'Dizzy');
+    if (m.hp / m.maxHp < 0.25) return setFace(side, side === 'me' ? 'Worried' : 'Pain');
+    if (m.status === 'burn' || m.status === 'poison') return setFace(side, 'Pain');
+    setFace(side, side === 'me' ? 'Determined' : 'Normal');
+  }
+  const other = (side) => (side === 'me' ? 'wild' : 'me');
+
   async function playEvent(e) {
     const who = nm(sideMon(e.side));
     switch (e.t) {
@@ -296,6 +330,9 @@
         sideActor(target).flash = performance.now() + 450;
         sideMon(target).hp = e.hp;
         renderBoxes();
+        setFace(target, e.crit ? 'Surprised' : 'Pain', 1300);
+        if (e.eff > 1) setFace(e.side, 'Joyous', 1300);
+        else if (e.eff === 0) setFace(e.side, 'Surprised', 1300);
         await sleep(550);
         if (e.crit) await say(t('b.crit'), 700);
         if (e.eff > 1) await say(t('b.super'), 800);
@@ -303,20 +340,22 @@
         else if (e.eff < 1) await say(t('b.notVery'), 800);
         break;
       }
-      case 'miss': await say(t('b.used', { name: who, move: e.names[L()] || e.names.en }), 400); await say(t('b.miss'), 700); break;
-      case 'status': sideMon(e.side).status = e.status; renderBoxes(); await say(t(`b.status.${e.status}`, { name: who }), 900); break;
-      case 'statusHurt': sideMon(e.side).hp = e.hp; renderBoxes(); play(sideActor(e.side), ['Hurt'], 400); await say(t(`b.hurt.${e.status}`, { name: who }), 900); break;
+      case 'miss': setFace(e.side, 'Sigh', 1100); await say(t('b.used', { name: who, move: e.names[L()] || e.names.en }), 400); await say(t('b.miss'), 700); break;
+      case 'status': sideMon(e.side).status = e.status; renderBoxes(); setFace(e.side, e.status === 'freeze' ? 'Surprised' : e.status === 'confusion' ? 'Dizzy' : 'Pain', 1200); await say(t(`b.status.${e.status}`, { name: who }), 900); break;
+      case 'statusHurt': sideMon(e.side).hp = e.hp; renderBoxes(); setFace(e.side, 'Pain', 1100); play(sideActor(e.side), ['Hurt'], 400); await say(t(`b.hurt.${e.status}`, { name: who }), 900); break;
       case 'frozen': await say(t('b.frozen', { name: who }), 800); break;
-      case 'thaw': sideMon(e.side).status = null; renderBoxes(); await say(t('b.thaw', { name: who }), 800); break;
+      case 'thaw': sideMon(e.side).status = null; renderBoxes(); setFace(e.side, 'Happy', 1100); await say(t('b.thaw', { name: who }), 800); break;
       case 'paralyzed': await say(t('b.paralyzed', { name: who }), 800); break;
-      case 'confusedHit': sideMon(e.side).hp = e.hp; renderBoxes(); play(sideActor(e.side), ['Hurt'], 400); await say(t('b.confusedHit', { name: who }), 900); break;
-      case 'unconfused': sideMon(e.side).status = null; renderBoxes(); await say(t('b.unconfused', { name: who }), 800); break;
+      case 'confusedHit': sideMon(e.side).hp = e.hp; renderBoxes(); setFace(e.side, 'Dizzy', 1100); play(sideActor(e.side), ['Hurt'], 400); await say(t('b.confusedHit', { name: who }), 900); break;
+      case 'unconfused': sideMon(e.side).status = null; renderBoxes(); setFace(e.side, 'Happy', 1100); await say(t('b.unconfused', { name: who }), 800); break;
       case 'faint':
         play(sideActor(e.side), ['Faint', 'Hurt'], 900);
         Sound.play('switch');
+        if (e.side === 'me') shown.party[shown.active].fainted = true;
+        setFace(e.side, e.side === 'me' ? 'Crying' : 'Pain');
+        setFace(other(e.side), e.side === 'me' ? 'Determined' : 'Joyous');
         await say(t('b.faint', { name: who }), 1000);
         sideActor(e.side).alpha = 0;
-        if (e.side === 'me') shown.party[shown.active].fainted = true;
         break;
       case 'needSwitch': break;
       case 'switch': {
@@ -326,6 +365,7 @@
         shown.active = e.to;
         actors.me = actor(await ownSprite(to.key), 3, 140, 262);
         renderBoxes();
+        restFace('me');
         await say(t('b.go', { name: nm(to) }), 800);
         break;
       }
@@ -333,6 +373,7 @@
         if (e.target != null) shown.party[e.target].hp = e.hp;
         renderBoxes();
         Sound.play('chime');
+        if (e.target != null) setFace('me', 'Happy', 1300);
         await say(t('b.item', { item: t(`item.${e.item}`) }), 900);
         break;
       }
@@ -344,11 +385,11 @@
         ball.wobble = true;
         for (let i = 0; i < e.shakes; i++) { Sound.play('pat'); await sleep(650); }
         ball.wobble = false;
-        if (e.caught) { Sound.play('fanfare'); await say(t('b.caught', { name: nm(shown.wild) }), 1400); }
-        else { ball = null; actors.wild.alpha = 1; await say(t(['b.broke0', 'b.broke1', 'b.broke2', 'b.broke3'][e.shakes]), 1000); }
+        if (e.caught) { Sound.play('fanfare'); setFace('me', 'Inspired'); await say(t('b.caught', { name: nm(shown.wild) }), 1400); }
+        else { ball = null; actors.wild.alpha = 1; setFace('wild', 'Angry', 1400); setFace('me', 'Worried', 1400); await say(t(['b.broke0', 'b.broke1', 'b.broke2', 'b.broke3'][e.shakes]), 1000); }
         break;
       }
-      case 'ran': Sound.play('switch'); await say(t('b.ran'), 900); break;
+      case 'ran': Sound.play('switch'); setFace('me', 'Sigh'); await say(t('b.ran'), 900); break;
       case 'cantRun': await say(t('b.cantRun'), 800); break;
       default: break;
     }
@@ -356,6 +397,7 @@
 
   function showResult() {
     const r = view.result || {};
+    setFace('me', { win: 'Joyous', caught: 'Inspired', lose: 'Crying', ran: 'Sigh' }[view.over] || 'Normal');
     const title = { win: 'b.resWin', caught: 'b.resCaught', lose: 'b.resLose', ran: 'b.resRan' }[view.over];
     $('#resTitle').textContent = t(title, { name: nm(view.wild) });
     const lines = [];
@@ -366,6 +408,7 @@
       const p = r.penalty || { health: 15, mood: 10 };
       lines.push(p.health > 15 ? t('b.resPenaltyHeavy', p) : t('b.resPenalty'));
       if (r.lostBerries) lines.push(t('b.resLostBerries', { n: r.lostBerries }));
+      for (const names of r.fainted || []) lines.push(t('b.resFainted', { name: names[L()] || names.en }));
     }
     $('#resText').textContent = lines.join('\n');
     $('#resOk').textContent = t('b.continue');

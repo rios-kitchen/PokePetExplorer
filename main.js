@@ -19,6 +19,7 @@ const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
 const Wild = require('./src/main/wild');
 const Data = require('./src/main/pokedata');
+const Shiny = require('./src/main/shiny');
 const { Updater } = require('./src/main/updater');
 const AI = require('./src/main/ai');
 
@@ -41,6 +42,7 @@ let tray = null;
 let quitting = false;
 let lastReminder = Date.now();
 let lastPatXp = 0;
+const PAT_XP_PER_DAY = 20;
 let drag = null;
 
 /** Pomodoro timer – lives in the main process so pet and panel always agree. */
@@ -265,7 +267,26 @@ function checkGrowth(id = S().pokemon) {
   if (!id || !store.data.custom.some((c) => c.id === id)) return;
   const pet = petOf(store.data, id);
   if (Growth.readyToHatch(pet, Growth.hatchLevel(store.data))) { hatchEgg(id); return; }
+  if (pet.stage === 'hatched' && !pet.finalForm && pet.evolveAt == null) { lookupEvolveLevel(id); return; }
   if (Growth.evolutionDue(pet)) offerEvolution(id);
+}
+
+/** Find out at which level this species evolves (the games' level, from PokeAPI). Offline: try again later. */
+const evolveLookups = new Set();
+async function lookupEvolveLevel(id) {
+  const p = petList().find((x) => x.id === id);
+  if (!p || !p.dex || evolveLookups.has(id)) return;
+  evolveLookups.add(id);
+  try {
+    const options = await Sources.evolutionOptions(p.dex);
+    const pet = petOf(store.data, id);
+    if (!options.length) pet.finalForm = true;
+    else pet.evolveAt = Math.min(...options.map(Growth.optionLevel));
+    changed();
+    if (Growth.evolutionDue(pet)) offerEvolution(id);
+  } catch { /* offline */ } finally {
+    evolveLookups.delete(id);
+  }
 }
 
 /**
@@ -297,6 +318,7 @@ async function hatchEgg(id) {
     }
     Object.assign(entry, { dex: sp.dex, names: sp.names });
     store.data.skins[id] = sp.skin;
+    if (sp.skin.shiny) Shiny.obtained(store.data);
     pet.stage = 'hatched';
     pet.hatchedAt = Date.now();
     delete pet.egg;
@@ -320,8 +342,11 @@ async function offerEvolution(id) {
   if (!p) return;
   evolutionLookup = id;
   try {
-    const options = await Sources.evolutionOptions(p.dex);
-    if (!options.length) { pet.finalForm = true; changed(); return; }
+    const all = await Sources.evolutionOptions(p.dex);
+    if (!all.length) { pet.finalForm = true; changed(); return; }
+    // only the forms it can reach at its level (e.g. Tyrogue's three at Lv20, Eevee's stones at the fallback level)
+    const options = all.filter((o) => Growth.optionLevel(o) <= levelOf(pet.xp));
+    if (!options.length) { pet.evolveAt = Math.min(...all.map(Growth.optionLevel)); changed(); return; }
     pet.evolution = { options, snoozeUntil: 0 };
     changed();
     if (S().pokemon === id) petEvent('evolve-ready', { name: petName(id), options: options.slice(0, 3) });
@@ -354,6 +379,8 @@ async function evolve(id, dex) {
   pet.species = { dex: option.dex, names: option.names };
   pet.evolutions = (pet.evolutions || 0) + 1;
   pet.evolution = null;
+  pet.evolvedAt = Date.now();
+  pet.evolveAt = null;   // the new form's next evolution is looked up again
   for (const a of Object.keys(pet.attrs)) pet.attrs[a] += 5;
   addMood(20);
   Diary.record(store.data, 'levelUps');
@@ -556,7 +583,7 @@ async function runSecret(text) {
 async function bringCompanion(petId) {
   try {
     const taken = new Set(petList().map((p) => p.dex).filter(Boolean));
-    const shiny = Math.random() < Growth.SHINY_RATE;
+    const shiny = Shiny.roll(store.data);
     const sp = await Sources.randomEggSpecies(spritesDir(), { exclude: taken, shiny });
     const j = offerJoin({ dex: sp.dex, names: sp.names, shiny: !!sp.skin.shiny, from: 'outing' });
     const name = sp.names[lang()] || sp.names.en;
@@ -724,6 +751,7 @@ function addPokemon({ id, dex, names, shiny = false, from }) {
   pet.hatchedAt = Date.now();
   pet.from = from || null;
   store.data.skins[id] = { source: 'pending', shiny: !!shiny };
+  if (shiny) Shiny.obtained(store.data);
   ensurePmdSkins().catch(() => {});
   return id;
 }
@@ -766,7 +794,12 @@ function answerJoin(token, keep) {
 // also start from an outing ("we met a wild Pokémon – go and battle it?"). Main keeps the battle state.
 let wildWin = null;
 let battle = null;           // { b: Battle state, ctx: { place, region, source, capture, ids, wild } }
-const LOSE_PENALTY = { outing: { health: 15, mood: 10, berries: 0 }, grass: { health: 30, mood: 20, berries: 3 } };
+// losing: health and mood lost by everyone on the team, berries dropped, and the chance that each Pokémon knocked
+// out in the battle is still fainted at home (then it needs a Revive)
+const LOSE_PENALTY = {
+  outing: { health: 15, mood: 10, berries: 0, faint: 0.05 },
+  grass: { health: 30, mood: 20, berries: 3, faint: 0.6 }
+};
 const BATTLE_ITEMS = ['pokeball', 'greatball', 'ultraball', 'oran', 'potion', 'antidote', 'parlyz', 'burnheal', 'iceheal', 'persim', 'fullheal', 'revive'];
 
 function openWild(encounter) {
@@ -850,9 +883,9 @@ async function startBattle(source, opts = {}) {
       const found = await Sources.lookupSpecies(opts.query);
       const [info, pk] = await Promise.all([Data.species(found.dex, dir), Data.pokemon(found.dex, dir)]);
       sp = { dex: found.dex, names: info.names, types: pk.types, capture: info.capture };
-    } else sp = await Wild.pickSpecies({ place, region, partnerLevel: leadLevel, drawn, dir });
+    } else sp = await Wild.pickSpecies({ place, region, partnerLevel: leadLevel, drawn, dir, seen: Object.keys(store.data.pokedex).map(Number) });
     const level = Battle.wildLevel(leadLevel);
-    const shiny = Math.random() < Wild.SHINY_RATE;
+    const shiny = Shiny.roll(store.data);
     const party = [];
     for (const id of ids) {
       const p = petList().find((x) => x.id === id);
@@ -935,6 +968,12 @@ function finishBattle() {
       const pet = petOf(d, id);
       pet.mood = Math.max(0, pet.mood - p.mood);
     }
+    result.fainted = [];
+    b.party.forEach((m, i) => {
+      if (!m.fainted || Math.random() >= p.faint) return;
+      Object.assign(Care.careOf(d, ctx.ids[i]), { fainted: true, sick: true, health: 0 });
+      result.fainted.push(m.names);
+    });
     result.lostBerries = Math.min(d.berries, p.berries);
     d.berries -= result.lostBerries;
     result.penalty = { health: p.health, mood: p.mood };
@@ -959,7 +998,7 @@ async function offerOutingEncounter(petId, place, region) {
   try {
     const dir = spritesDir();
     sp = await Wild.pickSpecies({ place, region, partnerLevel: levelOf(petOf(store.data, petId).xp),
-      drawn: Wild.drawnDex(Sources.creditIndexCached(dir)), dir });
+      drawn: Wild.drawnDex(Sources.creditIndexCached(dir)), dir, seen: Object.keys(store.data.pokedex).map(Number) });
   } catch { return; }   // offline: nobody this time
   const until = Date.now() + Wild.ENCOUNTER_WAIT_MIN * 60e3;
   store.data.wild.encounter = { place, region, by: petId, sp, until };
@@ -1861,9 +1900,10 @@ function registerIpc() {
       if (drag.trail.length > 8) drag.trail.shift();
     }, 16);
   });
-  ipcMain.on('pet:drag-end', () => {
+  ipcMain.on('pet:drag-end', (_e, o) => {
     if (!drag) return;
     clearInterval(drag.iv);
+    if (o && o.away) { drag = null; savePetPos(); return; }   // the away icon: no flinging
     // how fast was it moving when let go? (px/s over the last ~100 ms)
     const tr = drag.trail.filter((q) => Date.now() - q.t < 120);
     drag = null;
@@ -1896,7 +1936,10 @@ function registerIpc() {
     taskProgress('pat');
     addMood(2);
     const now = Date.now();
-    if (now - lastPatXp > 15000) { lastPatXp = now; addXp(1); }
+    // a little XP for pats: one every 15 s, at most PAT_XP_PER_DAY a day
+    const st = store.data.stats;
+    if (st.patDay !== today()) { st.patDay = today(); st.patXp = 0; }
+    if (now - lastPatXp > 15000 && st.patXp < PAT_XP_PER_DAY) { lastPatXp = now; st.patXp++; addXp(1); }
     changed();
   });
   ipcMain.on('pet:action', (_e, action, arg) => {
@@ -2230,7 +2273,12 @@ async function selfTest(dir) {
   console.log('[test] photos:', store.data.photos.length);
   await step('evolution', async () => {
     const pet = activePet();
-    pet.xp = Growth.xpFor(Growth.EVOLVE_LEVELS[0]);
+    pet.evolveAt = null;
+    await lookupEvolveLevel(S().pokemon);
+    console.log('[test] evolves at Lv', pet.evolveAt, 'not before', new Date(Growth.evolveNotBefore(pet)).toISOString());
+    pet.xp = Growth.xpFor(pet.evolveAt || 30);
+    console.log('[test] due before a week:', Growth.evolutionDue(pet));
+    pet.hatchedAt = Date.now() - 8 * 86400e3;
     await offerEvolution(S().pokemon);
     console.log('[test] evolution options:', JSON.stringify((pet.evolution || {}).options));
   });

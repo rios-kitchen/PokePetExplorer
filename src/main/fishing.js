@@ -21,10 +21,10 @@ const TIERS = [
   { name: 'veryRare', bite: 650,  pull: 1.55, berries: 6, xp: 8 }
 ];
 const NEW_SPECIES_BONUS = 2;
-const JOIN_CHANCE = [0.06, 0.1, 0.16, 0.25];   // by tier: rarer Pokémon are more curious about you
-const SHINY_RATE = 1 / 128;
+const JOIN_CHANCE = [0.02, 0.03, 0.05, 0.08];   // by tier: rarer Pokémon are more curious about you
+const SHINY_RATE = 1 / 4096;                      // as in the games
 // species already in the fishing Pokédex bite this many times as often as new ones, so completing it takes a while
-const REPEAT_WEIGHT = 3;
+const REPEAT_WEIGHT = 5;
 
 // The cast's colour sets the difficulty: green (short, easy), yellow, red (long, hard – and rarer bites).
 const ZONES = [
@@ -37,7 +37,7 @@ const zoneOf = (power) => (power < 0.4 ? 0 : power < 0.75 ? 1 : 2);
 /** Tier weights for a cast that landed at `depth` 0 (close to the pier) … 1 (far out). */
 function tierWeights(depth) {
   const d = Math.max(0, Math.min(1, depth));
-  return [60 - 30 * d, 28 + 10 * d, 10 + 14 * d, 2 + 6 * d];
+  return [62 - 30 * d, 29 + 14 * d, 8 + 12 * d, 1 + 4 * d];
 }
 
 function pickWeighted(weights, rnd) {

@@ -22,9 +22,9 @@
 
 | 操作 | 效果 |
 |---|---|
-| 第一次打开 | 弹出「大木博士」窗口，从**妙蛙种子、小火龙、杰尼龟**里选一只作为第一只搭档（1/64 概率是闪光）。关掉了也可以从右键菜单「🔴 选择你的第一只宝可梦…」重新打开。 |
-| 单击宝可梦 | 摸摸它：冒爱心、心情上升；每 15 秒最多 +1 经验。 |
-| 拖动宝可梦 | 把它放到屏幕任意位置。 |
+| 第一次打开 | 弹出「大木博士」窗口，从**妙蛙种子、小火龙、杰尼龟**里选一只作为第一只搭档（和原作一样 1/4096 概率是闪光）。关掉了也可以从右键菜单「🔴 选择你的第一只宝可梦…」重新打开。 |
+| 单击宝可梦 | 摸摸它：冒爱心、心情上升；每 15 秒最多 +1 经验，每天最多 20 点。 |
+| 拖动宝可梦 | 把它放到屏幕任意位置。外出时桌面上的小地图也可以拖动。 |
 | 拖着甩出去再松手 | 它会飞出去、在屏幕边缘反弹，落地时有点晕（但很开心）。 |
 | 放到屏幕左右边缘 | 它会躲一半在边缘后面偷看；点一下就出来。 |
 | 戳不同部位 | 头：摸摸头；肚子：咯咯笑；脚：吱一声。戳太多次它会生气。 |
@@ -85,13 +85,13 @@
 |---|---|---|
 | 橙橙果 | 1 | 饥饿 +25，心情 +3 |
 | 宝可梦泡芙 | 2 | 饥饿 +15，心情 +15 |
-| 神奇糖果 | 5 | 饥饿 +5，心情 +5，**经验 +40** |
+| 神奇糖果 | 20 | 饥饿 +5，心情 +5，**经验 +50** |
 | 洗澡 | 免费 | 清洁回满，心情 +6 |
 | 伤药 | 3 | 健康 +45 |
 | 解毒药 / 解麻药 / 灼伤药 / 解冻药 / 柿仔果 | 各 3 | 治对应状态，健康 +20 |
 | 万灵药 | 8 | 治所有状态，健康 +30 |
 | 活力碎片 | 8 | 救醒晕倒的宝可梦 |
-| 精灵球 / 超级球 / 高级球 | 5 / 12 / 25 | 只能在对战中用来捕捉 |
+| 精灵球 / 超级球 / 高级球 | 10 / 20 / 40 | 只能在对战中用来捕捉 |
 
 背包里有的物品会**先用背包的**，没有才花树果。可以在 🍓 照顾页、右键菜单「照顾」或宝可梦的气泡按钮里使用。
 
@@ -101,9 +101,10 @@
 
 ## 4. 成长与进化
 
-- 等级公式：`等级 = 1 + ⌊√(经验 / 25)⌋`。
+- **等级**：和原作的「中等偏快」经验曲线一样，升到 Lv n 一共需要 **n³ − 1** 经验（Lv10 = 999，Lv16 = 4095，Lv36 = 46655），**最高 Lv100**。
 - 软件开着时宝可梦会**自己慢慢长**：满速每小时 +4 经验。心情不好、生病、饿或脏都会减速（参照 QQ 宠物的成长惩罚），晕倒时不长。
-- **进化**：**Lv12** 第一次进化，**Lv24** 第二次。到级后宝可梦会先问你，可以选「以后再说」（6 小时后再问）；有分支进化的可以自己选。进化后等级、能力和日记都保留。
+- **进化**：在**原作的进化等级**进化（数据来自 PokeAPI，例如妙蛙种子 Lv16、小火龙 Lv16 / Lv36）。原作里用道具、通信交换、亲密度等方式进化的，这里统一在 **Lv30** 进化。
+- **进化还需要时间**：加入队伍**满 7 天**才能第一次进化，上次进化后**满 14 天**才能再进化。等级和天数都达到后，宝可梦会先问你，可以选「以后再说」（6 小时后再问）；有分支进化的可以自己选。进化后等级、能力和日记都保留。
 - **四项能力**（华丽大赛式）：**帅气、可爱、聪明、强壮**。来自番茄钟、外出、训练课、对战，也会给对战带来小加成。
 
 ## 5. 外出 🧭
@@ -125,7 +126,7 @@
 - 回来时会饿一些、脏一些，迷宫还可能带回异常状态（已知是哪种）。
 - 迷宫和旅行有几率捡到道具（从橙橙果到活力碎片）。
 - 每次回来都会拍一张**合影**（随机姿势和表情），存在 📖 图鉴 → 合影：只保留**最近 3 张**，点 ☆ 收藏的会一直保留（最多 **20 张**）。
-- **带回新伙伴**：迷宫和旅行回来时，有几率带回一只野生宝可梦，你可以选择让它留下或放它回去。几率 = 3% + 17% × 心情/100（心情越好越高，最高 20%）。训练课不会。
+- **带回新伙伴**：迷宫和旅行回来时，有几率带回一只野生宝可梦，你可以选择让它留下或放它回去。几率 = 1% + 7% × 心情/100（心情越好越高，最高 8%）。训练课不会。
 - **遇到野生宝可梦**：迷宫和旅行回来时有 **30%** 几率遇到一只野生宝可梦，它会跟着回来。宝可梦一回来就**立刻问你要不要对战**：选「去对战！」马上开打；选「等一会」可以暂缓，它会等 **30 分钟**，超过 30 分钟还没对战它就会离开（见第 7 节）。
 - 提前叫回来：右键菜单里「马上叫回来」，**没有任何奖励**。
 
@@ -139,14 +140,14 @@
 
 | 稀有度 | 例子 | 树果 | 经验 | 想跟你走的几率 |
 |---|---|---|---|---|
-| 常见 | 鲤鱼王、角金鱼、蚊香蝌蚪… | 0 | 2 | 6% |
-| 少见 | 墨海马、大钳蟹、海星星… | 1 | 3 | 10% |
-| 稀有 | 灯笼鱼、太阳珊瑚、丑丑鱼… | 3 | 5 | 16% |
-| 非常稀有 | 迷你龙、拉普拉斯、暴鲤龙 | 6 | 8 | 25% |
+| 常见 | 鲤鱼王、角金鱼、蚊香蝌蚪… | 0 | 2 | 2% |
+| 少见 | 墨海马、大钳蟹、海星星… | 1 | 3 | 3% |
+| 稀有 | 灯笼鱼、太阳珊瑚、丑丑鱼… | 3 | 5 | 5% |
+| 非常稀有 | 迷你龙、拉普拉斯、暴鲤龙 | 6 | 8 | 8% |
 
-- 共 **24 种**水系宝可梦，每条大小随机（标准身高的 70%–140%），**1/128** 闪光。
+- 共 **24 种**水系宝可梦，每条大小随机（标准身高的 70%–140%），**1/4096** 闪光。甩到红区时非常稀有的只占约 5%。
 - 第一次钓到某种额外 **+2 🍓**。所有记录在 📖 图鉴 → 钓鱼图鉴（次数、最大尺寸）。
-- **已经钓到过的种类更容易再上钩**：同一稀有度里，已在图鉴中的种类上钩概率是新种类的 **3 倍**，所以越往后越难集齐全图鉴。
+- **已经钓到过的种类更容易再上钩**：同一稀有度里，已在图鉴中的种类上钩概率是新种类的 **5 倍**，所以越往后越难集齐全图鉴。
 - 钓到的宝可梦有时**想跟你走**：选「欢迎加入！」它就成为新伙伴。
 - 钓鱼**没有每日次数限制**。
 
@@ -170,7 +171,8 @@
 - 草丛偏向一般、草、虫、飞行、妖精、电、毒属性；外出遇到的按地点：洞窟（岩石、地面、钢…）、火山（火、岩石、地面、龙）、冰川（冰、水、钢）、遗迹（超能力、幽灵、恶、妖精）；旅行遇到的来自那个地区的图鉴。偶尔也会出现别的属性。
 - **野生等级 = 领头宝可梦等级 −3 ～ +1**（最低 Lv2）。
 - 已进化的形态要搭档 **Lv15** 以后才会出现，最终形态要 **Lv28** 以后。
-- **1/128** 闪光。
+- **常见的总是那几只**：有一半的遭遇只会从你**已经见过的种类**里出（见过 3 种以上时），所以要遇到新种类会越来越难。
+- **1/4096** 闪光，另有保底（见第 10 节）。
 
 ### 对战规则（简化版正作规则）
 
@@ -197,12 +199,13 @@
 
 | 结果 | 效果 |
 |---|---|
-| **胜利** | 参战过的宝可梦平分经验 `(8 + 3×野生等级) ÷ 参战数量`；**+1–3 🍓**；最后在场的宝可梦帅气 +1、强壮 +1；计入每日任务「对战」 |
+| **胜利** | 参战过的宝可梦平分经验 `(10 + 2.5×野生等级) ÷ 参战数量`；**+1–3 🍓**；最后在场的宝可梦帅气 +1、强壮 +1；计入每日任务「对战」 |
 | **捕捉成功** | 同样获得经验；野生宝可梦**加入队伍**，等级保持不变；记入宝可梦图鉴；计入每日任务「捕捉」 |
-| **失败（草丛）** | 出战的宝可梦**健康 −30、心情 −20**，逃跑时还会**掉 3 颗 🍓**（不够就全掉），不会晕倒 |
-| **失败（外出遇到的）** | 轻微惩罚：出战的宝可梦**健康 −15、心情 −10**，不会晕倒 |
+| **失败（草丛）** | 出战的宝可梦**健康 −30、心情 −20**，逃跑时还会**掉 3 颗 🍓**（不够就全掉）；在对战中倒下的宝可梦有 **60%** 几率回家后仍然**晕倒**，要用活力碎片救醒 |
+| **失败（外出遇到的）** | 轻微惩罚：出战的宝可梦**健康 −15、心情 −10**；对战中倒下的只有 **5%** 几率晕倒 |
 | **逃跑** | 没有奖励也没有惩罚 |
 
+- **对战表情**：双方血条旁边有 PMD 头像，会随战况变化：被打中会疼，打出效果绝佳会高兴，被要害打中会吃惊，混乱时会晕，血量低时会担心，赢了欢呼，输了哭。
 - 对战中得的**灼伤、中毒、麻痹、冰冻会带回家**，要在 🍓 照顾页治疗（混乱不会带回家）。
 - 📖 图鉴 → 宝可梦图鉴记录**见过**和**抓到**的种类数。
 
@@ -236,7 +239,7 @@
 |---|---|
 | 专注 | 1 个番茄 → 2，25 个 → 5，100 个 → 10 |
 | 待办 | 10 个 → 3，50 个 → 5 |
-| 等级 | Lv5 → 3，Lv12 → 5，Lv24 → 10 |
+| 等级 | Lv5 → 3，Lv16 → 5，Lv36 → 10 |
 | 养成 | 孵化 → 5，进化一次 → 5，进化两次 → 10，治好 5 次病 → 5，任一能力达 50 → 8，拥有闪光 → 3 |
 | 外出 | 1 次 → 2，20 次 → 8，去过全部 9 个地区 → 15 |
 | 钓鱼 | 第一条 → 2，钓鱼图鉴 10 种 → 8，全部 24 种 → 20 |
@@ -251,11 +254,18 @@
 
 在 🐾 宝可梦页可以**切换搭档**（谁在桌面上）、**加入出战**、**移除**。右键菜单「切换宝可梦」也可以快速切换。
 
+和原作一样，收集是件慢慢来的事：钓鱼和外出带回伙伴的几率都很低，草丛里常见的总是那几只。
+
+### 闪光宝可梦 ✨
+
+- 所有闪光的概率都和原作一样：**1/4096**（初始宝可梦、草丛、外出遇到、跟回来的伙伴、钓鱼）。
+- **保底**：距离上一只闪光加入队伍（或开始游戏）满 **90 天**后，之后遇到的野生宝可梦（草丛、外出遇到、跟着回来的伙伴）**一定是闪光**，直到有一只加入你的队伍为止。所以大约每 3 个月至少能得到一只闪光。钓鱼不算保底。
+
 ## 11. 日记、表情和其他
 
 - **日记**：宝可梦每天用自己的话写日记（专注、待办、吃饭、洗澡、生病、摸摸）；每 7 天总结这周开心、一般还是难过。📔 日记页能看到每天的专注分钟和时间线。
-- **表情**：气泡里显示 PMD 头像，表情随心情和状态变化（开心、担心、难过、疼、晕…）。
-- **对键盘鼠标做出反应**（可关）：你打字时它坐下陪你打字，连续打字 15 分钟没开番茄钟会建议你开一个；鼠标移动时它会看向光标；离开 3 分钟它会睡觉。只知道「什么时候按了键」，不知道按了哪个键。
+- **表情和动作**：形象来自 PMD SpriteCollab，每只有约 35 个动作（待机、8 方向走路、睡觉、吃东西、受伤、倒下、蹦跳、攻击…），动作跟着它在做的事变化；气泡里显示 PMD 头像，表情随心情和状态变化（开心、担心、难过、疼、晕…）。
+- **对键盘鼠标做出反应**（可关）：你打字时它坐下陪你打字，连续打字 15 分钟没开番茄钟会建议你开一个；鼠标移动时它会看向光标；鼠标停在它身上会害羞，快速晃鼠标它会晕；离开 3 分钟它会睡觉。
 - **全屏时躲开**：前台是全屏应用（视频、游戏、演示）时自动隐藏（设置里可关，默认开）。
 - **AI 聊天**（默认关闭）：设置 → AI 聊天，选服务商、填自己的 API key 和模型，然后右键「💬 聊天」。宝可梦按自己的性格和当前状态回答。对话不保存。
 - **检查更新**：启动时检查 GitHub 上的新版本（可关）；设置 → 更新 可以下载安装包到「下载」文件夹并打开。
@@ -269,9 +279,11 @@
 | 外出 | 同时只能一只；时长 30–90 分钟 |
 | 签到 | 每天 1 次，7 天一轮 |
 | 每日任务 | 每天 4 个 + 全部完成奖励 |
-| 钓鱼 | 不限次数（已钓到的种类上钩概率 ×3） |
+| 钓鱼 | 不限次数（已钓到的种类上钩概率 ×5） |
 | 节日礼物 | 每个节日 1 次 |
-| 摸摸给经验 | 每 15 秒最多 1 点 |
+| 摸摸给经验 | 每 15 秒最多 1 点，每天最多 20 点 |
+| 进化 | 原作等级，且加入满 7 天 / 上次进化后满 14 天 |
+| 闪光保底 | 上一只闪光加入后满 90 天 |
 | 关闭软件时的照顾结算 | 最多 12 小时 |
 | 异常状态加重 | 每 6 小时一阶 |
 | 进化「以后再说」 | 6 小时后再问 |
@@ -286,9 +298,9 @@
 
 | Action | Result |
 |---|---|
-| First launch | Professor Oak's window opens: pick **Bulbasaur, Charmander or Squirtle** as your first partner (1 in 64 is shiny). If you close it, reopen it from the right-click menu "🔴 Choose your first Pokémon…". |
-| Click the pet | Pat it: hearts, mood up; at most +1 XP every 15 s. |
-| Drag the pet | Move it anywhere on screen. |
+| First launch | Professor Oak's window opens: pick **Bulbasaur, Charmander or Squirtle** as your first partner (1 in 4096 is shiny, as in the games). If you close it, reopen it from the right-click menu "🔴 Choose your first Pokémon…". |
+| Click the pet | Pat it: hearts, mood up; at most +1 XP every 15 s, 20 a day. |
+| Drag the pet | Move it anywhere on screen. While it's away, the little map on the desktop can be dragged too. |
 | Drag, swing and let go | It flies, bounces off the screen edges and lands a bit dizzy (and happy). |
 | Drop it at the left/right edge | It hides halfway and peeks out; click it to bring it back. |
 | Poke different spots | Head: a pat; belly: a giggle; feet: a squeak. Poke too much and it gets annoyed. |
@@ -351,13 +363,13 @@ Every Pokémon has its own **hunger, cleanliness, health and mood** (0–100).
 |---|---|---|
 | Oran Berry | 1 | Hunger +25, mood +3 |
 | Poké Puff | 2 | Hunger +15, mood +15 |
-| Rare Candy | 5 | Hunger +5, mood +5, **XP +40** |
+| Rare Candy | 20 | Hunger +5, mood +5, **XP +50** |
 | Bath | free | Cleanliness to 100, mood +6 |
 | Potion | 3 | Health +45 |
 | Antidote / Paralyze Heal / Burn Heal / Ice Heal / Persim Berry | 3 each | Cures that condition, health +20 |
 | Full Heal | 8 | Cures any condition, health +30 |
 | Revive | 8 | Wakes a fainted Pokémon |
-| Poké Ball / Great Ball / Ultra Ball | 5 / 12 / 25 | Battle only, for catching |
+| Poké Ball / Great Ball / Ultra Ball | 10 / 20 / 40 | Battle only, for catching |
 
 Items in the bag are **used first**; berries are only spent when you have none. Use items from the 🍓 Care tab, the
 right-click "Care" menu or the buttons in the pet's speech bubble.
@@ -368,11 +380,15 @@ Pomodoros +3, to-dos +1, daily sign-in, daily tasks, achievements, outings, fish
 
 ## 4. Growing up and evolving
 
-- Level formula: `level = 1 + ⌊√(XP / 25)⌋`.
+- **Levels** follow the games' "medium fast" curve: reaching Lv n takes **n³ − 1** XP in total (Lv10 = 999,
+  Lv16 = 4095, Lv36 = 46655), **up to Lv100**.
 - The pet **grows by itself while the app runs**: +4 XP per hour at full speed, slower when it's sad, sick, hungry or
   dirty (QQ Pet's growth penalties), not at all while fainted.
-- **Evolution** at **Lv12** and **Lv24**. The pet asks first; "Later" asks again in 6 hours. For branching species you
-  pick the form. Level, stats and diary are kept.
+- **Evolution** happens at **the level from the games** (from PokeAPI: Bulbasaur Lv16, Charmander Lv16 / Lv36 …).
+  Evolutions that use stones, trades, friendship and the like happen at **Lv30** here.
+- **Evolving also takes time**: at least **7 days** on your team before the first evolution and **14 days** after the
+  previous one. Once both the level and the days are there, the pet asks first; "Later" asks again in 6 hours. For
+  branching species you pick the form. Level, stats and diary are kept.
 - **Four contest stats**: **Cool, Cute, Smart, Tough**. They come from Pomodoros, outings, classes and battles, and give small bonuses in battle.
 
 ## 5. Outings 🧭
@@ -397,7 +413,7 @@ where it was) and the **timer keeps running while the app is closed**. Only one 
 - Every return brings a **photo** (random pose and expression) in 📖 Dex → Photos: only the **3 newest** are kept, and
   ☆ favourites stay for good (up to **20**).
 - **A new friend**: after a dungeon or a trip, a wild Pokémon may follow it home and you decide whether it stays.
-  Chance = 3% + 17% × mood/100 (up to 20% when it's happy). Classes never bring one.
+  Chance = 1% + 7% × mood/100 (up to 8% when it's happy). Classes never bring one.
 - **A wild encounter**: after a dungeon or a trip there's a **30%** chance that a wild Pokémon comes back with it. Your
   Pokémon **asks right away** whether to battle: "Battle!" starts at once; "Wait a bit" puts it off, but the wild
   Pokémon only waits **30 minutes** – after that it leaves (see section 7).
@@ -416,14 +432,14 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 
 | Rarity | Examples | Berries | XP | Wants to join |
 |---|---|---|---|---|
-| Common | Magikarp, Goldeen, Poliwag… | 0 | 2 | 6% |
-| Uncommon | Horsea, Krabby, Staryu… | 1 | 3 | 10% |
-| Rare | Chinchou, Corsola, Feebas… | 3 | 5 | 16% |
-| Very rare | Dratini, Lapras, Gyarados | 6 | 8 | 25% |
+| Common | Magikarp, Goldeen, Poliwag… | 0 | 2 | 2% |
+| Uncommon | Horsea, Krabby, Staryu… | 1 | 3 | 3% |
+| Rare | Chinchou, Corsola, Feebas… | 3 | 5 | 5% |
+| Very rare | Dratini, Lapras, Gyarados | 6 | 8 | 8% |
 
-- **24** water Pokémon, each with a random size (70%–140% of the usual height), shiny **1 in 128**.
+- **24** water Pokémon, each with a random size (70%–140% of the usual height), shiny **1 in 4096**. Even in the red zone only about 5% of bites are very rare.
 - A new species gives **+2 🍓** extra. Everything goes into 📖 Dex → Fishing Pokédex (count, biggest size).
-- **Species you've already caught bite more often**: within a rarity, a species already in the Pokédex is **3 times** as
+- **Species you've already caught bite more often**: within a rarity, a species already in the Pokédex is **5 times** as
   likely as a new one, so completing the Pokédex takes a while.
 - A catch may **want to come along**: "Welcome to the team!" makes it a new team member.
 - Fishing has **no daily limit**.
@@ -454,7 +470,9 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
   Dark, Fairy); a trip's encounter comes from that region's Pokédex. Other types turn up now and then.
 - **Wild level = your lead's level −3 to +1** (at least Lv2).
 - Evolved forms only appear once your partner is **Lv15**, fully evolved ones from **Lv28**.
-- Shiny **1 in 128**.
+- **The usual faces**: half of all encounters come only from species you've **already seen** (once you've seen three or
+  more), so new species get harder and harder to find.
+- Shiny **1 in 4096**, with a guarantee (section 10).
 
 ### Battle rules (simplified main-series rules)
 
@@ -484,12 +502,14 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 
 | Result | Effect |
 |---|---|
-| **Win** | XP `(8 + 3 × wild level) ÷ number of participants` for each Pokémon that took part; **+1–3 🍓**; the Pokémon on the field gets Cool +1 and Tough +1; counts for the "battle" daily task |
+| **Win** | XP `(10 + 2.5 × wild level) ÷ number of participants` for each Pokémon that took part; **+1–3 🍓**; the Pokémon on the field gets Cool +1 and Tough +1; counts for the "battle" daily task |
 | **Caught** | The same XP; the wild Pokémon **joins your team** at its level; recorded in the Pokédex; counts for the "catch" daily task |
-| **Lose (grass)** | The team gets **health −30, mood −20** and **drops 3 🍓** while running away (or all you have), never fainted |
-| **Lose (outing encounter)** | Light penalty: the team gets **health −15, mood −10**, never fainted |
+| **Lose (grass)** | The team gets **health −30, mood −20** and **drops 3 🍓** while running away (or all you have); each Pokémon knocked out in the battle has a **60%** chance to still be **fainted** at home and need a Revive |
+| **Lose (outing encounter)** | Light penalty: the team gets **health −15, mood −10**; a Pokémon knocked out faints only **5%** of the time |
 | **Run** | Nothing gained or lost |
 
+- **Battle faces**: PMD portraits next to both HP bars react to the fight – pain when hit, joy at a super-effective move,
+  surprise at a critical hit, dizzy when confused, worried when low, cheering when you win and crying when you lose.
 - **Burns, poison, paralysis and freezing from the battle come home** – treat them in the 🍓 Care tab (confusion doesn't).
 - 📖 Dex → Pokédex counts the species **seen** and **caught**.
 
@@ -528,7 +548,7 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 |---|---|
 | Focus | 1 Pomodoro → 2, 25 → 5, 100 → 10 |
 | To-dos | 10 → 3, 50 → 5 |
-| Levels | Lv5 → 3, Lv12 → 5, Lv24 → 10 |
+| Levels | Lv5 → 3, Lv16 → 5, Lv36 → 10 |
 | Raising | hatch → 5, evolve once → 5, twice → 10, cure 5 times → 5, any stat at 50 → 8, own a shiny → 3 |
 | Outings | 1 → 2, 20 → 8, all 9 regions → 15 |
 | Fishing | first fish → 2, 10 species → 8, all 24 → 20 |
@@ -544,14 +564,27 @@ You start with the one from the professor. After that, new team members **only**
 In the 🐾 Pokémon tab you can **switch your partner** (the one on the desktop), **add to team** and **remove**. The
 right-click "Switch Pokémon" menu switches quickly too.
 
+As in the games, collecting takes its time: fishing and outings rarely bring a new friend, and the grass mostly shows
+the usual faces.
+
+### Shiny Pokémon ✨
+
+- Every shiny is as rare as in the games: **1 in 4096** (starter, grass, outing encounters, friends following you
+  home, fishing).
+- **Guarantee**: once **90 days** have passed since your last shiny joined the team (or since you started), every wild
+  Pokémon you meet (grass, outing encounters, friends following you home) **is shiny** until one of them joins you – so
+  you get at least one about every three months. Fishing doesn't count for the guarantee.
+
 ## 11. Diary, emotions and more
 
 - **Diary**: the pet writes a daily entry in its own words (focus, to-dos, meals, baths, sickness, pats) and every 7 days
   says whether the week was happy, okay or sad. 📔 Diary shows focus minutes per day and a timeline.
-- **Emotions**: speech bubbles show its PMD portrait, matching its mood and state (happy, worried, sad, pain, dizzy…).
+- **Animations and emotions**: sprites come from PMD SpriteCollab, about 35 animations each (idle, walking in 8
+  directions, sleeping, eating, hurt, fainting, hopping, attacks…) that follow what it's doing; speech bubbles show its
+  PMD portrait, matching its mood and state (happy, worried, sad, pain, dizzy…).
 - **Reacting to keyboard & mouse** (can be turned off): it types along while you type and suggests a Pomodoro after
-  15 min of typing without one; it looks at the cursor; it naps when you've been away 3 min. It only knows *when* a key
-  was pressed, never which.
+  15 min of typing without one; it looks at the cursor; it gets shy when you hover over it and dizzy when you shake the
+  mouse; it naps when you've been away 3 min.
 - **Hiding over fullscreen apps** (videos, games, slides) – on by default, can be turned off.
 - **AI chat** (off by default): Settings → AI chat, pick a provider, enter your own API key and a model, then right-click
   "💬 Chat…". Your Pokémon answers in character from its current state. Conversations aren't saved.
@@ -567,9 +600,11 @@ right-click "Switch Pokémon" menu switches quickly too.
 | Outings | one Pokémon at a time; 30–90 minutes |
 | Sign-in | once a day, 7-day cycle |
 | Daily tasks | 4 a day + an all-done bonus |
-| Fishing | unlimited (caught species bite 3× as often) |
+| Fishing | unlimited (caught species bite 5× as often) |
 | Holiday gifts | once per holiday |
-| XP from patting | at most 1 every 15 s |
+| XP from patting | at most 1 every 15 s, 20 a day |
+| Evolution | the games' level, plus 7 days on the team / 14 days since the last one |
+| Shiny guarantee | 90 days after the last shiny joined |
 | Care while the app is closed | at most 12 hours counted |
 | Status condition getting worse | one stage every 6 hours |
 | Evolution "Later" | asked again after 6 hours |
@@ -580,20 +615,22 @@ right-click "Switch Pokémon" menu switches quickly too.
 
 # 开发者附录 / Developer appendix
 
-**当前版本 / Current version:** 1.0.0 · Electron + vanilla JS · 数据文件版本 / store version 4
+**当前版本 / Current version:** 1.0.0 + unreleased changes · Electron + vanilla JS · 数据文件版本 / store version 5（旧存档的等级会按新曲线保留 / old saves keep their levels on the new curve）
 
 ## 数值在哪里改 / Where the numbers live
 
 | 功能 / Feature | 文件 / File | 主要常量 / Key constants |
 |---|---|---|
 | 照顾、物品、异常状态 / Care, items, statuses | `src/main/care.js` | `ITEMS`, `REWARD`, `DIAGNOSE_COST`, `STAGE_HOURS`, `MAX_STAGE` |
-| 成长、进化 / Growth, evolution | `src/main/growth.js` | `BASE_XP_PER_HOUR`, `EVOLVE_LEVELS`, `EVOLVE_SNOOZE_H`, `SHINY_RATE` (1/64 starter) |
+| 成长、进化 / Growth, evolution | `src/main/growth.js` | `xpFor` / `levelOf` (n³ − 1), `MAX_LEVEL`, `EVOLVE_FALLBACK`, `EVOLVE_MIN_DAYS`, `EVOLVE_SNOOZE_H`; evolution levels from `sources.js` `evolutionOptions` |
+| 闪光 / Shinies | `src/main/shiny.js` | `RATE` (1/4096), `PITY_DAYS` (90); `data.shiny.since` |
 | 外出 / Outings | `src/main/expedition.js` | `EXPEDITIONS`, `LOOT`, `companionChance()` |
 | 外出遭遇 / Outing encounters | `main.js` `checkExpedition` / `offerOutingEncounter` / `checkEncounter` | 0.3 chance; `Wild.ENCOUNTER_WAIT_MIN` (30); saved in `data.wild.encounter` |
 | 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `TIERS`, `ZONES`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |
-| 野生宝可梦 / Wild species | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `DAILY_GRASS`, `HOURLY_GRASS`, `SPECIAL`, `SHINY_RATE` |
-| 对战结算 / Battle results | `main.js` `finishBattle`, `LOSE_PENALTY` | win berries 1–3; lose: grass −30 health / −20 mood / −3 berries, outing −15 / −10 |
+| 野生宝可梦 / Wild species | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `DAILY_GRASS`, `HOURLY_GRASS`, `REPEAT_SEEN`, `SPECIAL`, `SHINY_RATE` |
+| 对战结算 / Battle results | `main.js` `finishBattle`, `LOSE_PENALTY` | win berries 1–3; lose: grass −30 health / −20 mood / −3 berries / 60% faint, outing −15 / −10 / 5% faint |
+| 摸摸经验 / Pat XP | `main.js` | `PAT_XP_PER_DAY` (20) |
 | 属性相克 / Type chart | `src/main/typechart.js` | 18 × 18 |
 | 种族值、招式、捕获率 / Base stats, moves, catch rates | `src/main/pokedata.js` | PokeAPI, cached in `userData/pokedata.json` |
 | 每日 / Daily | `src/main/daily.js` | `TASKS`, `PER_DAY`, `ALL_DONE_BONUS`, `SIGN_REWARDS` |
@@ -606,7 +643,6 @@ right-click "Switch Pokémon" menu switches quickly too.
 ## 测试 / Testing
 
 ```bash
-npm test                                            # unit tests (node --test)
 POKEPET_TEST=<dir> POKEPET_DATA_DIR=<dir> npx electron .   # end-to-end self-test, screenshots in <dir>
 ```
 
@@ -614,7 +650,7 @@ The self-test uses a fresh data folder, walks through the starter, Pomodoro, car
 battles, and saves a screenshot of each step.
 自测会用一个新的数据目录，依次走一遍选初始宝可梦、番茄钟、照顾、外出、进化、钓鱼和对战，每一步保存截图。
 
-## 已知限制 / Known limitations (1.0.0)
+## 已知限制 / Known limitations
 
 - 对战只有攻击招式，没有变化类招式、能力升降、睡眠状态和天气场地。
   Battles only use damaging moves: no status moves, stat changes, sleep, weather or terrain.
@@ -622,7 +658,5 @@ battles, and saves a screenshot of each step.
   Only species PMD has drawn can appear or join.
 - 精灵图和 PokeAPI 数据需要联网下载，第一次遇到某个物种会慢一点；之后会缓存。
   Sprites and PokeAPI data are downloaded on first use (slower the first time), then cached.
-- 安装包没有签名和公证（macOS 首次需右键 → 打开；Windows 需在 SmartScreen 里点「仍要运行」）。
-  Installers are unsigned (macOS: right-click → Open the first time; Windows: SmartScreen → Run anyway).
 - Windows 版还没在真机上完整测试过。
   The Windows build hasn't been fully tested on a real machine yet.

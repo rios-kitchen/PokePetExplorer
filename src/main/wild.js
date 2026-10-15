@@ -23,7 +23,10 @@ const ENCOUNTER_WAIT_MIN = 30;   // a wild Pokémon met on an outing waits this 
 // not "legendary" in PokeAPI's data, but just as special: Ultra Beasts and Paradox Pokémon
 const SPECIAL = new Set([793, 794, 795, 796, 797, 798, 799, 803, 804, 805, 806,
   984, 985, 986, 987, 988, 989, 990, 991, 992, 993, 994, 995, 1005, 1006, 1009, 1010, 1020, 1021, 1022, 1023]);
-const SHINY_RATE = 1 / 128;
+const SHINY_RATE = 1 / 4096;   // as in the games (see shiny.js for the guarantee)
+// half the time the grass picks among species you've already met (if there are a few around), like the
+// common Pokémon of a route turning up again and again
+const REPEAT_SEEN = 0.5;
 
 /** Dex numbers PMD has drawn (from the cached artist index), else everything up to 1025. */
 function drawnDex(creditIndex) {
@@ -36,9 +39,14 @@ function drawnDex(creditIndex) {
  * Pick a wild species for a place: { dex, names, types, capture }. Tries a few random candidates and
  * keeps one that fits the place (sometimes accepting an odd one out, for variety). Needs PokeAPI.
  */
-async function pickSpecies({ place, region, partnerLevel, drawn, dir, rnd = Math.random }) {
+async function pickSpecies({ place, region, partnerLevel, drawn, dir, seen = [], rnd = Math.random }) {
   const range = region && REGION_DEX[region];
-  const pool = range ? drawn.filter((d) => d >= range[0] && d <= range[1]) : drawn;
+  let pool = range ? drawn.filter((d) => d >= range[0] && d <= range[1]) : drawn;
+  if (rnd() < REPEAT_SEEN) {
+    const inPool = new Set(pool);
+    const met = seen.filter((d) => inPool.has(d));
+    if (met.length >= 3) pool = met;
+  }
   const fits = HABITATS[place] || HABITATS.grass;
   let fallback = null;
   for (let tries = 0; tries < 14; tries++) {
@@ -68,4 +76,4 @@ async function battlerFor({ key, dex, names, level, attrs, shiny, dir }) {
   return { key, dex, names, level, types: pk.types, base: pk.base, moves, attrs, shiny };
 }
 
-module.exports = { HABITATS, REGION_DEX, DAILY_GRASS, HOURLY_GRASS, ENCOUNTER_WAIT_MIN, SHINY_RATE, SPECIAL, drawnDex, pickSpecies, battlerFor };
+module.exports = { HABITATS, REGION_DEX, DAILY_GRASS, HOURLY_GRASS, ENCOUNTER_WAIT_MIN, SHINY_RATE, REPEAT_SEEN, SPECIAL, drawnDex, pickSpecies, battlerFor };

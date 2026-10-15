@@ -18,8 +18,9 @@
   const L = () => (state ? state.settings.lang : 'en');
   const t = (k, v) => I18N.t(L(), k, v);
 
-  const levelOf = (xp) => 1 + Math.floor(Math.sqrt((xp || 0) / 25));
-  const xpAt = (lv) => 25 * (lv - 1) * (lv - 1);
+  // the games' "medium fast" curve, as in src/main/growth.js: Lv n needs n³ − 1 XP, up to Lv100
+  const xpAt = (lv) => Math.min(100, lv) ** 3 - 1;
+  const levelOf = (xp) => { let l = 1; while (l < 100 && xpAt(l + 1) <= (xp || 0)) l++; return l; };
 
   function el(tag, attrs = {}, ...children) {
     const e = document.createElement(tag);
@@ -174,7 +175,7 @@
     const base = xpAt(lv), next = xpAt(lv + 1);
     $('#heroName').textContent = petName(id);
     $('#heroLevel').textContent = t('poke.level', { n: lv });
-    $('#heroXp').style.width = `${Math.round(((xp - base) / (next - base)) * 100)}%`;
+    $('#heroXp').style.width = `${Math.round(((xp - base) / Math.max(1, next - base)) * 100)}%`;
     $('#heroXpText').textContent = `${t('poke.xp', { xp, next })} · ${t('poke.growth', { n: Math.round((state.growthRate ?? 1) * 100) })}`;
     $('#heroBerries').textContent = `🍓 ${state.berries}`;
     const m = state.mood;
@@ -379,7 +380,7 @@
     for (const p of all) {
       const xp = state.pets[p.id]?.xp || 0;
       const lv = levelOf(xp);
-      const pct = Math.round(((xp - xpAt(lv)) / (xpAt(lv + 1) - xpAt(lv))) * 100);
+      const pct = Math.round(((xp - xpAt(lv)) / Math.max(1, xpAt(lv + 1) - xpAt(lv))) * 100);
       const cv = spriteNode(p.id, 72);
       const selected = state.settings.pokemon === p.id;
       const card = el('div', { class: `poke${selected ? ' selected' : ''}`, onclick: () => api.send('pokemon:select', p.id) },

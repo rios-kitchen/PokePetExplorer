@@ -140,7 +140,16 @@ test('passive growth adds up fractions', () => {
   assert.equal(pet.xp, Growth.BASE_XP_PER_HOUR);
 });
 
-test('eggs hatch at Lv5; evolution is offered at Lv12 and Lv24, and can be snoozed', () => {
+test('the games\' level curve: Lv n needs n³ − 1 XP, up to Lv100', () => {
+  assert.equal(Growth.levelOf(0), 1);
+  assert.equal(Growth.xpFor(16), 4095);
+  assert.equal(Growth.levelOf(4094), 15);
+  assert.equal(Growth.levelOf(4095), 16);
+  assert.equal(Growth.levelOf(10e6), 100);
+  for (let l = 1; l <= 100; l++) assert.equal(Growth.levelOf(Growth.xpFor(l)), l);
+});
+
+test('eggs hatch at Lv5; evolution at the species\' level, not before a week (two after the last), snoozable', () => {
   const pet = petOf(fresh(), 'pikachu');
   pet.stage = 'egg';
   pet.xp = Growth.xpFor(5) - 1;
@@ -149,17 +158,30 @@ test('eggs hatch at Lv5; evolution is offered at Lv12 and Lv24, and can be snooz
   assert.equal(Growth.readyToHatch(pet), true);
 
   pet.stage = 'hatched';
-  pet.xp = Growth.xpFor(11);
-  assert.equal(Growth.evolutionDue(pet), false);
-  pet.xp = Growth.xpFor(12);
-  assert.equal(Growth.evolutionDue(pet), true);
-  pet.evolution = { options: [], snoozeUntil: Date.now() + 1000 };
-  assert.equal(Growth.evolutionDue(pet), false);
+  const day = 86400e3, now = Date.now();
+  pet.hatchedAt = now - 8 * day;
+  pet.xp = Growth.xpFor(16);
+  assert.equal(Growth.evolutionDue(pet, now), false, 'level not looked up yet');
+  pet.evolveAt = 16;
+  pet.xp = Growth.xpFor(15);
+  assert.equal(Growth.evolutionDue(pet, now), false);
+  pet.xp = Growth.xpFor(16);
+  assert.equal(Growth.evolutionDue(pet, now), true);
+  pet.hatchedAt = now - 6 * day;
+  assert.equal(Growth.evolutionDue(pet, now), false, 'less than a week with you');
+  pet.hatchedAt = now - 8 * day;
+  pet.evolution = { options: [], snoozeUntil: now + 1000 };
+  assert.equal(Growth.evolutionDue(pet, now), false);
   pet.evolution = null;
   pet.evolutions = 1;
-  assert.equal(Growth.evolutionDue(pet), false);
-  pet.xp = Growth.xpFor(24);
-  assert.equal(Growth.evolutionDue(pet), true);
+  pet.evolvedAt = now - 10 * day;
+  pet.evolveAt = 36;
+  assert.equal(Growth.evolutionDue(pet, now), false);
+  pet.xp = Growth.xpFor(36);
+  assert.equal(Growth.evolutionDue(pet, now), false, 'less than two weeks since the last evolution');
+  pet.evolvedAt = now - 15 * day;
+  assert.equal(Growth.evolutionDue(pet, now), true);
+  assert.equal(Growth.optionLevel({ level: null }), Growth.EVOLVE_FALLBACK);
   pet.finalForm = true;
   assert.equal(Growth.evolutionDue(pet), false);
 });
@@ -548,9 +570,22 @@ test('species already in the fishing Pokédex bite more often', () => {
   let r = 1;
   const rnd = () => { r = (r * 16807) % 2147483647; return r / 2147483647; };
   for (let i = 0; i < 6000; i++) if (Fishing.bite(0, rnd, caught).hidden.dex === common[0].dex) fresh++;
-  // without weighting the new species would be 1 in 6 of common bites; now 1 in 16 (≈ 0.06 × common share)
-  const commonShare = 60 / 100;
+  // without weighting the new species would be 1 in 6 of common bites; now 1 in 26
+  const commonShare = 62 / 100;
   const share = fresh / 6000 / commonShare;
-  assert.ok(share > 0.04 && share < 0.09, `new species share ${share}`);
-  assert.equal(Fishing.REPEAT_WEIGHT, 3);
+  assert.ok(share > 0.025 && share < 0.06, `new species share ${share}`);
+  assert.equal(Fishing.REPEAT_WEIGHT, 5);
+});
+
+test('shinies: 1 in 4096, guaranteed once 90 days passed since the last one joined', () => {
+  const Shiny = require('../src/main/shiny');
+  const day = 86400e3, now = Date.now();
+  const d = { shiny: { since: now - 89 * day } };
+  assert.equal(Shiny.roll(d, { rnd: () => 0.5, now }), false);
+  assert.equal(Shiny.roll(d, { rnd: () => 0.0001, now }), true);
+  d.shiny.since = now - 91 * day;
+  assert.equal(Shiny.roll(d, { rnd: () => 0.5, now }), true);
+  assert.equal(Shiny.roll(d, { rnd: () => 0.5, now, pity: false }), false);
+  Shiny.obtained(d, now);
+  assert.equal(Shiny.roll(d, { rnd: () => 0.5, now }), false);
 });

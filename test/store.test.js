@@ -56,7 +56,8 @@ test('version 1 data: global mood moves into every pet', () => {
   assert.equal(d.mood, undefined);
   assert.equal(d.pets.pikachu.mood, 42);
   assert.equal(d.pets.eevee.mood, 42);
-  assert.equal(d.pets.pikachu.xp, 120, 'xp kept');
+  // the old curve's Lv3 + 20/125 of the way → the games' curve (Lv3 = 26 XP, Lv4 = 63)
+  assert.equal(d.pets.pikachu.xp, Math.round(26 + (20 / 125) * 37), 'level and progress kept');
   assert.equal(d.pets.pikachu.care.hunger, 40, 'care kept');
   assert.equal(d.pets.pikachu.stage, 'hatched');
   assert.equal(d.berries, 7);

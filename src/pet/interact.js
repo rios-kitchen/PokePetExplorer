@@ -110,7 +110,12 @@
   function hitTest(x, y) {
     const el = document.elementFromPoint(x, y);
     if (el && el.closest('.bubble, .pill')) return true;
-    if (x < 0 || y < 0 || x >= P.W || y >= P.H || P.isAway()) return false;
+    if (x < 0 || y < 0 || x >= P.W || y >= P.H) return false;
+    if (P.isAway()) {
+      // the little destination icon can be dragged around too
+      const r = P.awayRect();
+      return !!r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    }
     const a = ctx.getImageData(Math.floor(x * P.DPR), Math.floor(y * P.DPR), 1, 1).data[3];
     if (a > 10) return true;
     const g = P.geometry();
@@ -128,10 +133,11 @@
       const moved = Math.hypot(e.screenX - down.sx, e.screenY - down.sy);
       if (!down.dragging && moved > 4) {
         down.dragging = true;
+        api.send('pet:drag-start');
+        if (P.isAway()) return;
         pet.held = true;
         if (pet.mode === 'sleep' || pet.mode === 'walk') pet.mode = 'idle';
         P.interacted();
-        api.send('pet:drag-start');
         if (!P.bubbleBusy()) P.showBubble(say('held'), { ms: 1500 });
       }
       if (down.dragging && e.buttons === 0) endPointer();
@@ -156,6 +162,12 @@
     const wasAt = { x: down.cx, y: down.cy };
     down = null;
     document.body.style.cursor = 'grab';
+    if (P.isAway()) {
+      // the icon: dropped where it is, or a click opens the menu (call back, …)
+      if (wasDrag) api.send('pet:drag-end', { away: true });
+      else api.send('pet:menu');
+      return;
+    }
     if (wasDrag) {
       api.send('pet:drag-end');
       pet.held = false;

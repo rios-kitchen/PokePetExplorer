@@ -31,6 +31,17 @@
     return iconCache[expId];
   }
 
+  /** Where the away icon is drawn (window coordinates), so it can be grabbed and moved. */
+  function awayRect() {
+    const e = P.state && P.state.expedition;
+    if (!e) return null;
+    const ic = icon(e.id);
+    const s = Math.max(2, P.fx());
+    const w = ic.width * s, h = ic.height * s;
+    const ground = P.H - P.GROUND_PAD;
+    return { left: (P.W - w) / 2 - s * 2, right: (P.W + w) / 2 + s * 2, top: ground - h - s * 4, bottom: ground + s };
+  }
+
   /** While away: a small pixel icon of where the pet is, gently bobbing, with its shadow. */
   function drawAwayMap(ctx, now) {
     const e = P.state && P.state.expedition;
@@ -120,5 +131,5 @@
     return api.invoke('photo:save', { dataUrl: c.toDataURL('image/png'), expId: e.id, region: e.region || null, petId: e.petId });
   }
 
-  Object.assign(P, { drawAwayMap, takePhoto });
+  Object.assign(P, { drawAwayMap, awayRect, takePhoto });
 })();
