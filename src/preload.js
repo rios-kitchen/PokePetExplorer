@@ -9,7 +9,7 @@ const SEND = new Set([
 ]);
 const INVOKE = new Set(['state:get', 'pet:move-by', 'pet:pat', 'pokemon:assets',
   'care:use', 'care:diagnose', 'diary:portrait', 'diary:week', 'expedition:start', 'evolution:choose', 'shop:buy', 'settings:extra', 'update:check', 'update:download', 'photo:save', 'photo:get', 'photo:fav', 'fish:bite', 'fish:land', 'starter:choose', 'join:answer', 'daily:sign', 'daily:claim', 'weather:city', 'wild:explore', 'wild:outing', 'wild:state', 'battle:act', 'battle:assets', 'ai:chat', 'ai:history', 'ai:set-key', 'ai:models', 'ai:test']);
-const ON = new Set(['state', 'pet:event', 'panel:tab', 'input', 'chat', 'wild:encounter']);
+const ON = new Set(['state', 'pet:event', 'panel:tab', 'input', 'chat', 'wild:encounter', 'wild:refresh']);
 
 contextBridge.exposeInMainWorld('api', {
   send(channel, ...args) { if (SEND.has(channel)) ipcRenderer.send(channel, ...args); },

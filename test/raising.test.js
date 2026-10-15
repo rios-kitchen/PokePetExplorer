@@ -334,10 +334,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found.map((f) => f.cmd), ['berries', 'hatch', 'shiny']);
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
+  for (const c of ['battle', 'win', 'catch']) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {

@@ -18,6 +18,7 @@ const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
 const Wild = require('./src/main/wild');
+const Data = require('./src/main/pokedata');
 const { Updater } = require('./src/main/updater');
 const AI = require('./src/main/ai');
 
@@ -488,6 +489,23 @@ async function runSecret(text) {
     checkExpedition();
     return { ok: true };
   }
+  if (cmd === 'battle') {
+    // a battle right away (no daily limit), optionally against a named Pokémon
+    if (battle && !battle.b.over) { openWild(false); return { ok: true }; }
+    const res = await startBattle('test', { query: args.length ? args.join('-') : null });
+    if (!res.ok) return { ok: false };
+    if (wildWin && !wildWin.isDestroyed()) { send(wildWin, 'wild:refresh'); wildWin.show(); wildWin.focus(); } else openWild(false);
+    return { ok: true };
+  }
+  if (cmd === 'win' || cmd === 'catch') {
+    // end the current battle: the wild Pokémon is beaten / caught
+    if (!battle || battle.b.over) return { ok: false };
+    const b = battle.b;
+    if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
+    finishBattle();
+    send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
   if (cmd === 'berries') {
     store.data.berries += 10;
     changed();
@@ -789,7 +807,7 @@ function bagForBattle() {
 }
 
 /** Start a battle in the grass (uses an encounter) or from an outing. */
-async function startBattle(source) {
+async function startBattle(source, opts = {}) {
   if (battle && !battle.b.over) return { ok: true };
   const ids = partyIds().filter((id) => !Care.careOf(store.data, id).fainted);
   if (!ids.length) return { ok: false, error: 'noParty' };
@@ -798,12 +816,17 @@ async function startBattle(source) {
     if (!pendingEncounter || Date.now() > pendingEncounter.until) { pendingEncounter = null; return { ok: false, error: 'gone' }; }
     ({ place, region } = pendingEncounter);
     pendingEncounter = null;
-  } else if (wildEnergy() <= 0) return { ok: false, error: 'tired' };
+  } else if (source !== 'test' && wildEnergy() <= 0) return { ok: false, error: 'tired' };
   const dir = spritesDir();
   try {
     const leadLevel = levelOf(petOf(store.data, ids[0]).xp);
     const drawn = Wild.drawnDex(Sources.creditIndexCached(dir));
-    const sp = await Wild.pickSpecies({ place, region, partnerLevel: leadLevel, drawn, dir });
+    let sp;
+    if (opts.query) {
+      const found = await Sources.lookupSpecies(opts.query);
+      const [info, pk] = await Promise.all([Data.species(found.dex, dir), Data.pokemon(found.dex, dir)]);
+      sp = { dex: found.dex, names: info.names, types: pk.types, capture: info.capture };
+    } else sp = await Wild.pickSpecies({ place, region, partnerLevel: leadLevel, drawn, dir });
     const level = Battle.wildLevel(leadLevel);
     const shiny = Math.random() < Wild.SHINY_RATE;
     const party = [];
@@ -814,7 +837,7 @@ async function startBattle(source) {
     }
     const w = await Wild.battlerFor({ key: 'wild', dex: sp.dex, names: sp.names, level, attrs: {}, shiny, dir });
     const wild = Battle.makeMon({ ...w, wild: true });
-    if (source !== 'outing') store.data.wild.used++;
+    if (source === 'grass') store.data.wild.used++;
     const seen = store.data.pokedex[sp.dex] || { seen: 0, caught: 0 };
     store.data.pokedex[sp.dex] = { ...seen, seen: seen.seen + 1 };
     battle = { b: Battle.create({ party, wild, bag: bagForBattle() }), ctx: { place, region, source, capture: sp.capture, ids } };
@@ -2216,6 +2239,32 @@ async function selfTest(dir) {
   });
   await wait(3500);
   await shot(petWin, '20-pet-hatched-shiny');
+  let words = null;
+  try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* not on this machine */ }
+  if (words && words.battle) {
+    // test codes: a forced battle against a chosen Pokémon, then win; another, then catch
+    await step('battle-codes', async () => {
+      const used = store.data.wild.used;
+      console.log('[test] battle code:', JSON.stringify(await runSecret(`${words.battle} snorlax`)), battle && battle.b.wild.dex, store.data.wild.used === used);
+    });
+    await wait(3500);
+    await shot(wildWin, '20b-battle-forced');
+    await step('win-code', async () => {
+      const xp = activePet().xp;
+      console.log('[test] win code:', JSON.stringify(await runSecret(words.win)), activePet().xp > xp);
+    });
+    await wait(2500);
+    await shot(wildWin, '20c-battle-won');
+    await step('catch-code', async () => {
+      const n = Object.keys(store.data.pets).length;
+      await runSecret(words.battle);
+      console.log('[test] catch code:', JSON.stringify(await runSecret(words.catch)), Object.keys(store.data.pets).length === n + 1);
+    });
+    await wait(15000);
+    console.log('[test] caught screen:', await wildWin.webContents.executeJavaScript("document.querySelector('#resTitle').textContent + ' | ' + document.querySelector('#result').className + ' | ' + document.querySelector('#wildBox .name').textContent"));
+    await shot(wildWin, '20d-battle-caught');
+    if (wildWin && !wildWin.isDestroyed()) wildWin.close();
+  }
   // album: four outings in a row → only the latest 3 regular photos stay; star the oldest one
   for (let i = 0; i < 4; i++) {
     await step(`photo-${i}`, async () => {

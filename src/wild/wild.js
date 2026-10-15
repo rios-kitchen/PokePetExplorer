@@ -169,6 +169,7 @@
   // ---------------------------------------------------------------- battle mode
   let shown = null;   // what's displayed (updated event by event)
   async function startBattle() {
+    $('#result').classList.add('hidden');
     info = await api.invoke('wild:state');
     view = info.battle;
     if (!view) { showExplore(); return; }
@@ -176,9 +177,11 @@
     actors.walker = null;
     setScene(view.place, view.region);
     shown = JSON.parse(JSON.stringify(view));
+    actors.wild = null;
+    renderBoxes();
     actors.wild = actor(await wildSprite(view.wild), 7, 345, 150);
     actors.me = actor(await ownSprite(view.party[view.active].key), 3, 140, 262);
-    renderBoxes();
+    if (view.over) return;   // already decided (a test code): the caller shows the result
     Sound.play('alarm');
     await say(t(view.wild.shiny ? 'b.appearShiny' : 'b.appear', { name: nm(view.wild) }), 1200);
     await say(t('b.go', { name: nm(view.party[view.active]) }), 700);
@@ -378,6 +381,24 @@
   }
   api.on('state', (s) => { state = s; Sound.setEnabled(s.settings.sound); document.title = t('wild.title'); });
   api.on('wild:encounter', () => { if (mode === 'explore') showExplore(); });
+  // the battle changed outside this window (started or ended from Settings): catch up
+  let refreshing = Promise.resolve();
+  api.on('wild:refresh', () => { refreshing = refreshing.then(refresh, refresh); });
+  async function refresh() {
+    info = await api.invoke('wild:state');
+    if (!info.battle) { showExplore(); return; }
+    const fresh = !view || (view.over && !info.battle.over) || view.wild.dex !== info.battle.wild.dex;
+    if (mode !== 'battle' || !actors.wild || fresh) await startBattle();
+    view = info.battle;
+    shown = JSON.parse(JSON.stringify(view));
+    renderBoxes();
+    if (view.over) {
+      $('#menu').replaceChildren();
+      if (view.over === 'win' && actors.wild) { play(actors.wild, ['Faint', 'Hurt'], 900); setTimeout(() => { actors.wild.alpha = 0; }, 900); }
+      if (view.over === 'caught' && actors.wild) { actors.wild.alpha = 0; ball = { from: { x: 345, y: 110 }, to: { x: 345, y: 110 }, start: 0, wobble: false }; Sound.play('fanfare'); }
+      showResult();
+    }
+  }
   (async () => {
     state = await api.invoke('state:get');
     Sound.setEnabled(state.settings.sound);
