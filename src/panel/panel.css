@@ -416,3 +416,14 @@ img.smooth, #heroSprite.smooth { image-rendering: auto; }
 .ai-model .secondary { white-space: nowrap; }
 .ai-actions { display: flex; gap: 8px; }
 #aiStatus { margin: 0; overflow-wrap: anywhere; }
+
+/* ---- favourite photos */
+.photo-wrap { position: relative; }
+.photo-wrap .photo { width: 100%; }
+.photo-wrap .star {
+  position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45); color: #fff; font-size: 14px; line-height: 24px; cursor: pointer;
+}
+.photo-wrap .star.on { color: var(--yellow); background: rgba(0, 0, 0, 0.6); }
+.photo-wrap .star:hover { transform: scale(1.1); }
+#favHead { margin-top: 22px; }

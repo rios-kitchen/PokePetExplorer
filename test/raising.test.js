@@ -310,3 +310,25 @@ test('every expedition has a pixel scene', () => {
   }
   for (const r of Exp.REGIONS) assert.equal(Maps.sceneRgba('travel', { region: r }).width, Maps.W);
 });
+
+// ---------------------------------------------------------------- photo album
+const Album = require('../src/main/album');
+const photo = (i, fav = false) => ({ id: `p${i}`, file: `p${i}.png`, at: i, fav });
+
+test('only the latest 3 regular photos are kept; favourites stay', () => {
+  const photos = [photo(1, true), photo(2), photo(3), photo(4), photo(5), photo(6, true)];
+  const dropped = Album.prune(photos);
+  assert.deepEqual(dropped.map((p) => p.id), ['p2']);
+  assert.deepEqual(photos.map((p) => p.id).sort(), ['p1', 'p3', 'p4', 'p5', 'p6']);
+});
+
+test('at most 20 favourites; unstarring an old photo drops it', () => {
+  const photos = Array.from({ length: 20 }, (_, i) => photo(i, true)).concat([photo(30)]);
+  assert.equal(Album.setFavorite(photos, 'p30', true).reason, 'full');
+  assert.equal(Album.wouldDrop(photos, 'p0'), false, 'only 1 regular photo – it stays');
+  photos.push(photo(31), photo(32));
+  assert.equal(Album.wouldDrop(photos, 'p0'), true);
+  const res = Album.setFavorite(photos, 'p0', false);
+  assert.deepEqual(res.dropped.map((p) => p.id), ['p0']);
+  assert.equal(Album.setFavorite(photos, 'p30', true).ok, true);
+});

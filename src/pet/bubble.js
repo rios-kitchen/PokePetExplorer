@@ -46,8 +46,9 @@
   function portrait(emotion) {
     const dex = P.sprite && dexOf(P.sprite.id);
     if (!dex) return Promise.resolve(null);
-    const k = `${dex}-${emotion}`;
-    if (!(k in faceCache)) faceCache[k] = api.invoke('diary:portrait', dex, emotion).catch(() => null);
+    const shiny = !!(P.state.skins[P.sprite.id] || {}).shiny;   // shiny Pokémon get their shiny faces
+    const k = `${dex}${shiny ? 's' : ''}-${emotion}`;
+    if (!(k in faceCache)) faceCache[k] = api.invoke('diary:portrait', dex, emotion, shiny).catch(() => null);
     return faceCache[k];
   }
 

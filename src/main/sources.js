@@ -228,16 +228,22 @@ async function downloadSkin(dex, shiny, dir) {
   return { ...(await downloadPmd(dex, shiny, dir)), shiny: !!shiny };
 }
 
-/** PMD portrait (40x40 face) for the diary, cached. emotion: Normal | Happy | Sad | Pain | Joyous … */
-async function portrait(dex, emotion, dir) {
+/** PMD portrait (40x40 face), cached. emotion: Normal | Happy | Sad | Pain | Joyous … – shiny for shiny Pokémon. */
+async function portrait(dex, emotion, dir, shiny = false) {
   const folder = path.join(dir, 'portraits');
-  const file = path.join(folder, `${dex4(dex)}-${emotion}.png`);
+  const file = path.join(folder, `${dex4(dex)}${shiny ? '-shiny' : ''}-${emotion}.png`);
   if (fs.existsSync(file)) return fs.readFileSync(file);
-  const buf = await getBuffer(`${PMD}/portrait/${dex4(dex)}/${emotion}.png`)
-    || (emotion !== 'Normal' ? await getBuffer(`${PMD}/portrait/${dex4(dex)}/Normal.png`) : null);
+  // shiny faces live in portrait/<dex>/0000/0001/; fall back to the shiny "Normal" face, then the regular ones
+  const base = `${PMD}/portrait/${dex4(dex)}`;
+  const tries = [
+    ...(shiny ? [`${base}/0000/0001/${emotion}.png`, `${base}/0000/0001/Normal.png`] : []),
+    `${base}/${emotion}.png`, `${base}/Normal.png`
+  ];
+  let buf = null;
+  for (const url of [...new Set(tries)]) { buf = await getBuffer(url); if (buf) break; }
   if (!buf) return null;
   fs.mkdirSync(folder, { recursive: true });
-  fs.writeFileSync(file, buf);   // a missing emotion is stored as its "Normal" face
+  fs.writeFileSync(file, buf);   // a missing emotion is stored as the closest face found
   await pmdCredits(dex, dir);    // and its artists' names
   return buf;
 }

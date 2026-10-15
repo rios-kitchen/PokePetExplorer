@@ -12,6 +12,7 @@ const Growth = require('./src/main/growth');
 const Expedition = require('./src/main/expedition');
 const Achievements = require('./src/main/achievements');
 const Secrets = require('./src/main/secrets');
+const Album = require('./src/main/album');
 const { Updater } = require('./src/main/updater');
 const AI = require('./src/main/ai');
 
@@ -172,6 +173,7 @@ function snapshot() {
     fishdex: d.fishdex,
     souvenirs: d.souvenirs,
     photos: d.photos,
+    album: { recent: Album.RECENT, maxFavorites: Album.MAX_FAVORITES },
     timer: { ...timer },
     platform: process.platform
   };
@@ -400,8 +402,19 @@ function carryOverOldData() {
 }
 
 // ---------- photo album ----------
-const MAX_PHOTOS = 60;
 function photosDir() { return path.join(app.getPath('userData'), 'photos'); }
+
+function deletePhotoFiles(list) {
+  for (const ph of list) { try { fs.unlinkSync(path.join(photosDir(), ph.file)); } catch { /* gone */ } }
+}
+
+/** Star / unstar a photo (favourites are kept; only the newest few others are). */
+function favoritePhoto(id, fav) {
+  const res = Album.setFavorite(store.data.photos, String(id || ''), !!fav);
+  deletePhotoFiles(res.dropped);
+  if (res.ok) changed();
+  return { ok: res.ok, reason: res.reason };
+}
 
 /** Save a group photo from an expedition (PNG data URL from the pet window). */
 function savePhoto({ dataUrl, expId, region, petId }) {
@@ -413,10 +426,7 @@ function savePhoto({ dataUrl, expId, region, petId }) {
   fs.mkdirSync(photosDir(), { recursive: true });
   fs.writeFileSync(path.join(photosDir(), `${id}.png`), buf);
   store.data.photos.push({ id, file: `${id}.png`, expId, region: region || null, petId, at: Date.now() });
-  while (store.data.photos.length > MAX_PHOTOS) {
-    const old = store.data.photos.shift();
-    try { fs.unlinkSync(path.join(photosDir(), old.file)); } catch { /* gone */ }
-  }
+  deletePhotoFiles(Album.prune(store.data.photos));
   changed();
   return { ok: true, id };
 }
@@ -1349,6 +1359,7 @@ function registerIpc() {
   ipcMain.handle('egg:adopt', () => adoptEgg());
   ipcMain.handle('settings:extra', (_e, text) => runSecret(text));
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
+  ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
     const ph = store.data.photos.find((x) => x.id === id);
     try { return ph ? `data:image/png;base64,${fs.readFileSync(path.join(photosDir(), ph.file)).toString('base64')}` : null; } catch { return null; }
@@ -1382,10 +1393,10 @@ function registerIpc() {
   ipcMain.handle('evolution:choose', (_e, dex) => evolve(S().pokemon, dex));
   ipcMain.on('evolution:later', () => snoozeEvolution());
   ipcMain.on('poop:clean', (_e, id) => cleanPoop(String(id || '')));
-  ipcMain.handle('diary:portrait', async (_e, dex, emotion) => {
+  ipcMain.handle('diary:portrait', async (_e, dex, emotion, shiny) => {
     try {
       const known = !!Sources.cachedCredits(dex, spritesDir());
-      const buf = await Sources.portrait(dex, emotion, spritesDir());
+      const buf = await Sources.portrait(dex, emotion, spritesDir(), !!shiny);
       if (!known && Sources.cachedCredits(dex, spritesDir())) broadcast();
       return buf ? `data:image/png;base64,${buf.toString('base64')}` : null;
     } catch { return null; }
@@ -1622,6 +1633,21 @@ async function selfTest(dir) {
   });
   await wait(3500);
   await shot(petWin, '20-pet-hatched-shiny');
+  // album: four outings in a row → only the latest 3 regular photos stay; star the oldest one
+  for (let i = 0; i < 4; i++) {
+    await step(`photo-${i}`, async () => {
+      Object.assign(careOfActive(), { hunger: 95, clean: 95, health: 100, sick: false, status: null });
+      startExpedition('woods');
+      store.data.expedition.endsAt = Date.now();
+      checkExpedition();
+    });
+    await wait(4500);
+  }
+  console.log('[test] photos kept:', store.data.photos.length);
+  await step('fav', async () => {
+    const oldest = [...store.data.photos].sort((x, y) => x.at - y.at)[0];
+    console.log('[test] star:', JSON.stringify(favoritePhoto(oldest.id, true)));
+  });
   send(panelWin, 'panel:tab', 'dex');
   await wait(2000);
   await shot(panelWin, '21-panel-dex-album');
@@ -1647,6 +1673,7 @@ if (!app.requestSingleInstanceLock()) {
     const sysLang = (app.getLocale() || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
     carryOverOldData();
     store = new Store(app.getPath('userData'), sysLang);
+    deletePhotoFiles(Album.prune(store.data.photos));   // older saves kept up to 60 photos
     migrate();
     offlineCare();
     dailyBerries();

@@ -127,12 +127,13 @@ window.PanelExt = function PanelExt(env) {
   }
 
   function portraitFor(petId, emotion) {
-    return portrait(dexOf(env.getState(), petId), emotion);
+    const state = env.getState();
+    return portrait(dexOf(state, petId), emotion, !!(state.skins[petId] || {}).shiny);
   }
 
-  function portrait(dex, emotion) {
-    const k = `${dex}-${emotion}`;
-    if (!(k in portraitCache)) portraitCache[k] = dex ? api.invoke('diary:portrait', dex, emotion) : Promise.resolve(null);
+  function portrait(dex, emotion, shiny = false) {
+    const k = `${dex}${shiny ? 's' : ''}-${emotion}`;
+    if (!(k in portraitCache)) portraitCache[k] = dex ? api.invoke('diary:portrait', dex, emotion, shiny) : Promise.resolve(null);
     return portraitCache[k];
   }
 
@@ -283,10 +284,9 @@ window.PanelExt = function PanelExt(env) {
     $('#weekPrev').disabled = start <= (state.diary.startDay || today());
 
     // headline card: portrait + verdict
-    const dex = dexOf(state, state.settings.pokemon);
     const emotion = { happy: 'Happy', okay: 'Normal', sad: 'Sad' }[week.verdict] || 'Normal';
     const face = el('div', { class: 'week-face' }, env.spriteNode(state.settings.pokemon, 56));
-    portrait(dex, emotion).then((url) => { if (url) face.replaceChildren(el('img', { src: url, alt: '' })); });
+    portraitFor(state.settings.pokemon, emotion).then((url) => { if (url) face.replaceChildren(el('img', { src: url, alt: '' })); });
     const verdictEmoji = { happy: '😊', okay: '🙂', sad: '😢', none: '📖' }[week.verdict];
     $('#weekCard').replaceChildren(face, el('div', { class: 'week-text' },
       el('div', { class: 'verdict' }, `${verdictEmoji} ${t(`diary.verdict.${week.verdict}`)}`),

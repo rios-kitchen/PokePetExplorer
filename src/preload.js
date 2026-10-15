@@ -8,7 +8,7 @@ const SEND = new Set([
   'pokemon:select', 'pokemon:remove', 'poop:clean', 'expedition:recall', 'evolution:later', 'update:show', 'ai:clear', 'ai:open'
 ]);
 const INVOKE = new Set(['state:get', 'pet:move-by', 'pet:pat', 'pokemon:assets',
-  'care:use', 'care:diagnose', 'diary:portrait', 'diary:week', 'expedition:start', 'evolution:choose', 'shop:buy', 'egg:adopt', 'settings:extra', 'update:check', 'update:download', 'photo:save', 'photo:get', 'ai:chat', 'ai:history', 'ai:set-key', 'ai:models', 'ai:test']);
+  'care:use', 'care:diagnose', 'diary:portrait', 'diary:week', 'expedition:start', 'evolution:choose', 'shop:buy', 'egg:adopt', 'settings:extra', 'update:check', 'update:download', 'photo:save', 'photo:get', 'photo:fav', 'ai:chat', 'ai:history', 'ai:set-key', 'ai:models', 'ai:test']);
 const ON = new Set(['state', 'pet:event', 'panel:tab', 'input', 'chat']);
 
 contextBridge.exposeInMainWorld('api', {

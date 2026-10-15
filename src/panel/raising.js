@@ -143,13 +143,27 @@ window.PanelRaising = function PanelRaising(env) {
   const photoCache = {};
   const photoUrl = (id) => (photoCache[id] ||= api.invoke('photo:get', id));
 
-  function renderAlbum(state) {
-    const photos = [...state.photos].reverse();
-    $('#albumList').replaceChildren(...photos.map((ph) => {
-      const img = el('img', { alt: '' });
-      photoUrl(ph.id).then((url) => { if (url) img.src = url; });
-      const place = ph.region ? t(`region.${ph.region}`) : t(`exp.${ph.expId}`);
-      return el('button', {
+  /** Would unstarring this photo delete it? (same rule as album.js wouldDrop) */
+  function wouldDrop(state, ph) {
+    const regular = state.photos.filter((p) => !p.fav || p.id === ph.id).sort((a, b) => b.at - a.at);
+    return regular.findIndex((p) => p.id === ph.id) >= state.album.recent;
+  }
+
+  function photoCard(state, ph) {
+    const img = el('img', { alt: '' });
+    photoUrl(ph.id).then((url) => { if (url) img.src = url; });
+    const place = ph.region ? t(`region.${ph.region}`) : t(`exp.${ph.expId}`);
+    const star = el('button', {
+      class: `star${ph.fav ? ' on' : ''}`, title: t(ph.fav ? 'dex.unfav' : 'dex.fav'),
+      onclick: async (e) => {
+        e.stopPropagation();
+        if (ph.fav && wouldDrop(state, ph) && !window.confirm(t('dex.unfavConfirm', { n: state.album.recent }))) return;
+        const res = await api.invoke('photo:fav', ph.id, !ph.fav);
+        if (!res.ok && res.reason === 'full') window.alert(t('dex.favFull', { n: state.album.maxFavorites }));
+      }
+    }, ph.fav ? '★' : '☆');
+    return el('div', { class: 'photo-wrap' },
+      el('button', {
         class: 'photo', title: `${env.petName(ph.petId)} · ${place}`,
         onclick: async () => {
           const url = await photoUrl(ph.id);
@@ -157,14 +171,26 @@ window.PanelRaising = function PanelRaising(env) {
           $('#lightbox img').src = url;
           $('#lightbox').classList.remove('hidden');
         }
-      }, img);
-    }), ...(photos.length ? [] : [el('p', { class: 'hint full' }, t('dex.noPhotos'))]));
+      }, img),
+      star);
+  }
+
+  function renderAlbum(state) {
+    const newest = (a, b) => b.at - a.at;
+    const recent = state.photos.filter((p) => !p.fav).sort(newest);
+    const favs = state.photos.filter((p) => p.fav).sort(newest);
+    $('#albumHint').textContent = t('dex.albumHint', { n: state.album.recent });
+    $('#albumList').replaceChildren(...recent.map((ph) => photoCard(state, ph)),
+      ...(recent.length ? [] : [el('p', { class: 'hint full' }, t('dex.noPhotos'))]));
+    $('#favHead').textContent = t('dex.favorites', { n: favs.length, max: state.album.maxFavorites });
+    $('#favList').replaceChildren(...favs.map((ph) => photoCard(state, ph)),
+      ...(favs.length ? [] : [el('p', { class: 'hint full' }, t('dex.noFavorites'))]));
   }
   $('#lightbox').addEventListener('click', () => $('#lightbox').classList.add('hidden'));
 
   let dexKey = '';
   function renderDex(state) {
-    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length, state.photos.length]);
+    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length, state.photos.map((p) => [p.id, !!p.fav])]);
     if (key === dexKey) return;
     dexKey = key;
     renderAlbum(state);
