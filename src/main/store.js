@@ -9,8 +9,9 @@ function today() {
 
 const Sprites = require('../shared/sprites');
 
-// 1 = PokePet; 2 = PokePet Explorer (mood per pet, raising fields); 3 = start from an egg (no built-ins)
-const VERSION = 3;
+// 1 = PokePet; 2 = mood per pet, raising fields; 3 = no built-ins;
+// 4 = the first Pokémon is a starter picked at the professor's (no free Poké Balls)
+const VERSION = 4;
 
 const ATTRS = ['cool', 'cute', 'smart', 'tough'];   // contest-style stats, raised by expeditions and items
 
@@ -114,9 +115,16 @@ function migrate(data) {
     }
   }
   for (const id of Object.keys(data.pets)) petOf(data, id);
-  // every player starts with an egg
-  if (!data.custom.length) addEgg(data);
-  if (!data.custom.some((c) => c.id === data.settings.pokemon)) data.settings.pokemon = data.custom[0].id;
+  if ((data.version || 1) < 4) {
+    // a team of nothing but unopened Poké Balls (the old way to start) → choose a starter instead
+    const hatched = data.custom.some((c) => data.pets[c.id] && data.pets[c.id].stage !== 'egg');
+    if (!hatched) {
+      for (const c of data.custom) { delete data.pets[c.id]; delete data.skins[c.id]; }
+      data.custom = [];
+    }
+  }
+  // no team yet: the starter is chosen at the professor's (main.js openStarter)
+  if (!data.custom.some((c) => c.id === data.settings.pokemon)) data.settings.pokemon = data.custom.length ? data.custom[0].id : null;
   data.version = VERSION;
   return data;
 }

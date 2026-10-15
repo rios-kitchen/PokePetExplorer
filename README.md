@@ -11,8 +11,10 @@ A pixel Pokémon desktop pet for **macOS and Windows** with **QQ-Pet style raisi
 >
 > Both can be installed side by side; they keep separate data.
 
-**You start with an egg.** Nobody knows who's inside until it hatches – the first egg after one level,
-later eggs at Lv 5 – and once in a while (1 in 64) it's a shiny one.
+**Your journey starts at Professor Oak's:** choose Bulbasaur (Grass), Charmander (Fire) or Squirtle
+(Water) as your first partner – once in a while (1 in 64) it's a shiny one. New Pokémon join later by
+themselves: a fish you reel in may want to come along, and a happy Pokémon sometimes brings a wild
+friend back from an outing. (Battles and catching are planned for a later update.)
 
 **Work in progress:** daily tasks and weather greetings are still to come.
 
@@ -108,10 +110,9 @@ while you're away or the app is closed (max. 12 h are counted).
 ### The panel
 
 Tabs are grouped: **💼 Work** (Pomodoro timer and to-do list together) | **🍓 Care** (bag and shop),
-**🧭 Outing** (expeditions), **📖 Dex** (achievements, souvenirs), **🐾 Pokémon** (team, adopt an egg),
+**🧭 Outing** (expeditions), **📖 Dex** (achievements, souvenirs), **🐾 Pokémon** (your team),
 **📔 Diary** | **⚙️ Settings**.
 
-- **Adopt an egg** in the Pokémon tab: who is inside stays a surprise until it hatches (first egg at Lv 2, later ones at Lv 5).
 - **Achievements** pay berries once (focus, to-dos, levels, hatching, evolving, outings, travel, cures…).
 
 ### Emotions
@@ -137,9 +138,9 @@ charge, trip, look-up …). State animations follow the pet's behaviour; attacks
 sessions, the rest play as random idle actions. Other sprite sources (Showdown, HOME, B/W) only have one
 animation each, so PokePet Explorer doesn't use them.
 
-Every Pokémon comes from an egg: when it hatches, a random unevolved species (that PMD has drawn) is
-picked, normal or shiny. Adopt another egg in the **Pokémon** tab (one at a time). Names (incl. Chinese)
-come from [PokeAPI](https://pokeapi.co); diary portraits from PMD SpriteCollab.
+Your first Pokémon is a Kanto starter; later ones join from fishing and outings (you decide whether
+they stay). Shiny Pokémon use PMD's shiny sprites and portraits. Names (incl. Chinese) come from
+[PokeAPI](https://pokeapi.co); diary portraits from PMD SpriteCollab.
 
 ### Expedition photos
 
@@ -150,9 +151,11 @@ brings a photo of the two of you there – a random pose and a random expression
 ### Fishing
 
 Right-click → **🎣 Fishing** (or **Dex → Go fishing**) opens a little pond where your Pokémon sits on
-the pier with you. Hold the mouse (or Space) to charge and release to cast – the farther out, the rarer
-the bites. Wait for the bobber to dip and click quickly, then hold to reel in while keeping the line
-tension out of the red. 24 water Pokémon in four rarities (from Magikarp to Dratini, Lapras and
+the pier with you. Hold the mouse (or Space) to charge and release to cast. The colour of the cast sets
+the difficulty: **green** is easy, **yellow** normal, **red** hard – but red casts reach the deep water
+where the rare Pokémon are. Wait for the bobber to dip and click quickly, then hold to reel in: ease off
+when the fish tugs hard (the line snaps in the red), but don't let the line go slack, or it swims away
+fast. Some catches would rather come along with you than swim off. 24 water Pokémon in four rarities (from Magikarp to Dratini, Lapras and
 Gyarados), each with a random size and a rare shiny – collected in **Dex → Fishing Pokédex**, with
 berries for rare and new catches and a little XP for your partner.
 

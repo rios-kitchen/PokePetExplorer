@@ -1,0 +1,27 @@
+:root { --bg: #f6f4ef; --card: #ffffff; --ink: #23221f; --muted: #77736a; --line: #e4e0d6; --red: #e2463b; --yellow: #ffd84a; }
+@media (prefers-color-scheme: dark) { :root { --bg: #1d1c1a; --card: #282724; --ink: #f0ede6; --muted: #a39f95; --line: #3a3833; } }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--ink); user-select: none;
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+header { display: flex; gap: 12px; align-items: flex-start; padding: 18px 20px 6px; }
+.prof { font-size: 44px; line-height: 1; }
+.speech { flex: 1; background: var(--card); border: 2px solid var(--ink); border-radius: 12px; padding: 8px 14px; position: relative; }
+.speech::before { content: ''; position: absolute; left: -8px; top: 16px; width: 12px; height: 12px; background: var(--card);
+  border-left: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(45deg); }
+.speech b { color: var(--red); }
+.speech p { margin: 2px 0 0; }
+main { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px 20px; }
+.card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; cursor: pointer;
+  background: var(--card); border: 2px solid var(--line); border-radius: 14px; transition: transform 120ms, border-color 120ms; }
+.card:hover { transform: translateY(-2px); }
+.card.selected { border-color: var(--red); box-shadow: 0 0 0 3px rgba(226, 70, 59, 0.18); }
+.card canvas { width: 96px; height: 96px; image-rendering: pixelated; }
+.card b { font-size: 16px; }
+.type { font-size: 12px; font-weight: 700; padding: 1px 10px; border-radius: 99px; color: #fff; }
+.type.grass { background: #4fa04a; } .type.fire { background: #e2603b; } .type.water { background: #3b78c4; }
+.card .desc { font-size: 12px; color: var(--muted); text-align: center; }
+footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 20px 18px; }
+footer p { margin: 0; color: var(--muted); }
+.primary { background: var(--yellow); border: 2px solid #23221f; border-radius: 10px; padding: 8px 22px; font: inherit; font-weight: 700; color: #23221f; cursor: pointer; }
+.primary:disabled { opacity: 0.45; cursor: default; }

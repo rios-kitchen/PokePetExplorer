@@ -21,7 +21,16 @@ const TIERS = [
   { name: 'veryRare', bite: 650,  pull: 1.55, berries: 6, xp: 8 }
 ];
 const NEW_SPECIES_BONUS = 2;
+const JOIN_CHANCE = [0.06, 0.1, 0.16, 0.25];   // by tier: rarer Pokémon are more curious about you
 const SHINY_RATE = 1 / 128;
+
+// The cast's colour sets the difficulty: green (short, easy), yellow, red (long, hard – and rarer bites).
+const ZONES = [
+  { name: 'easy',   pull: 0.85, bite: 1.25 },
+  { name: 'normal', pull: 1.05, bite: 1.0 },
+  { name: 'hard',   pull: 1.2,  bite: 0.8 }
+];
+const zoneOf = (power) => (power < 0.4 ? 0 : power < 0.75 ? 1 : 2);
 
 /** Tier weights for a cast that landed at `depth` 0 (close to the pier) … 1 (far out). */
 function tierWeights(depth) {
@@ -40,15 +49,20 @@ function pickWeighted(weights, rnd) {
  * { tier, bite (ms to react), pull (how hard it fights), hidden: { dex, size, shiny } }
  */
 function bite(depth, rnd = Math.random) {
+  const zone = ZONES[zoneOf(depth)];
   const tier = pickWeighted(tierWeights(depth), rnd);
   const pool = FISH.filter((f) => f.tier === tier);
   const fish = pool[Math.floor(rnd() * pool.length)];
   const size = Math.round(fish.height * 10 * (0.7 + rnd() * 0.7));   // cm, 70 %–140 % of the usual height
-  return { tier, bite: TIERS[tier].bite, pull: TIERS[tier].pull, hidden: { dex: fish.dex, size, shiny: rnd() < SHINY_RATE } };
+  return {
+    tier, zone: zoneOf(depth),
+    bite: Math.round(TIERS[tier].bite * zone.bite), pull: TIERS[tier].pull * zone.pull,
+    hidden: { dex: fish.dex, size, shiny: rnd() < SHINY_RATE }
+  };
 }
 
 /** Land a catch: record it in the fishing Pokédex and work out the rewards. Mutates data. */
-function land(data, catchInfo, now = Date.now()) {
+function land(data, catchInfo, now = Date.now(), rnd = Math.random) {
   const fish = FISH.find((f) => f.dex === catchInfo.dex);
   if (!fish) return null;
   const tier = TIERS[fish.tier];
@@ -66,8 +80,9 @@ function land(data, catchInfo, now = Date.now()) {
   data.stats.fishCaught = (data.stats.fishCaught || 0) + 1;
   return {
     dex: fish.dex, names: fish.names, tier: fish.tier, size: catchInfo.size, shiny: !!catchInfo.shiny,
-    isNew, best: best && !isNew, berries, xp: tier.xp
+    isNew, best: best && !isNew, berries, xp: tier.xp,
+    wantsToJoin: rnd() < JOIN_CHANCE[fish.tier]
   };
 }
 
-module.exports = { FISH, TIERS, SHINY_RATE, NEW_SPECIES_BONUS, tierWeights, bite, land };
+module.exports = { FISH, TIERS, ZONES, SHINY_RATE, NEW_SPECIES_BONUS, JOIN_CHANCE, zoneOf, tierWeights, bite, land };

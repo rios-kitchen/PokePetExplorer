@@ -421,13 +421,7 @@
       lines.map((l) => el('div', {}, l)));
   }
 
-  $('#adoptEgg').addEventListener('click', async () => {
-    const btn = $('#adoptEgg');
-    btn.disabled = true;
-    const res = await api.invoke('egg:adopt');
-    btn.disabled = false;
-    $('#eggStatus').textContent = res.ok ? t('egg.adopted') : t(`egg.error.${res.error}`);
-  });
+
 
 
 
@@ -463,6 +457,7 @@
   $('#setReact').addEventListener('change', (e) => api.send('settings:set', { reactInput: e.target.checked }));
   $('#setLogin').addEventListener('change', (e) => api.send('settings:set', { launchAtLogin: e.target.checked }));
   $('#resetPos').addEventListener('click', () => api.send('pet:reset-pos'));
+  $('#goStarter').addEventListener('click', () => api.send('starter:open'));
 
   // ---------------------------------------------------------------- AI chat (optional)
   const AI_PROVIDERS = ['anthropic', 'openai', 'gemini', 'deepseek', 'moonshot', 'qwen', 'zhipu', 'siliconflow',
@@ -576,6 +571,11 @@
       applyI18n();
       pokeKey = '';
     }
+    // before the starter is chosen there's nobody to look after: send the trainer to the professor
+    const noPet = !state.custom.some((c) => c.id === state.settings.pokemon);
+    $('#noPet').classList.toggle('hidden', !noPet);
+    document.body.classList.toggle('no-pet-mode', noPet);
+    if (noPet) return;
     renderHero();
     renderFocus();
     renderTodos();

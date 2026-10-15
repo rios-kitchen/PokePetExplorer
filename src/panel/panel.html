@@ -33,6 +33,11 @@
     <button data-tab="settings"><i>⚙️</i><span data-i18n="tab.settings"></span></button>
   </nav>
 
+  <section id="noPet" class="no-pet hidden">
+    <div class="no-pet-ball">🔴</div>
+    <p data-i18n="starter.noPet"></p>
+    <button id="goStarter" class="primary" data-i18n="starter.go"></button>
+  </section>
   <main>
     <!-- WORK: Pomodoro + to-dos (everything about getting things done) -->
     <section id="tab-work" class="tab">
@@ -158,10 +163,6 @@
 
     <!-- POKEMON -->
     <section id="tab-pokemon" class="tab">
-      <div class="egg-row">
-        <button id="adoptEgg" class="secondary" data-i18n="egg.adopt"></button>
-        <span id="eggStatus" class="hint" data-i18n="egg.hint"></span>
-      </div>
       <h3 data-i18n="poke.team"></h3>
       <div id="pokeGrid" class="poke-grid"></div>
       <p id="pokeStatus" class="hint"></p>

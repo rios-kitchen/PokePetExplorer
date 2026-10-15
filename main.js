@@ -4,7 +4,7 @@ const {
 } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { Store, today, petOf, addEgg } = require('./src/main/store');
+const { Store, today, petOf, addEgg, freshPet } = require('./src/main/store');
 const Sources = require('./src/main/sources');
 const Care = require('./src/main/care');
 const Diary = require('./src/main/diary');
@@ -100,8 +100,14 @@ async function ensurePmdSkins() {
     const missing = !skin || skin.style !== 'pmd';
     const outdated = skin && skin.style === 'pmd' && skin.v !== Sources.PMD_VERSION;
     if (!missing && !outdated) continue;
+    const shiny = !!(skin && skin.shiny);
     try {
-      store.data.skins[p.id] = await Sources.downloadSkin(p.dex, !!(skin && skin.shiny), spritesDir());
+      let meta;
+      try { meta = await Sources.downloadSkin(p.dex, shiny, spritesDir()); } catch (e) {
+        if (e.code !== 'not-found' || !shiny) throw e;
+        meta = await Sources.downloadSkin(p.dex, false, spritesDir());   // shiny not drawn yet
+      }
+      store.data.skins[p.id] = meta;
       changed();
       if (S().pokemon === p.id) petEvent('skin', { id: p.id });
     } catch { /* offline or not in PMD: keep the placeholder */ }
@@ -119,8 +125,11 @@ function creditsOf(p) {
   return { sprite: skin.style === 'pmd' ? (skin.shiny ? c.shiny : c.sprite) : null, portrait: c.portrait };
 }
 
-const careOfActive = () => Care.careOf(store.data, S().pokemon);
-const activePet = () => petOf(store.data, S().pokemon);
+/** Is there an active Pokémon? (not before the starter has been chosen) */
+const hasPet = () => !!S().pokemon && store.data.custom.some((c) => c.id === S().pokemon);
+// before the starter is chosen these hand out throw-away records, so nothing is saved for "no one"
+const careOfActive = () => (hasPet() ? Care.careOf(store.data, S().pokemon) : Care.freshCare());
+const activePet = () => (hasPet() ? petOf(store.data, S().pokemon) : freshPet());
 
 function petName(id = S().pokemon) {
   const p = petList().find((x) => x.id === id);
@@ -222,6 +231,7 @@ function addMood(n) {
 }
 
 function addXp(n, id = S().pokemon) {
+  if (!id || !store.data.custom.some((c) => c.id === id)) return;
   const pet = petOf(store.data, id);
   const before = levelOf(pet.xp);
   pet.xp += n;
@@ -239,6 +249,7 @@ function levelChanged(id, before) {
 // ---------- raising: hatching, evolution, expeditions ----------
 /** Hatch an egg or offer an evolution when the level is reached. */
 function checkGrowth(id = S().pokemon) {
+  if (!id || !store.data.custom.some((c) => c.id === id)) return;
   const pet = petOf(store.data, id);
   if (Growth.readyToHatch(pet, Growth.hatchLevel(store.data))) { hatchEgg(id); return; }
   if (Growth.evolutionDue(pet)) offerEvolution(id);
@@ -369,6 +380,7 @@ function checkExpedition() {
   if (out.kind === 'travel') store.data.stats.travels = (store.data.stats.travels || 0) + 1;
   if (S().pokemon === out.petId) petEvent('expedition-back', out);
   levelChanged(out.petId, before);
+  if (out.companion) bringCompanion(out.petId);
   notify(T('notif.expeditionBack'), T('notif.expeditionBackBody', { name: petName(out.petId), n: out.berries }));
   changed();
 }
@@ -451,30 +463,55 @@ async function runSecret(text) {
     petEvent('daily-berries', { n: 10 });
     return { ok: true };
   }
-  // hatch the egg now – optionally as a given species (name or dex) and/or shiny
-  const eggId = () => store.data.custom.find((c) => store.data.pets[c.id] && store.data.pets[c.id].stage === 'egg')?.id;
-  let id = petOf(store.data, S().pokemon).stage === 'egg' ? S().pokemon : eggId();
-  if (!id) id = adoptEgg().id;
+  if (cmd === 'shiny' && hasPet() && activePet().stage !== 'egg') {
+    // the partner becomes shiny (its shiny sprite downloads; falls back to normal if not drawn)
+    store.data.skins[S().pokemon] = { source: 'pending', shiny: true };
+    changed();
+    await ensurePmdSkins().catch(() => {});
+    petEvent('skin', { id: S().pokemon });
+    return { ok: true };
+  }
+  const words = args.filter((a) => a !== 'shiny');
+  if (cmd === 'hatch' && !(hasPet() && activePet().stage === 'egg')) {
+    // a new Pokémon joins right away: the one named (English name or dex), or a random one
+    try {
+      const shiny = args.includes('shiny');
+      let sp;
+      if (words.length) sp = await Sources.lookupSpecies(words.join('-'));
+      else { const r = await Sources.randomEggSpecies(spritesDir(), { shiny }); sp = { dex: r.dex, names: r.names }; }
+      const id = addPokemon({ dex: sp.dex, names: sp.names, shiny, from: 'secret' });
+      if (!hasPet()) { S().pokemon = id; if (!petWin) createPetWindow(); if (starterWin && !starterWin.isDestroyed()) starterWin.close(); }
+      changed();
+      petEvent('joined', { name: sp.names[lang()] || sp.names.en });
+      return { ok: true };
+    } catch { return { ok: false }; }
+  }
+  // (old saves) the active Pokémon is still in its Poké Ball: open it now, optionally as a given species / shiny
+  const id = S().pokemon;
+  if (!hasPet()) return { ok: false };
   const pet = petOf(store.data, id);
   const plan = pet.egg ? pet.egg.plan || {} : {};
-  const words = args.filter((a) => a !== 'shiny');
   if (cmd === 'shiny' || args.includes('shiny')) plan.shiny = true;
   if (cmd === 'hatch' && words.length) {
     try { plan.dex = (await Sources.lookupSpecies(words.join('-'))).dex; } catch { return { ok: false }; }
   }
   pet.egg = { plan };
-  if (S().pokemon !== id) selectPokemon(id);
   const res = await hatchEgg(id);
   return { ok: res.ok };
 }
 
-/** Adopt a mystery egg (one at a time). Who's inside is decided when it hatches. */
-function adoptEgg() {
-  if (Object.values(store.data.pets).some((p) => p.stage === 'egg')) return { ok: false, error: 'hasEgg' };
-  const id = addEgg(store.data);
-  selectPokemon(id);
-  changed();
-  return { ok: true, id };
+
+/** A wild Pokémon followed the pet home: find out who (needs the internet) and ask the trainer. */
+async function bringCompanion(petId) {
+  try {
+    const taken = new Set(petList().map((p) => p.dex).filter(Boolean));
+    const shiny = Math.random() < Growth.SHINY_RATE;
+    const sp = await Sources.randomEggSpecies(spritesDir(), { exclude: taken, shiny });
+    const j = offerJoin({ dex: sp.dex, names: sp.names, shiny: !!sp.skin.shiny, from: 'outing' });
+    const name = sp.names[lang()] || sp.names.en;
+    if (S().pokemon === petId) setTimeout(() => petEvent('companion', { name, by: petName(petId), token: j.token }), 7000);
+    notify(T('notif.companion'), T('notif.companionBody', { name, by: petName(petId) }));
+  } catch { /* offline: nobody followed this time */ }
 }
 
 function diagnosePet() {
@@ -599,6 +636,80 @@ function setPetHidden(hidden) {
 }
 
 // ---------- panel window ----------
+// ---------- starter and new team members ----------
+// The first Pokémon is picked at the professor's from the three Kanto starters; later ones come from
+// fishing (some catches want to come along) and outings (a wild friend follows the pet home).
+const STARTERS = ['bulbasaur', 'charmander', 'squirtle'];   // ids with built-in pixel art (shown until PMD loads)
+let starterWin = null;
+
+function openStarter() {
+  if (hasPet()) return;
+  if (!starterWin || starterWin.isDestroyed()) {
+    starterWin = new BrowserWindow({
+      width: 560, height: 470, resizable: false, show: false, title: T('starter.title'), icon: appIcon(256),
+      backgroundColor: '#f6f4ef', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) starterWin.setMenu(null);
+    starterWin.loadFile(path.join(__dirname, 'src', 'starter', 'starter.html'));
+    starterWin.once('ready-to-show', () => { starterWin.show(); starterWin.focus(); });
+    starterWin.on('closed', () => { starterWin = null; });
+  } else {
+    starterWin.show();
+    starterWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/**
+ * A new Pokémon joins the team (already out of its ball). Its PMD sprite downloads in the background;
+ * until then it shows the built-in art (starters) or a Poké Ball.
+ */
+function addPokemon({ id, dex, names, shiny = false, from }) {
+  id = id || `mon-${dex}-${Date.now().toString(36)}`;
+  store.data.custom.push({ id, dex, names });
+  const pet = petOf(store.data, id);
+  pet.stage = 'hatched';
+  pet.hatchedAt = Date.now();
+  pet.from = from || null;
+  store.data.skins[id] = { source: 'pending', shiny: !!shiny };
+  ensurePmdSkins().catch(() => {});
+  return id;
+}
+
+function chooseStarter(id) {
+  if (hasPet() || !STARTERS.includes(id)) return { ok: false };
+  const def = Sprites.DEFS[id];
+  addPokemon({ id, dex: def.dex, names: def.name, shiny: Math.random() < Growth.SHINY_RATE, from: 'starter' });
+  S().pokemon = id;
+  changed();
+  if (!petWin) createPetWindow();
+  for (const p of store.data.poops) createPoopWindow(p);
+  if (starterWin && !starterWin.isDestroyed()) starterWin.close();
+  setTimeout(() => petEvent('starter', { name: petName(id) }), 1500);
+  return { ok: true };
+}
+
+// a new friend waiting for the trainer's answer: { token, dex, names, shiny, from }
+let pendingJoin = null;
+
+function offerJoin(info) {
+  pendingJoin = { ...info, token: `j${Date.now().toString(36)}` };
+  return pendingJoin;
+}
+
+function answerJoin(token, keep) {
+  const j = pendingJoin;
+  if (!j || j.token !== token) return { ok: false };
+  pendingJoin = null;
+  if (!keep) { changed(); return { ok: true, kept: false }; }
+  const id = addPokemon({ dex: j.dex, names: j.names, shiny: j.shiny, from: j.from });
+  changed();
+  notify(T('notif.joined'), T('notif.joinedBody', { name: j.names[lang()] || j.names.en }));
+  petEvent('joined', { name: j.names[lang()] || j.names.en });
+  return { ok: true, kept: true, id };
+}
+
 // ---------- fishing ----------
 let fishWin = null;
 const bites = new Map();   // token -> hidden catch (the window only learns the species once it's landed)
@@ -640,8 +751,10 @@ function fishLand(token) {
   const pet = activePet();
   if (!activeAway() && pet.stage !== 'egg') { addXp(res.xp); addMood(3); }
   if (res.isNew || res.tier >= 2) petEvent('fish-caught', { name: res.names[lang()] || res.names.en, size: res.size, isNew: res.isNew });
+  // sometimes the catch would rather come along than swim away
+  const join = res.wantsToJoin ? offerJoin({ dex: res.dex, names: res.names, shiny: res.shiny, from: 'fishing' }) : null;
   changed();
-  return { ok: true, ...res };
+  return { ok: true, ...res, join: join ? join.token : null };
 }
 
 // ---------- AI chat (optional, off by default) ----------
@@ -892,7 +1005,7 @@ const activeAway = () => Expedition.isAway(store.data, S().pokemon);
 
 /** Time passes for the active Pokémon (not while it's away on an expedition). */
 function careStep(hours, asleep) {
-  if (activeAway()) return;
+  if (!hasPet() || activeAway()) return;
   const care = careOfActive();
   const { moodDelta, events } = Care.decay(care, hours, { asleep, poops: store.data.poops.length });
   addMood(moodDelta);
@@ -984,7 +1097,7 @@ function cleanPoop(id) {
 
 function poopTick(asleep) {
   const d = store.data;
-  if (activeAway()) return;
+  if (!hasPet() || activeAway()) return;
   const care = careOfActive();
   // now and then without a meal, too (about every 3 hours while active)
   if (!d.poopDueAt && !asleep && care.hunger > 50 && Math.random() < 1 / 180) {
@@ -1001,7 +1114,7 @@ function slowTick() {
   poopTick(asleep);
   careStep(1 / 60, asleep);
   const care = careOfActive();
-  if (!activeAway()) {
+  if (hasPet() && !activeAway()) {
     Diary.sample(store.data, activePet().mood, care.health, S().pokemon);
     // QQ Pet grows while it's online: a little XP every minute, slower when it's not well
     const before = levelOf(activePet().xp);
@@ -1104,6 +1217,16 @@ function buildMenu() {
       { label: T('menu.stop'), click: () => timerCmd('stop') }
     ];
 
+  if (!hasPet()) {
+    return Menu.buildFromTemplate([
+      { label: T('starter.menu'), click: () => openStarter() },
+      { type: 'separator' },
+      { label: T('menu.todos'), click: () => openPanel('todos') },
+      { label: T('menu.settings'), click: () => openPanel('settings') },
+      { type: 'separator' },
+      { label: T('menu.quit'), click: () => app.quit() }
+    ]);
+  }
   return Menu.buildFromTemplate([
     { label: status, enabled: false },
     ...timerItems,
@@ -1405,8 +1528,10 @@ function registerIpc() {
   ipcMain.handle('care:use', (_e, itemId) => useCareItem(itemId));
   ipcMain.handle('care:diagnose', () => diagnosePet());
   ipcMain.handle('shop:buy', (_e, itemId, n) => shopBuy(String(itemId || ''), n));
-  ipcMain.handle('egg:adopt', () => adoptEgg());
   ipcMain.handle('settings:extra', (_e, text) => runSecret(text));
+  ipcMain.handle('starter:choose', (_e, id) => chooseStarter(String(id || '')));
+  ipcMain.on('starter:open', () => openStarter());
+  ipcMain.handle('join:answer', (_e, token, keep) => answerJoin(String(token || ''), !!keep));
   ipcMain.handle('fish:bite', (_e, depth) => fishBite(depth));
   ipcMain.handle('fish:land', (_e, token) => fishLand(String(token || '')));
   ipcMain.on('fish:lost', (_e, token) => bites.delete(String(token || '')));
@@ -1469,11 +1594,18 @@ async function selfTest(dir) {
     try { await fn(); } catch (e) { console.error(`self-test step ${name} failed:`, e); }
   };
   fs.mkdirSync(dir, { recursive: true });
-  // a new player only has an egg; the test needs a hatched Pokémon too (Pikachu, built-in art first)
-  await wait(1500);
-  await shot(petWin, '00-pet-first-egg');
+  // a new player starts at the professor's: pick a starter (Charmander), then the test also uses a Pikachu
+  await wait(2000);
+  if (starterWin) {
+    await starterWin.webContents.executeJavaScript("document.querySelectorAll('.card')[1].click(); 0");
+    await wait(500);
+    await shot(starterWin, '00-starter');
+  }
+  await step('starter', async () => console.log('[test] starter:', JSON.stringify(chooseStarter('charmander'))));
+  await wait(2500);
+  await shot(petWin, '00b-pet-starter');
   store.data.custom.unshift({ id: 'pikachu', dex: 25, names: Sprites.DEFS.pikachu.name });
-  petOf(store.data, 'pikachu');
+  petOf(store.data, 'pikachu').stage = 'hatched';
   selectPokemon('pikachu');
   await wait(2500);
   await shot(petWin, '01-pet-hd');
@@ -1666,14 +1798,14 @@ async function selfTest(dir) {
   send(panelWin, 'panel:tab', 'dex');
   await wait(1200);
   await shot(panelWin, '17-panel-dex');
-  await step('egg', async () => {
-    const id = store.data.custom.find((c) => store.data.pets[c.id].stage === 'egg').id;
-    selectPokemon(id);
-  });
+  // a wild friend follows the pet home from an outing and asks to join
+  await step('companion', async () => bringCompanion(S().pokemon));
+  await wait(9000);
+  await shot(petWin, '18-pet-companion');
+  await step('companion-keep', async () => console.log('[test] companion keep:', JSON.stringify(pendingJoin && answerJoin(pendingJoin.token, true))));
   send(panelWin, 'panel:tab', 'pokemon');
   await wait(3000);
-  await shot(petWin, '18-pet-egg');
-  await shot(panelWin, '19-panel-pokemon-egg');
+  await shot(panelWin, '19-panel-pokemon-team');
   // hidden commands (words from the untracked test/secrets.local.json): +10 berries, then a shiny Bulbasaur
   await step('secret', async () => {
     let words = null;
@@ -1787,8 +1919,12 @@ if (!app.requestSingleInstanceLock()) {
     setAppMenu();
     registerIpc();
     createTray();
-    createPetWindow();
-    for (const p of store.data.poops) createPoopWindow(p);
+    if (hasPet()) {
+      createPetWindow();
+      for (const p of store.data.poops) createPoopWindow(p);
+    } else {
+      setTimeout(openStarter, 600);
+    }
     keys.start();
     setInterval(tick, 1000);
     setInterval(slowTick, 60000);

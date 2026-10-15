@@ -379,8 +379,6 @@ img.smooth, #heroSprite.smooth { image-rendering: auto; }
 .souvenirs .full { grid-column: 1 / -1; }
 
 /* ---- pokémon tab: eggs and stats */
-.egg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.egg-row .hint { margin: 0; }
 .poke .attrs { margin-top: 4px; font-size: 11px; color: var(--muted); white-space: nowrap; }
 
 .extra.hidden { display: none; }
@@ -442,3 +440,10 @@ img.smooth, #heroSprite.smooth { image-rendering: auto; }
 .fish .hint { margin: 0; font-size: 10.5px; }
 .fish-face { width: 40px; height: 40px; border-radius: 8px; background: var(--ring-bg); display: grid; place-items: center; overflow: hidden; font-size: 18px; }
 .fish-face img { width: 40px; height: 40px; image-rendering: pixelated; }
+
+/* ---- no Pokémon yet (before the starter is chosen) */
+.no-pet { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; }
+.no-pet.hidden { display: none; }
+.no-pet-ball { font-size: 54px; }
+.no-pet p { max-width: 280px; color: var(--muted); }
+body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display: none; }

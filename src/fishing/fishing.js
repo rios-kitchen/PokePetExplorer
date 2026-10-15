@@ -98,7 +98,10 @@
   };
 
   const randRange = (a, b) => a + Math.random() * (b - a);
-  const depthOf = (x) => Math.max(0, Math.min(1, (x - 60) / 90));
+  // the cast's power is its depth (0 near the pier … 1 far out); its colour zone is the difficulty
+  const zoneOf = (p) => (p < 0.4 ? 0 : p < 0.75 ? 1 : 2);
+  const ZONE_KEYS = ['easy', 'normal', 'hard'];
+  const ZONE_COLORS = ['#6cbf5a', '#f5c93a', '#e2463b'];
 
   function say(key, vars, ms = 2200) { game.message = t(key, vars); game.messageUntil = Date.now() + ms; }
 
@@ -128,7 +131,9 @@
   window.addEventListener('blur', release);
 
   function cast() {
+    game.depth = game.power;
     const land = 62 + game.power * 88;
+    say(`fish.zone.${ZONE_KEYS[zoneOf(game.power)]}`, null, 2600);
     game.from = { ...TIP };
     game.to = { x: Math.round(land), y: Math.round(52 + game.power * 34 + randRange(-4, 4)) };
     game.flyStart = Date.now();
@@ -143,7 +148,7 @@
   }
 
   async function startBite() {
-    const res = await api.invoke('fish:bite', depthOf(game.bob.x)).catch(() => null);
+    const res = await api.invoke('fish:bite', game.depth).catch(() => null);
     if (!res || game.phase !== 'waiting') return;
     game.bite = res;
     game.phase = 'bite';
@@ -188,11 +193,29 @@
     ].filter(Boolean).map(([c, txt]) => { const s = document.createElement('span'); s.className = c; s.textContent = txt; return s; }));
     $('#resFace').removeAttribute('src');
     $('#resOk').textContent = t('fish.again');
+    // it wants to come along: keep it or let it swim off
+    const name = r.names[L()] || r.names.en;
+    $('#resJoin').classList.toggle('hidden', !r.join);
+    $('#resOk').classList.toggle('hidden', !!r.join);
+    if (r.join) {
+      $('#joinText').textContent = t('fish.join', { name });
+      $('#joinKeep').textContent = t('join.keep');
+      $('#joinRelease').textContent = t('join.release');
+      const answer = async (keep) => {
+        await api.invoke('join:answer', r.join, keep);
+        $('#resJoin').classList.add('hidden');
+        $('#resOk').classList.remove('hidden');
+        game.message = t(keep ? 'fish.joined' : 'fish.released', { name }); game.messageUntil = Date.now() + 3000;
+      };
+      $('#joinKeep').onclick = () => answer(true);
+      $('#joinRelease').onclick = () => answer(false);
+    }
     $('#result').classList.remove('hidden');
     const url = await api.invoke('diary:portrait', r.dex, 'Happy', r.shiny).catch(() => null);
     if (url) $('#resFace').src = url;
   }
   function closeResult() {
+    if (!$('#resJoin').classList.contains('hidden')) return;   // answer first
     $('#result').classList.add('hidden');
     game.phase = 'idle';
   }
@@ -228,14 +251,15 @@
     if (game.phase === 'bite' && ms > game.biteUntil) lose('fish.msg.tooSlow');
     if (game.phase === 'reel') {
       const b = game.bite;
-      if (ms > game.nextPull) { game.pull = randRange(0.4, 1.7) * b.pull; game.nextPull = ms + randRange(500, 1300); }
+      // the fish tugs in bursts; a strong tug barely lets you gain line, so ease off when it pulls
+      if (ms > game.nextPull) { game.pull = randRange(0.4, 1.7) * b.pull; game.nextPull = ms + randRange(400, 1200); }
       if (game.holding) {
-        game.tension += dt * (22 + 34 * game.pull);
-        game.progress += dt * (26 - 6 * b.pull);
+        game.tension += dt * (18 + 28 * game.pull);
+        game.progress += dt * (28 - 8 * game.pull);
       } else {
-        // letting go relaxes the line quickly but costs a little progress (stronger fish pull more back)
+        // letting go relaxes the line quickly; let it go slack and the fish swims off fast
         game.tension -= dt * 60;
-        game.progress -= dt * (2 + 2 * b.pull);
+        game.progress -= dt * (game.tension < 25 ? 9 + 5 * b.pull : 2 + 2 * b.pull);
       }
       game.tension = Math.max(0, game.tension);
       if (game.tension >= 100) lose('fish.msg.snapped');
@@ -306,10 +330,16 @@
 
     // power meter while charging
     if (game.phase === 'charging') {
-      g.fillStyle = '#2a2420'; g.fillRect(8, 60, 6, 24);
-      const h = Math.round(22 * game.power);
-      g.fillStyle = game.power > 0.75 ? '#e2463b' : game.power > 0.4 ? '#f5c93a' : '#6cbf5a';
-      g.fillRect(9, 83 - h, 4, h);
+      // the three zones, dimmed, with the current power filled in its zone's colour
+      // on the right edge, clear of the Pokémon on the pier
+      const X = 148, B = 76, H = 36;
+      g.fillStyle = '#2a2420'; g.fillRect(X - 1, B - H - 1, 8, H + 2);
+      const zone = (a, b, c) => { g.fillStyle = c; g.fillRect(X, B - Math.round(H * b), 6, Math.round(H * (b - a))); };
+      g.globalAlpha = 0.35; zone(0, 0.4, ZONE_COLORS[0]); zone(0.4, 0.75, ZONE_COLORS[1]); zone(0.75, 1, ZONE_COLORS[2]); g.globalAlpha = 1;
+      const h = Math.round(H * game.power);
+      g.fillStyle = ZONE_COLORS[zoneOf(game.power)];
+      g.fillRect(X, B - h, 6, h);
+      g.fillStyle = '#ffffff'; g.fillRect(X - 1, B - h, 8, 1);
     }
   }
 

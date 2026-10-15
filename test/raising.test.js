@@ -187,8 +187,9 @@ test('an expedition runs on time, then brings rewards and costs', () => {
   assert.equal(Exp.start(d, 'eevee', 'woods', t0).reason, 'busy');
   assert.equal(Exp.finish(d, t0 + 29 * 60e3), null, 'not back yet');
 
-  // rnd: berries roll 0 → 2, loot roll 0 → yes, loot pick 0 → oran, hazard roll 0.99 → none
-  const out = Exp.finish(d, t0 + 30 * 60e3, { rnd: seq(0, 0, 0, 0.99) });
+  // rnd: berries 0 → 2, loot 0 → yes, pick 0 → oran, companion 0.99 → no, hazard 0.99 → none
+  const out = Exp.finish(d, t0 + 30 * 60e3, { rnd: seq(0, 0, 0, 0.99, 0.99) });
+  assert.equal(out.companion, false);
   assert.equal(out.berries, 2);
   assert.equal(d.berries, 2);
   assert.equal(out.xp, 15);
@@ -259,23 +260,60 @@ const { addEgg } = require('../src/main/store');
 const Secrets = require('../src/main/secrets');
 const Maps = require('../src/shared/maps');
 
-test('a new player starts with one egg; the first hatches at Lv2, later ones at Lv5', () => {
+const Fishing = require('../src/main/fishing');
+
+test('a new player has no Pokémon until the starter is chosen', () => {
   const d = fresh();
-  assert.equal(d.custom.length, 1);
-  const egg = d.custom[0];
-  assert.equal(egg.dex, null);
-  assert.equal(d.pets[egg.id].stage, 'egg');
-  assert.equal(d.settings.pokemon, egg.id);
+  assert.equal(d.custom.length, 0);
+  assert.equal(d.settings.pokemon, null);
+});
+
+test('an old save with only an unopened Poké Ball goes to the professor instead', () => {
+  const d = migrate(merge(defaults('en'), {
+    version: 3, settings: { pokemon: 'egg-1' }, custom: [{ id: 'egg-1', dex: null, names: null }],
+    pets: { 'egg-1': { xp: 10, stage: 'egg' } }
+  }));
+  assert.equal(d.custom.length, 0);
+  assert.equal(d.pets['egg-1'], undefined);
+  assert.equal(d.settings.pokemon, null);
+  // …but a team with a hatched Pokémon keeps everything, balls included
+  const k = migrate(merge(defaults('en'), {
+    version: 3, settings: { pokemon: 'mon' },
+    custom: [{ id: 'mon', dex: 25, names: { en: 'Pikachu', zh: '皮卡丘' } }, { id: 'egg-2', dex: null, names: null }],
+    pets: { mon: { xp: 100, stage: 'hatched' }, 'egg-2': { xp: 0, stage: 'egg' } }
+  }));
+  assert.deepEqual(k.custom.map((c) => c.id), ['mon', 'egg-2']);
+});
+
+test('balls from old saves still open at Lv2 (first) / Lv5', () => {
+  const d = fresh();
   assert.equal(Growth.hatchLevel(d), 2);
   d.stats.hatches = 1;
   assert.equal(Growth.hatchLevel(d), 5);
-  const pet = d.pets[egg.id];
-  pet.xp = Growth.xpFor(2);
-  assert.equal(Growth.readyToHatch(pet, 2), true);
-  assert.equal(Growth.readyToHatch(pet, 5), false);
-  const id2 = addEgg(d);
-  assert.notEqual(id2, egg.id);
-  assert.equal(d.custom.length, 2);
+  const id = addEgg(d);
+  const pet = d.pets[id];
+  pet.xp = Growth.xpFor(5);
+  assert.equal(Growth.readyToHatch(pet, 5), true);
+});
+
+test('companions: the happier the pet, the likelier a wild friend follows it home', () => {
+  assert.ok(Exp.companionChance(100) > Exp.companionChance(20) * 2);
+  assert.ok(Exp.companionChance(100) <= 0.2 + 1e-9);
+  const d = fresh();
+  petOf(d, 'mon').mood = 100;
+  Exp.start(d, 'mon', 'coolClass', 0);
+  assert.equal(Exp.finish(d, 0, { force: true, rnd: seq(0) }).companion, false, 'never from training');
+});
+
+test('fishing: rarer catches are likelier to want to join; cast colour sets the difficulty', () => {
+  const d = fresh();
+  assert.equal(Fishing.land(d, { dex: 129, size: 90 }, 1, seq(0)).wantsToJoin, true);
+  assert.equal(Fishing.land(d, { dex: 129, size: 90 }, 1, seq(0.99)).wantsToJoin, false);
+  assert.ok(Fishing.JOIN_CHANCE[3] > Fishing.JOIN_CHANCE[0]);
+  assert.deepEqual([0.1, 0.5, 0.9].map(Fishing.zoneOf), [0, 1, 2]);
+  const easy = Fishing.bite(0.1, seq(0)), hard = Fishing.bite(0.9, seq(0));
+  assert.ok(easy.bite > hard.bite);
+  assert.ok(hard.pull / Fishing.TIERS[hard.tier].pull > easy.pull / Fishing.TIERS[easy.tier].pull);
 });
 
 test('old saves keep the built-in Pokémon they raised', () => {
@@ -334,7 +372,6 @@ test('at most 20 favourites; unstarring an old photo drops it', () => {
 });
 
 // ---------------------------------------------------------------- fishing
-const Fishing = require('../src/main/fishing');
 
 test('fishing table: 24 species in four tiers, names in both languages', () => {
   assert.equal(Fishing.FISH.length, 24);

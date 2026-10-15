@@ -115,6 +115,8 @@ function finish(data, now = Date.now(), { force = false, rnd = Math.random } = {
     data.inventory[item] = (data.inventory[item] || 0) + 1;
     out.items.push(item);
   }
+  // a wild Pokémon may follow it home – the happier the pet, the more it trusts its trainer
+  out.companion = exp.kind !== 'training' && rnd() < companionChance(pet.mood);
   if (exp.hazard && rnd() < exp.hazard[1]) {
     inflict(care, exp.hazard[0], now);
     if (care.status) care.status.known = true;   // you can see what the dungeon did
@@ -123,6 +125,9 @@ function finish(data, now = Date.now(), { force = false, rnd = Math.random } = {
   return out;
 }
 
+/** Chance (0…1) that a wild Pokémon follows the pet home, from its mood 0…100. */
+const companionChance = (mood) => 0.03 + 0.17 * Math.max(0, Math.min(100, mood)) / 100;
+
 /** Call off an expedition early: the pet comes straight back, without rewards. */
 function recall(data) {
   const e = data.expedition;
@@ -130,4 +135,4 @@ function recall(data) {
   return e;
 }
 
-module.exports = { EXPEDITIONS, REGIONS, LOOT, blocker, start, isAway, finish, recall };
+module.exports = { EXPEDITIONS, REGIONS, LOOT, blocker, start, isAway, finish, recall, companionChance };

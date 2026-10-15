@@ -238,6 +238,29 @@
       P.happy(900);
       P.showBubble(e.text, { priority: 2, ms: Math.min(20000, 4000 + e.text.length * 90), emotion: 'Happy' });
     },
+    starter(e) {
+      P.stars(16);
+      if (!P.playAnim(['Pose', 'Hop'])) P.jump(2);
+      P.showBubble(say('starter', { name: e.name }), { priority: 2, ms: 6000 });
+    },
+    joined(e) {
+      Sound.play('levelup');
+      P.hearts(3);
+      P.showBubble(say('joined', { name: e.name }), { ms: 4000 });
+    },
+    companion(e) {
+      if (P.isAway()) return;
+      P.stars(8);
+      if (!P.playAnim(['Pose', 'Hop'])) P.jump(1);
+      const answer = (keep) => api.invoke('join:answer', e.token, keep);
+      P.showBubble(say('companion', { name: e.name }), {
+        priority: 3, ms: 120000,
+        actions: [
+          { label: tr('join.keep'), primary: true, run: () => answer(true) },
+          { label: tr('join.release'), run: () => answer(false) }
+        ]
+      });
+    },
     'fish-caught'(e) {
       if (P.isAway()) return;
       P.hearts(2);

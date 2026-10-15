@@ -132,7 +132,8 @@
     } catch (e) {
       console.error('sprite load failed', e);
     }
-    if (!built) built = await buildGrid('pikachu', true);
+    // sprite still downloading (or offline): show the Pokémon's Poké Ball meanwhile
+    if (!built) built = buildEgg([...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7));
     let cry, name;
     const sp = P.state.pets[id] && P.state.pets[id].species;   // evolved
     if (sp) {
