@@ -193,6 +193,8 @@ function snapshot() {
     fish: Fishing.FISH,
     party: partyIds(),
     pokedexCount: { seen: Object.keys(d.pokedex).length, caught: Object.values(d.pokedex).filter((e) => e.caught).length },
+    grass: grassInfo(),
+    encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
     weatherNow: d.weatherNow,
     dailyInfo: { signRewards: Daily.SIGN_REWARDS, signItem: Daily.SIGN_ITEM, allDoneBonus: Daily.ALL_DONE_BONUS },
     timer: { ...timer },
@@ -764,7 +766,7 @@ function answerJoin(token, keep) {
 // also start from an outing ("we met a wild Pokémon – go and battle it?"). Main keeps the battle state.
 let wildWin = null;
 let battle = null;           // { b: Battle state, ctx: { place, region, source, capture, ids, wild } }
-let pendingEncounter = null; // from an outing: { place, region, until }
+const LOSE_PENALTY = { outing: { health: 15, mood: 10, berries: 0 }, grass: { health: 30, mood: 20, berries: 3 } };
 const BATTLE_ITEMS = ['pokeball', 'greatball', 'ultraball', 'oran', 'potion', 'antidote', 'parlyz', 'burnheal', 'iceheal', 'persim', 'fullheal', 'revive'];
 
 function openWild(encounter) {
@@ -799,7 +801,25 @@ function partyIds() {
 function wildEnergy() {
   const w = store.data.wild;
   if (w.day !== today()) { w.day = today(); w.used = 0; }
-  return Wild.DAILY_GRASS - w.used;
+  const hourAgo = Date.now() - 3600e3;
+  w.recent = (w.recent || []).filter((t) => t > hourAgo);
+  return Math.max(0, Math.min(Wild.DAILY_GRASS - w.used, Wild.HOURLY_GRASS - w.recent.length));
+}
+
+/** Grass limits for the windows: left today, left this hour, and when the next hourly one frees up. */
+function grassInfo() {
+  const left = wildEnergy();
+  const w = store.data.wild;
+  const dayLeft = Math.max(0, Wild.DAILY_GRASS - w.used);
+  const hourLeft = Math.max(0, Wild.HOURLY_GRASS - w.recent.length);
+  return { energy: left, max: Wild.DAILY_GRASS, dayLeft, hourLeft, hourMax: Wild.HOURLY_GRASS,
+    nextAt: hourLeft > 0 ? null : Math.min(...w.recent) + 3600e3 };
+}
+
+/** The wild Pokémon an outing turned up, if it's still waiting. */
+function waitingEncounter() {
+  const e = store.data.wild.encounter;
+  return e && Date.now() <= e.until ? e : null;
 }
 
 function bagForBattle() {
@@ -812,17 +832,21 @@ async function startBattle(source, opts = {}) {
   const ids = partyIds().filter((id) => !Care.careOf(store.data, id).fainted);
   if (!ids.length) return { ok: false, error: 'noParty' };
   let place = 'grass', region = null;
+  let met = null;
   if (source === 'outing') {
-    if (!pendingEncounter || Date.now() > pendingEncounter.until) { pendingEncounter = null; return { ok: false, error: 'gone' }; }
-    ({ place, region } = pendingEncounter);
-    pendingEncounter = null;
-  } else if (source !== 'test' && wildEnergy() <= 0) return { ok: false, error: 'tired' };
+    met = waitingEncounter();
+    if (!met) { store.data.wild.encounter = null; return { ok: false, error: 'gone' }; }
+    ({ place, region } = met);
+  } else if (source === 'grass' && wildEnergy() <= 0) {
+    return { ok: false, error: grassInfo().dayLeft > 0 ? 'rest' : 'tired' };
+  }
   const dir = spritesDir();
   try {
     const leadLevel = levelOf(petOf(store.data, ids[0]).xp);
     const drawn = Wild.drawnDex(Sources.creditIndexCached(dir));
     let sp;
-    if (opts.query) {
+    if (met) sp = met.sp;
+    else if (opts.query) {
       const found = await Sources.lookupSpecies(opts.query);
       const [info, pk] = await Promise.all([Data.species(found.dex, dir), Data.pokemon(found.dex, dir)]);
       sp = { dex: found.dex, names: info.names, types: pk.types, capture: info.capture };
@@ -837,7 +861,8 @@ async function startBattle(source, opts = {}) {
     }
     const w = await Wild.battlerFor({ key: 'wild', dex: sp.dex, names: sp.names, level, attrs: {}, shiny, dir });
     const wild = Battle.makeMon({ ...w, wild: true });
-    if (source === 'grass') store.data.wild.used++;
+    if (source === 'grass') { store.data.wild.used++; store.data.wild.recent.push(Date.now()); }
+    if (met) store.data.wild.encounter = null;
     const seen = store.data.pokedex[sp.dex] || { seen: 0, caught: 0 };
     store.data.pokedex[sp.dex] = { ...seen, seen: seen.seen + 1 };
     battle = { b: Battle.create({ party, wild, bag: bagForBattle() }), ctx: { place, region, source, capture: sp.capture, ids } };
@@ -901,12 +926,18 @@ function finishBattle() {
   }
   if (b.over === 'lose') {
     d.stats.battlesLost = (d.stats.battlesLost || 0) + 1;
-    for (const id of ctx.ids) {   // light penalty: tired and a bit sad, never fainted
+    // outings: a light penalty; the grass is riskier – more tired, sadder, and berries dropped in the scramble.
+    // Never fainted either way.
+    const p = ctx.source === 'outing' ? LOSE_PENALTY.outing : LOSE_PENALTY.grass;
+    for (const id of ctx.ids) {
       const care = Care.careOf(d, id);
-      care.health = Math.max(1, care.health - 15);
+      care.health = Math.max(1, care.health - p.health);
       const pet = petOf(d, id);
-      pet.mood = Math.max(0, pet.mood - 10);
+      pet.mood = Math.max(0, pet.mood - p.mood);
     }
+    result.lostBerries = Math.min(d.berries, p.berries);
+    d.berries -= result.lostBerries;
+    result.penalty = { health: p.health, mood: p.mood };
   }
   // conditions from the battle come home with them (burns, poison, paralysis, freezing)
   b.party.forEach((m, i) => {
@@ -919,10 +950,36 @@ function finishBattle() {
   changed();
 }
 
-/** An outing turned up a wild Pokémon: offer a battle for a while. */
-function offerOutingEncounter(petId, place, region) {
-  pendingEncounter = { place, region, until: Date.now() + 30 * 60e3 };
-  if (S().pokemon === petId) setTimeout(() => petEvent('encounter', { place, region }), 9000);
+/**
+ * An outing turned up a wild Pokémon: it came back with the pet and waits ENCOUNTER_WAIT_MIN minutes for a
+ * battle. The pet asks right away; after that the Pokémon leaves.
+ */
+async function offerOutingEncounter(petId, place, region) {
+  let sp;
+  try {
+    const dir = spritesDir();
+    sp = await Wild.pickSpecies({ place, region, partnerLevel: levelOf(petOf(store.data, petId).xp),
+      drawn: Wild.drawnDex(Sources.creditIndexCached(dir)), dir });
+  } catch { return; }   // offline: nobody this time
+  const until = Date.now() + Wild.ENCOUNTER_WAIT_MIN * 60e3;
+  store.data.wild.encounter = { place, region, by: petId, sp, until };
+  changed();
+  const info = { name: sp.names[lang()] || sp.names.en, by: petName(petId), min: Wild.ENCOUNTER_WAIT_MIN };
+  setTimeout(() => petEvent('encounter', info), 4000);   // right after the welcome-back bubble
+  notify(T('notif.encounter'), T('notif.encounterBody', info));
+  if (wildWin && !wildWin.isDestroyed()) send(wildWin, 'wild:encounter');
+}
+
+/** The waiting wild Pokémon gave up. */
+function checkEncounter() {
+  const e = store.data.wild.encounter;
+  if (!e || Date.now() <= e.until || (battle && !battle.b.over && battle.ctx.source === 'outing')) return;
+  store.data.wild.encounter = null;
+  const name = e.sp.names[lang()] || e.sp.names.en;
+  petEvent('encounter-gone', { name });
+  notify(T('notif.encounterGone'), T('notif.encounterGoneBody', { name }));
+  if (wildWin && !wildWin.isDestroyed()) send(wildWin, 'wild:encounter');
+  changed();
 }
 
 // ---------- fishing ----------
@@ -949,7 +1006,7 @@ function openFishing() {
 }
 
 function fishBite(depth) {
-  const b = Fishing.bite(Number(depth) || 0);
+  const b = Fishing.bite(Number(depth) || 0, Math.random, new Set(Object.keys(store.data.fishdex).map(Number)));
   const token = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   bites.clear();   // one line in the water at a time
   bites.set(token, b.hidden);
@@ -1477,6 +1534,7 @@ function poopTick(asleep) {
 }
 
 function slowTick() {
+  checkEncounter();
   const asleep = powerMonitor.getSystemIdleTime() >= 180;
   poopTick(asleep);
   careStep(1 / 60, asleep);
@@ -1938,10 +1996,14 @@ function registerIpc() {
   ipcMain.handle('join:answer', (_e, token, keep) => answerJoin(String(token || ''), !!keep));
   ipcMain.handle('wild:explore', () => startBattle('grass'));
   ipcMain.handle('wild:outing', () => startBattle('outing'));
-  ipcMain.handle('wild:state', () => ({ battle: battleView(), energy: wildEnergy(), max: Wild.DAILY_GRASS, party: partyIds(), pending: !!pendingEncounter }));
+  ipcMain.handle('wild:state', () => {
+    const e = waitingEncounter();
+    return { battle: battleView(), ...grassInfo(), party: partyIds(),
+      pending: e ? { names: e.sp.names, until: e.until } : null };
+  });
   ipcMain.handle('battle:act', (_e, action) => battleAct(action));
   ipcMain.on('battle:close', () => { if (battle && battle.b.over) battle = null; });
-  ipcMain.on('wild:open', () => openWild(false));
+  ipcMain.on('wild:open', (_e, encounter) => openWild(!!encounter));
   ipcMain.handle('battle:assets', async (_e, dex, shiny) => {
     try {
       const meta = await Sources.downloadSkin(Number(dex), !!shiny, spritesDir()).catch((e) => {
@@ -2434,6 +2496,45 @@ async function selfTest(dir) {
   send(panelWin, 'panel:tab', 'pokemon');
   await wait(2000);
   await shot(panelWin, '39-panel-party');
+  // grass: at most 3 an hour
+  await step('grass-hourly', async () => {
+    store.data.wild.recent = [Date.now() - 50 * 60e3, Date.now() - 20 * 60e3, Date.now() - 60e3];
+    console.log('[test] 4th grass this hour:', JSON.stringify(await startBattle('grass')), JSON.stringify(grassInfo()));
+  });
+  // losing in the grass costs more than losing to an outing's Pokémon
+  await step('grass-lose', async () => {
+    store.data.wild.recent = [];
+    const id = partyIds()[0];
+    Object.assign(Care.careOf(store.data, id), { health: 100 });
+    petOf(store.data, id).mood = 100;
+    const berries = store.data.berries;
+    await startBattle('grass');
+    battle.b.over = 'lose';
+    finishBattle();
+    console.log('[test] grass lose: health', Care.careOf(store.data, id).health, 'mood', petOf(store.data, id).mood, 'berries', store.data.berries - berries);
+  });
+  // an outing's wild Pokémon: asked at once, waits, then leaves
+  await step('outing-encounter', async () => {
+    if (wildWin && !wildWin.isDestroyed()) wildWin.close();
+    battle = null;
+    await offerOutingEncounter(S().pokemon, 'cave', null);
+    console.log('[test] encounter waiting:', !!waitingEncounter(), waitingEncounter() && waitingEncounter().sp.names.en);
+  });
+  await wait(5500);
+  await shot(petWin, '40-encounter-ask');
+  openPanel('dex');
+  await wait(2500);
+  await shot(panelWin, '41-panel-battle-bar');
+  openPanel('pokemon');
+  await wait(2000);
+  await shot(panelWin, '41b-panel-pokemon-bar');
+  await step('encounter-leaves', async () => {
+    store.data.wild.encounter.until = Date.now() - 1;
+    checkEncounter();
+    console.log('[test] encounter after 30 min:', store.data.wild.encounter, JSON.stringify(await startBattle('outing')));
+  });
+  await wait(1500);
+  await shot(petWin, '42-encounter-gone');
   quitting = true;
   app.quit();
 }

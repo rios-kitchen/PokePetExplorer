@@ -182,9 +182,10 @@ off by default): type your city and your Pokémon mentions sun, rain, snow, heat
 
 ### Battles and catching
 
-Right-click → **🌿 Explore the grass** (16 encounters a day) and walk into the tall grass to meet wild
-Pokémon – any species PMD has drawn, matched to the place (and to your partner's level). Outings to a
-dungeon or a region sometimes meet one too, and your Pokémon asks whether to go and battle it.
+Right-click → **🌿 Explore the grass** (or the button in the panel's Dex and Pokémon tabs; 16 encounters a day, at most 3
+an hour) and walk into the tall grass to meet wild Pokémon – any species PMD has drawn, matched to the place (and to your
+partner's level). Outings to a dungeon or a region sometimes bring one back: your Pokémon asks right away whether to
+battle it, and it waits 30 minutes before it leaves.
 
 - Turn-based battles in the style of the games: real base stats and level-up moves (from PokeAPI), the
   18-type chart, critical hits, burns, poison, paralysis, freezing and confusion. Your contest stats
@@ -193,8 +194,8 @@ dungeon or a region sometimes meet one too, and your Pokémon asks whether to go
   medicine and Revives from your bag.
 - Weaken a wild Pokémon, then throw a **Poké Ball / Great Ball / Ultra Ball** (from the shop) – it
   joins your team. Shiny wild Pokémon appear 1 in 128.
-- Winning gives XP to every Pokémon that took part, a few berries and toughness; losing only tires
-  them out (health −15, mood −10). Burns and poison follow them home – treat them in the Care tab.
+- Winning gives XP to every Pokémon that took part, a few berries and toughness. Losing to a Pokémon from an
+  outing only tires them out (health −15, mood −10); losing in the grass costs more (health −30, mood −20, 3 berries). Burns and poison follow them home – treat them in the Care tab.
 - **Dex → Pokédex** counts the species you've seen and caught.
 
 ### Studying together

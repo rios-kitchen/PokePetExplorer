@@ -65,7 +65,8 @@ function defaults(lang) {
     aiKeys: {},         // provider -> encrypted API key (never sent to the windows)
     greeted: { holiday: null, weather: null, weatherKind: null },   // last day / time something was greeted
     weatherNow: null,   // { kind, temp, isDay, at } – the last weather report
-    wild: { day: null, used: 0 },   // grass encounters today (limited per day)
+    // grass encounters today and in the last hour (both limited); a wild Pokémon met on an outing that waits for a battle
+    wild: { day: null, used: 0, recent: [], encounter: null },
     pokedex: {}         // dex -> { seen, caught } from battles
   };
 }

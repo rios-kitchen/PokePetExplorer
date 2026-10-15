@@ -475,3 +475,6 @@ body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display:
 .poke .party-btn { margin-top: 5px; width: 100%; font-size: 11px; padding: 3px 4px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); cursor: pointer; }
 .poke .party-btn.on { border-color: var(--red); color: var(--red); font-weight: 700; }
 .dex-line { margin: 14px 0 0; font-weight: 700; }
+.battle-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; }
+.battle-bar button { padding: 4px 12px; font-size: 12.5px; }
+.battle-bar .hint { flex: 1 1 200px; margin: 0; }

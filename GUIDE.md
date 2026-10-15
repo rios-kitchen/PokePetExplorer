@@ -126,7 +126,7 @@
 - 迷宫和旅行有几率捡到道具（从橙橙果到活力碎片）。
 - 每次回来都会拍一张**合影**（随机姿势和表情），存在 📖 图鉴 → 合影：只保留**最近 3 张**，点 ☆ 收藏的会一直保留（最多 **20 张**）。
 - **带回新伙伴**：迷宫和旅行回来时，有几率带回一只野生宝可梦，你可以选择让它留下或放它回去。几率 = 3% + 17% × 心情/100（心情越好越高，最高 20%）。训练课不会。
-- **遇到野生宝可梦**：迷宫和旅行回来时有 **30%** 几率遇到野生宝可梦，宝可梦会问你要不要去对战，邀请 **30 分钟**内有效（见第 7 节）。
+- **遇到野生宝可梦**：迷宫和旅行回来时有 **30%** 几率遇到一只野生宝可梦，它会跟着回来。宝可梦一回来就**立刻问你要不要对战**：选「去对战！」马上开打；选「等一会」可以暂缓，它会等 **30 分钟**，超过 30 分钟还没对战它就会离开（见第 7 节）。
 - 提前叫回来：右键菜单里「马上叫回来」，**没有任何奖励**。
 
 ## 6. 钓鱼 🎣
@@ -146,6 +146,7 @@
 
 - 共 **24 种**水系宝可梦，每条大小随机（标准身高的 70%–140%），**1/128** 闪光。
 - 第一次钓到某种额外 **+2 🍓**。所有记录在 📖 图鉴 → 钓鱼图鉴（次数、最大尺寸）。
+- **已经钓到过的种类更容易再上钩**：同一稀有度里，已在图鉴中的种类上钩概率是新种类的 **3 倍**，所以越往后越难集齐全图鉴。
 - 钓到的宝可梦有时**想跟你走**：选「欢迎加入！」它就成为新伙伴。
 - 钓鱼**没有每日次数限制**。
 
@@ -153,8 +154,8 @@
 
 ### 怎么开始
 
-- **去草丛**：右键 →「🌿 去草丛探索…」→「走进草丛」。**每天最多遇到 16 次**（每天零点重置）。
-- **外出遇到**：外出回来时遇到的野生宝可梦（见第 5 节），点「去和外出时遇到的宝可梦对战」。**不占草丛次数**，30 分钟内有效。
+- **去草丛**：右键 →「🌿 去草丛探索…」，或在面板的 📖 图鉴页、🐾 宝可梦页点「🌿 去草丛」，再点「走进草丛」。**每天最多 16 次，并且任意 1 小时内最多 3 次**（每天零点重置；1 小时的次数满了会提示还要等几分钟）。
+- **外出遇到**：外出回来时跟回来的野生宝可梦（见第 5 节）。可以在宝可梦的气泡里点「去对战！」，或在对战窗口、面板的 📖 图鉴页 / 🐾 宝可梦页点「⚔ 和…对战」。**不占草丛次数**，只等 **30 分钟**，过时它就离开。
 - 桌面上**不会**随机冒出野生宝可梦。
 
 ### 出战队伍
@@ -198,7 +199,8 @@
 |---|---|
 | **胜利** | 参战过的宝可梦平分经验 `(8 + 3×野生等级) ÷ 参战数量`；**+1–3 🍓**；最后在场的宝可梦帅气 +1、强壮 +1；计入每日任务「对战」 |
 | **捕捉成功** | 同样获得经验；野生宝可梦**加入队伍**，等级保持不变；记入宝可梦图鉴；计入每日任务「捕捉」 |
-| **失败** | 轻微惩罚：出战的宝可梦**健康 −15、心情 −10**，不会晕倒 |
+| **失败（草丛）** | 出战的宝可梦**健康 −30、心情 −20**，逃跑时还会**掉 3 颗 🍓**（不够就全掉），不会晕倒 |
+| **失败（外出遇到的）** | 轻微惩罚：出战的宝可梦**健康 −15、心情 −10**，不会晕倒 |
 | **逃跑** | 没有奖励也没有惩罚 |
 
 - 对战中得的**灼伤、中毒、麻痹、冰冻会带回家**，要在 🍓 照顾页治疗（混乱不会带回家）。
@@ -262,12 +264,12 @@
 
 | 项目 | 限制 |
 |---|---|
-| 草丛遇敌 | 每天 16 次，零点重置 |
-| 外出遇到的野生宝可梦 | 外出回来 30% 几率，30 分钟内有效，不占草丛次数 |
+| 草丛遇敌 | 每天 16 次，任意 1 小时内最多 3 次，零点重置 |
+| 外出遇到的野生宝可梦 | 外出回来 30% 几率，回来时立刻询问，最多等 30 分钟，不占草丛次数 |
 | 外出 | 同时只能一只；时长 30–90 分钟 |
 | 签到 | 每天 1 次，7 天一轮 |
 | 每日任务 | 每天 4 个 + 全部完成奖励 |
-| 钓鱼 | 不限次数 |
+| 钓鱼 | 不限次数（已钓到的种类上钩概率 ×3） |
 | 节日礼物 | 每个节日 1 次 |
 | 摸摸给经验 | 每 15 秒最多 1 点 |
 | 关闭软件时的照顾结算 | 最多 12 小时 |
@@ -396,8 +398,9 @@ where it was) and the **timer keeps running while the app is closed**. Only one 
   ☆ favourites stay for good (up to **20**).
 - **A new friend**: after a dungeon or a trip, a wild Pokémon may follow it home and you decide whether it stays.
   Chance = 3% + 17% × mood/100 (up to 20% when it's happy). Classes never bring one.
-- **A wild encounter**: after a dungeon or a trip there's a **30%** chance of meeting a wild Pokémon; your Pokémon asks
-  whether to battle it, and the offer lasts **30 minutes** (see section 7).
+- **A wild encounter**: after a dungeon or a trip there's a **30%** chance that a wild Pokémon comes back with it. Your
+  Pokémon **asks right away** whether to battle: "Battle!" starts at once; "Wait a bit" puts it off, but the wild
+  Pokémon only waits **30 minutes** – after that it leaves (see section 7).
 - Calling it back early ("Call back now") gives **no rewards**.
 
 ## 6. Fishing 🎣
@@ -420,6 +423,8 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 
 - **24** water Pokémon, each with a random size (70%–140% of the usual height), shiny **1 in 128**.
 - A new species gives **+2 🍓** extra. Everything goes into 📖 Dex → Fishing Pokédex (count, biggest size).
+- **Species you've already caught bite more often**: within a rarity, a species already in the Pokédex is **3 times** as
+  likely as a new one, so completing the Pokédex takes a while.
 - A catch may **want to come along**: "Welcome to the team!" makes it a new team member.
 - Fishing has **no daily limit**.
 
@@ -427,9 +432,12 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 
 ### Starting a battle
 
-- **The grass**: right-click → "🌿 Explore the grass…" → "Into the grass". **Up to 16 encounters a day** (resets at midnight).
-- **From an outing**: a wild Pokémon met on an outing (section 5) → "Battle the Pokémon met on the outing". It **doesn't
-  use a grass encounter** and lasts 30 minutes.
+- **The grass**: right-click → "🌿 Explore the grass…", or "🌿 Explore the grass" in the panel's 📖 Dex or 🐾 Pokémon
+  tab, then "Into the grass". **Up to 16 encounters a day and at most 3 within any hour** (resets at midnight; when the
+  hour's three are used, it tells you how many minutes to wait).
+- **From an outing**: the wild Pokémon that came back from an outing (section 5). Press "Battle!" in your Pokémon's
+  bubble, or "⚔ Battle …" in the battle window or the panel's 📖 Dex / 🐾 Pokémon tab. It **doesn't use a grass
+  encounter** and only waits **30 minutes** before it leaves.
 - Wild Pokémon **never** pop up on the desktop by themselves.
 
 ### Your team
@@ -478,7 +486,8 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 |---|---|
 | **Win** | XP `(8 + 3 × wild level) ÷ number of participants` for each Pokémon that took part; **+1–3 🍓**; the Pokémon on the field gets Cool +1 and Tough +1; counts for the "battle" daily task |
 | **Caught** | The same XP; the wild Pokémon **joins your team** at its level; recorded in the Pokédex; counts for the "catch" daily task |
-| **Lose** | Light penalty: the team gets **health −15, mood −10**, never fainted |
+| **Lose (grass)** | The team gets **health −30, mood −20** and **drops 3 🍓** while running away (or all you have), never fainted |
+| **Lose (outing encounter)** | Light penalty: the team gets **health −15, mood −10**, never fainted |
 | **Run** | Nothing gained or lost |
 
 - **Burns, poison, paralysis and freezing from the battle come home** – treat them in the 🍓 Care tab (confusion doesn't).
@@ -553,12 +562,12 @@ right-click "Switch Pokémon" menu switches quickly too.
 
 | What | Limit |
 |---|---|
-| Grass encounters | 16 a day, reset at midnight |
-| Wild Pokémon from outings | 30% after an outing, lasts 30 min, doesn't use grass encounters |
+| Grass encounters | 16 a day, at most 3 within any hour, reset at midnight |
+| Wild Pokémon from outings | 30% after an outing, asked on return, waits at most 30 min, doesn't use grass encounters |
 | Outings | one Pokémon at a time; 30–90 minutes |
 | Sign-in | once a day, 7-day cycle |
 | Daily tasks | 4 a day + an all-done bonus |
-| Fishing | unlimited |
+| Fishing | unlimited (caught species bite 3× as often) |
 | Holiday gifts | once per holiday |
 | XP from patting | at most 1 every 15 s |
 | Care while the app is closed | at most 12 hours counted |
@@ -580,11 +589,11 @@ right-click "Switch Pokémon" menu switches quickly too.
 | 照顾、物品、异常状态 / Care, items, statuses | `src/main/care.js` | `ITEMS`, `REWARD`, `DIAGNOSE_COST`, `STAGE_HOURS`, `MAX_STAGE` |
 | 成长、进化 / Growth, evolution | `src/main/growth.js` | `BASE_XP_PER_HOUR`, `EVOLVE_LEVELS`, `EVOLVE_SNOOZE_H`, `SHINY_RATE` (1/64 starter) |
 | 外出 / Outings | `src/main/expedition.js` | `EXPEDITIONS`, `LOOT`, `companionChance()` |
-| 外出遭遇 / Outing encounters | `main.js` `checkExpedition` / `offerOutingEncounter` | 0.3 chance, 30 min window |
-| 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `TIERS`, `ZONES`, `JOIN_CHANCE`, `SHINY_RATE` |
+| 外出遭遇 / Outing encounters | `main.js` `checkExpedition` / `offerOutingEncounter` / `checkEncounter` | 0.3 chance; `Wild.ENCOUNTER_WAIT_MIN` (30); saved in `data.wild.encounter` |
+| 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `TIERS`, `ZONES`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |
-| 野生宝可梦 / Wild species | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `DAILY_GRASS`, `SPECIAL`, `SHINY_RATE` |
-| 对战结算 / Battle results | `main.js` `finishBattle` | win berries 1–3, lose −15 health / −10 mood |
+| 野生宝可梦 / Wild species | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `DAILY_GRASS`, `HOURLY_GRASS`, `SPECIAL`, `SHINY_RATE` |
+| 对战结算 / Battle results | `main.js` `finishBattle`, `LOSE_PENALTY` | win berries 1–3; lose: grass −30 health / −20 mood / −3 berries, outing −15 / −10 |
 | 属性相克 / Type chart | `src/main/typechart.js` | 18 × 18 |
 | 种族值、招式、捕获率 / Base stats, moves, catch rates | `src/main/pokedata.js` | PokeAPI, cached in `userData/pokedata.json` |
 | 每日 / Daily | `src/main/daily.js` | `TASKS`, `PER_DAY`, `ALL_DONE_BONUS`, `SIGN_REWARDS` |

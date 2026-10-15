@@ -540,3 +540,17 @@ test('catching: low HP, status and better balls help', () => {
   assert.ok(rate(0.5, 'pokeball', 'paralysis') > rate(0.5, 'pokeball'));
   assert.equal(Battle.tryCatch({ maxHp: 10, hp: 1, status: null }, 'ultraball', 255, () => 0.99).caught, true);
 });
+
+test('species already in the fishing Pokédex bite more often', () => {
+  const common = Fishing.FISH.filter((f) => f.tier === 0);
+  const caught = new Set(common.slice(1).map((f) => f.dex));   // all common ones but the first
+  let fresh = 0;
+  let r = 1;
+  const rnd = () => { r = (r * 16807) % 2147483647; return r / 2147483647; };
+  for (let i = 0; i < 6000; i++) if (Fishing.bite(0, rnd, caught).hidden.dex === common[0].dex) fresh++;
+  // without weighting the new species would be 1 in 6 of common bites; now 1 in 16 (≈ 0.06 × common share)
+  const commonShare = 60 / 100;
+  const share = fresh / 6000 / commonShare;
+  assert.ok(share > 0.04 && share < 0.09, `new species share ${share}`);
+  assert.equal(Fishing.REPEAT_WEIGHT, 3);
+});

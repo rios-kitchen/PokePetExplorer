@@ -21,7 +21,7 @@ canvas { display: block; image-rendering: pixelated; }
 .st.burn { background: #e2603b; } .st.poison { background: #9a4ab8; } .st.paralysis { background: #d8b020; }
 .st.freeze { background: #4aa8d8; } .st.confusion { background: #c86a9a; }
 .panel { width: 480px; margin: 8px auto 0; }
-#log { margin: 0 0 8px; min-height: 40px; background: var(--card); color: #23221f; border: 3px solid #2a2420; border-radius: 8px; padding: 8px 12px; font-size: 14px; }
+#log { white-space: pre-line; margin: 0 0 8px; min-height: 40px; background: var(--card); color: #23221f; border: 3px solid #2a2420; border-radius: 8px; padding: 8px 12px; font-size: 14px; }
 .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .menu.wide { grid-template-columns: 1fr; }
 .menu button { font: inherit; font-weight: 700; padding: 8px 10px; border-radius: 10px; border: 2px solid #2a2420; background: #f4f0e6; color: #23221f;

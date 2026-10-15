@@ -148,11 +148,17 @@
     if (actors.walker) actors.walker.anim = 'Walk';
     renderExploreMenu();
   }
+  const minsTo = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));
   function renderExploreMenu(msg) {
-    $('#log').textContent = msg || (info.party.length ? t('wild.explore', { n: info.energy, max: info.max }) : t('wild.noParty'));
+    const lines = [];
+    if (!info.party.length) lines.push(t('wild.noParty'));
+    else if (info.dayLeft > 0 && info.hourLeft <= 0) lines.push(t('wild.error.rest', { m: minsTo(info.nextAt) }));
+    else lines.push(`${t('wild.explore', { n: info.dayLeft, max: info.max })}${t('wild.hour', { h: info.hourLeft, hmax: info.hourMax })}`);
+    if (info.pending) lines.push(t('wild.waiting', { name: nm(info.pending), m: minsTo(info.pending.until) }));
+    $('#log').textContent = msg || lines.join('\n');
     const buttons = [];
-    buttons.push(button(`🌿 ${t('wild.go')}`, () => explore('grass'), { primary: true, sub: `${info.energy}/${info.max}`, disabled: info.energy <= 0 || !info.party.length }));
-    if (info.pending) buttons.push(button(`⚔ ${t('wild.outingFight')}`, () => explore('outing'), { primary: true }));
+    if (info.pending) buttons.push(button(`⚔ ${t('wild.outingFight')}`, () => explore('outing'), { primary: true, sub: `${minsTo(info.pending.until)} min` }));
+    buttons.push(button(`🌿 ${t('wild.go')}`, () => explore('grass'), { primary: !info.pending, sub: `${info.energy}/${info.hourMax}`, disabled: info.energy <= 0 || !info.party.length }));
     $('#menu').className = 'menu wide';
     $('#menu').replaceChildren(...buttons);
   }
@@ -162,7 +168,7 @@
     Sound.play('pat');
     await sleep(900);
     const res = await api.invoke(source === 'outing' ? 'wild:outing' : 'wild:explore');
-    if (!res.ok) { info = await api.invoke('wild:state'); renderExploreMenu(t(`wild.error.${res.error}`)); return; }
+    if (!res.ok) { info = await api.invoke('wild:state'); renderExploreMenu(t(`wild.error.${res.error}`, { m: info.nextAt ? minsTo(info.nextAt) : 0 })); return; }
     await startBattle();
   }
 
@@ -356,7 +362,11 @@
     if (r.xp) lines.push(t('b.resXp', { n: r.xp }));
     if (r.berries) lines.push(`+${r.berries} 🍓`);
     if (view.over === 'caught') lines.push(t('b.resJoined', { name: nm(view.wild) }));
-    if (view.over === 'lose') lines.push(t('b.resPenalty'));
+    if (view.over === 'lose') {
+      const p = r.penalty || { health: 15, mood: 10 };
+      lines.push(p.health > 15 ? t('b.resPenaltyHeavy', p) : t('b.resPenalty'));
+      if (r.lostBerries) lines.push(t('b.resLostBerries', { n: r.lostBerries }));
+    }
     $('#resText').textContent = lines.join('\n');
     $('#resOk').textContent = t('b.continue');
     $('#result').classList.remove('hidden');

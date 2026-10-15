@@ -23,6 +23,8 @@ const TIERS = [
 const NEW_SPECIES_BONUS = 2;
 const JOIN_CHANCE = [0.06, 0.1, 0.16, 0.25];   // by tier: rarer Pokémon are more curious about you
 const SHINY_RATE = 1 / 128;
+// species already in the fishing Pokédex bite this many times as often as new ones, so completing it takes a while
+const REPEAT_WEIGHT = 3;
 
 // The cast's colour sets the difficulty: green (short, easy), yellow, red (long, hard – and rarer bites).
 const ZONES = [
@@ -45,14 +47,14 @@ function pickWeighted(weights, rnd) {
 }
 
 /**
- * Something bites. Returns what the window needs to play it out – the species stays secret until it's landed:
+ * Something bites. `caught`: dex numbers already in the fishing Pokédex (they turn up more often). Returns what the window needs to play it out – the species stays secret until it's landed:
  * { tier, bite (ms to react), pull (how hard it fights), hidden: { dex, size, shiny } }
  */
-function bite(depth, rnd = Math.random) {
+function bite(depth, rnd = Math.random, caught = new Set()) {
   const zone = ZONES[zoneOf(depth)];
   const tier = pickWeighted(tierWeights(depth), rnd);
   const pool = FISH.filter((f) => f.tier === tier);
-  const fish = pool[Math.floor(rnd() * pool.length)];
+  const fish = pool[pickWeighted(pool.map((f) => (caught.has(f.dex) ? REPEAT_WEIGHT : 1)), rnd)];
   const size = Math.round(fish.height * 10 * (0.7 + rnd() * 0.7));   // cm, 70 %–140 % of the usual height
   return {
     tier, zone: zoneOf(depth),
@@ -85,4 +87,4 @@ function land(data, catchInfo, now = Date.now(), rnd = Math.random) {
   };
 }
 
-module.exports = { FISH, TIERS, ZONES, SHINY_RATE, NEW_SPECIES_BONUS, JOIN_CHANCE, zoneOf, tierWeights, bite, land };
+module.exports = { FISH, TIERS, ZONES, SHINY_RATE, REPEAT_WEIGHT, NEW_SPECIES_BONUS, JOIN_CHANCE, zoneOf, tierWeights, bite, land };

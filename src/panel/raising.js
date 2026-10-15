@@ -283,8 +283,24 @@ window.PanelRaising = function PanelRaising(env) {
       ...(state.souvenirs.length ? [] : [el('p', { class: 'hint full' }, t('dex.noSouvenirs'))]));
   }
 
+  // battles: the grass (with today's / this hour's encounters left) and a wild Pokémon waiting from an outing
+  function renderBattleBar(state) {
+    const g = state.grass;
+    const e = state.encounter;
+    const mins = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));
+    for (const bar of document.querySelectorAll('.battle-bar')) {
+      bar.replaceChildren(
+        ...(e ? [el('button', { class: 'primary', onclick: () => api.send('wild:open', true) },
+          t('dex.battleWaiting', { name: e.names[L()] || e.names.en, m: mins(e.until) }))] : []),
+        el('button', { class: 'secondary', onclick: () => api.send('wild:open') }, t('dex.goWild')),
+        el('span', { class: 'hint' }, g.dayLeft > 0 && g.hourLeft <= 0 ? t('wild.error.rest', { m: mins(g.nextAt) })
+          : `${t('wild.explore', { n: g.dayLeft, max: g.max })}${t('wild.hour', { h: g.hourLeft, hmax: g.hourMax })}`));
+    }
+  }
+
   return {
     render(state, tab) {
+      if (tab === 'dex' || tab === 'pokemon') renderBattleBar(state);
       if (tab === 'care') renderShop(state);
       if (tab === 'today') renderToday(state);
       if (tab === 'expedition') renderExpedition(state);
@@ -293,6 +309,7 @@ window.PanelRaising = function PanelRaising(env) {
     /** called every second while the panel is open (expedition countdown) */
     tick(state, tab) {
       if (tab === 'expedition' && state && state.expedition) renderExpedition(state);
+      if ((tab === 'dex' || tab === 'pokemon') && state && state.encounter) renderBattleBar(state);
     }
   };
 };
