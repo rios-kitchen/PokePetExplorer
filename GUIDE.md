@@ -1,6 +1,6 @@
 # 宝可宠探索 · PokePet Explorer — 功能与玩法说明 / Feature Guide
 
-> 版本 / Version **1.0.0**
+> 版本 / Version **1.1.0**
 >
 > 这份文档讲清楚软件里每项功能**怎么打开、怎么玩、有什么规则和每日限制**。玩家看它上手，开发者看它了解当前版本的功能和数值（数值都写在代码里的常量中，下面会注明出处）。
 > 安装、隐私、版权和项目结构请看 [README](README.md)。
@@ -620,7 +620,7 @@ the usual faces.
 
 # 开发者附录 / Developer appendix
 
-**当前版本 / Current version:** 1.0.0 + unreleased changes · Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等级会按新曲线保留 / old saves keep their levels on the new curve）
+**当前版本 / Current version:** 1.1.0 · Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等级会按新曲线保留 / old saves keep their levels on the new curve）
 
 ## 数值在哪里改 / Where the numbers live
 
