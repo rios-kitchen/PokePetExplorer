@@ -478,3 +478,6 @@ body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display:
 .battle-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; }
 .battle-bar button { padding: 4px 12px; font-size: 12.5px; }
 .battle-bar .hint { flex: 1 1 200px; margin: 0; }
+.dex-head { margin-bottom: 2px; }
+.pokedex .fish.seen .fish-face img { filter: grayscale(1) brightness(0.55); }
+.pokedex .fish.seen b { opacity: 0.75; }

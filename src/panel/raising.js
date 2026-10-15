@@ -233,7 +233,7 @@ window.PanelRaising = function PanelRaising(env) {
   // the fishing Pokédex: every species that can be caught, with its portrait once caught
   const fishFaces = {};
   function renderFishdex(state) {
-    $('#pokedexLine').textContent = t('dex.pokedex', state.pokedexCount);
+    renderPokedex(state);
     const caught = Object.keys(state.fishdex).length;
     $('#fishHead').textContent = t('dex.fishdex', { n: caught, total: state.fish.length });
     const TIER = ['common', 'uncommon', 'rare', 'veryRare'];
@@ -253,9 +253,30 @@ window.PanelRaising = function PanelRaising(env) {
   }
   $('#goFish').addEventListener('click', () => api.send('fish:open'));
 
+  // the Pokédex: every species met (grey face) or caught (with its portrait), kept even after one leaves the team
+  const dexFaces = {};
+  function renderPokedex(state) {
+    $('#pokedexHead').textContent = t('dex.pokedexHead', state.pokedexCount);
+    $('#pokedexLine').textContent = t('dex.pokedexHint');
+    const fmtDay = (ts) => (ts ? new Date(ts).toLocaleDateString(L() === 'zh' ? 'zh-CN' : 'en') : '');
+    $('#pokedexList').replaceChildren(...state.pokedex.map((e) => {
+      const got = e.caught > 0;
+      const face = el('div', { class: 'fish-face' }, '❔');
+      const k = `${e.dex}${e.shiny ? 's' : ''}`;
+      dexFaces[k] ||= api.invoke('diary:portrait', e.dex, 'Normal', !!e.shiny);
+      dexFaces[k].then((url) => { if (url) face.replaceChildren(el('img', { src: url, alt: '' })); });
+      const name = e.names ? e.names[L()] || e.names.en : `#${e.dex}`;
+      const tip = got ? t('dex.caughtTip', { n: e.caught, seen: e.seen, date: fmtDay(e.firstCaught) }) : t('dex.seenTip', { n: e.seen, date: fmtDay(e.firstSeen) });
+      return el('div', { class: `fish mon${got ? ' got' : ' seen'}`, title: tip },
+        face,
+        el('b', {}, name + (e.shiny ? ' ✨' : '')),
+        el('span', { class: 'hint' }, `#${String(e.dex).padStart(4, '0')} · ${got ? t('dex.caught') : t('dex.seen')}`));
+    }), ...(state.pokedex.length ? [] : [el('p', { class: 'hint full' }, t('dex.pokedexEmpty'))]));
+  }
+
   let dexKey = '';
   function renderDex(state) {
-    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length, state.photos.map((p) => [p.id, !!p.fav]), state.fishdex, state.pokedexCount]);
+    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length, state.photos.map((p) => [p.id, !!p.fav]), state.fishdex, state.pokedex]);
     if (key === dexKey) return;
     dexKey = key;
     renderAlbum(state);

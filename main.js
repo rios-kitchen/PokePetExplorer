@@ -21,6 +21,7 @@ const Wild = require('./src/main/wild');
 const Data = require('./src/main/pokedata');
 const Shiny = require('./src/main/shiny');
 const Limits = require('./src/main/limits');
+const Pokedex = require('./src/main/pokedex');
 const { Updater } = require('./src/main/updater');
 const AI = require('./src/main/ai');
 
@@ -95,6 +96,10 @@ function removeSkinFiles(meta, exceptId) {
 
 function migrate() {
   Diary.ensure(store.data);
+  // the Pokédex also knows the team and every fish caught before it kept full records
+  Pokedex.backfill(store.data,
+    petList().map((p) => ({ dex: p.dex, names: p.names, shiny: !!(store.data.skins[p.id] || {}).shiny })),
+    Object.keys(store.data.fishdex || {}).map((dex) => Fishing.FISH.find((f) => f.dex === Number(dex))).filter(Boolean));
 }
 
 /**
@@ -213,7 +218,8 @@ function snapshot() {
     album: { recent: Album.RECENT, maxFavorites: Album.MAX_FAVORITES },
     fish: Fishing.FISH,
     party: partyIds(),
-    pokedexCount: { seen: Object.keys(d.pokedex).length, caught: Object.values(d.pokedex).filter((e) => e.caught).length },
+    pokedexCount: Pokedex.counts(d),
+    pokedex: Pokedex.list(d),
     grass: grassInfo(),
     fishing: Limits.info(d, 'fishing', today()),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -339,6 +345,7 @@ async function hatchEgg(id) {
     Object.assign(entry, { dex: sp.dex, names: sp.names });
     store.data.skins[id] = sp.skin;
     if (sp.skin.shiny) Shiny.obtained(store.data);
+    Pokedex.caught(store.data, sp.dex, sp.names, { shiny: !!sp.skin.shiny });
     pet.stage = 'hatched';
     pet.hatchedAt = Date.now();
     delete pet.egg;
@@ -397,6 +404,7 @@ async function evolve(id, dex) {
     return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
   }
   pet.species = { dex: option.dex, names: option.names };
+  Pokedex.caught(store.data, option.dex, option.names, { shiny: !!(store.data.skins[id] && store.data.skins[id].shiny) });
   pet.evolutions = (pet.evolutions || 0) + 1;
   pet.evolution = null;
   pet.evolvedAt = Date.now();
@@ -772,6 +780,7 @@ function addPokemon({ id, dex, names, shiny = false, from }) {
   pet.from = from || null;
   store.data.skins[id] = { source: 'pending', shiny: !!shiny };
   if (shiny) Shiny.obtained(store.data);
+  Pokedex.caught(store.data, dex, names, { shiny });
   ensurePmdSkins().catch(() => {});
   return id;
 }
@@ -793,6 +802,7 @@ function chooseStarter(id) {
 let pendingJoin = null;
 
 function offerJoin(info) {
+  if (info.from !== 'fishing') Pokedex.see(store.data, info.dex, info.names);   // a fish was seen when landed
   pendingJoin = { ...info, token: `j${Date.now().toString(36)}` };
   return pendingJoin;
 }
@@ -904,8 +914,7 @@ async function startBattle(source, opts = {}) {
     const wild = Battle.makeMon({ ...w, wild: true });
     if (source === 'grass') Limits.use(store.data, 'grass', today());
     if (met) store.data.wild.encounter = null;
-    const seen = store.data.pokedex[sp.dex] || { seen: 0, caught: 0 };
-    store.data.pokedex[sp.dex] = { ...seen, seen: seen.seen + 1 };
+    if (!met) Pokedex.see(store.data, sp.dex, sp.names);   // an outing's Pokémon was seen when it was met
     battle = { b: Battle.create({ party, wild, bag: bagForBattle() }), ctx: { place, region, source, capture: sp.capture, ids } };
     changed();
     return { ok: true };
@@ -958,8 +967,6 @@ function finishBattle() {
     const w = b.wild;
     const id = addPokemon({ dex: w.dex, names: w.names, shiny: w.shiny, from: 'caught' });
     petOf(d, id).xp = Growth.xpFor(w.level);
-    const e = d.pokedex[w.dex] || { seen: 1, caught: 0 };
-    d.pokedex[w.dex] = { ...e, caught: e.caught + 1 };
     d.stats.caught = (d.stats.caught || 0) + 1;
     result.caughtId = id;
     taskProgress('catch');
@@ -1010,6 +1017,7 @@ async function offerOutingEncounter(petId, place, region) {
   } catch { return; }   // offline: nobody this time
   const until = Date.now() + Wild.ENCOUNTER_WAIT_MIN * 60e3;
   store.data.wild.encounter = { place, region, by: petId, sp, until };
+  Pokedex.see(store.data, sp.dex, sp.names);
   changed();
   const info = { name: sp.names[lang()] || sp.names.en, by: petName(petId), min: Wild.ENCOUNTER_WAIT_MIN };
   setTimeout(() => petEvent('encounter', info), 4000);   // right after the welcome-back bubble
@@ -1073,6 +1081,7 @@ function fishLand(token) {
   const res = Fishing.land(store.data, hidden);
   if (!res) return { ok: false };
   if (res.junk) { changed(); return { ok: true, ...res }; }
+  Pokedex.see(store.data, res.dex, res.names);
   taskProgress('fish');
   // fishing together: the active Pokémon has fun and learns a little
   const pet = activePet();
@@ -2579,6 +2588,18 @@ async function selfTest(dir) {
   send(panelWin, 'panel:tab', 'pokemon');
   await wait(2000);
   await shot(panelWin, '39-panel-party');
+  // the Pokédex keeps a Pokémon that left the team
+  await step('pokedex-keeps', async () => {
+    const leaving = store.data.custom.find((c) => c.id !== S().pokemon && c.dex);
+    const before = JSON.stringify(store.data.pokedex[leaving.dex]);
+    ipcMain.emit('pokemon:remove', {}, leaving.id);
+    console.log('[test] removed', leaving.names.en, '– still in the Pokédex:', before === JSON.stringify(store.data.pokedex[leaving.dex]), JSON.stringify(Pokedex.counts(store.data)));
+  });
+  openPanel('dex');
+  await wait(3000);
+  await panelWin.webContents.executeJavaScript("document.querySelector('#pokedexHead').scrollIntoView(); 0");
+  await wait(500);
+  await shot(panelWin, '41c-panel-pokedex');
   // grass: at most 3 an hour
   await step('grass-hourly', async () => {
     grassInfo();

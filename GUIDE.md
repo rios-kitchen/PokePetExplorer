@@ -208,7 +208,7 @@
 
 - **对战表情**：双方血条旁边有 PMD 头像，会随战况变化：被打中会疼，打出效果绝佳会高兴，被要害打中会吃惊，混乱时会晕，血量低时会担心，赢了欢呼，输了哭。
 - 对战中得的**灼伤、中毒、麻痹、冰冻会带回家**，要在 🍓 照顾页治疗（混乱不会带回家）。
-- 📖 图鉴 → 宝可梦图鉴记录**见过**和**抓到**的种类数。
+- 遇到和收服的宝可梦都会记进**宝可梦图鉴**（见第 10 节）。
 
 ## 8. 每日：签到、任务、节日、天气 📅
 
@@ -254,6 +254,13 @@
 3. **对战捕捉**（第 7 节）。
 
 在 🐾 宝可梦页可以**切换搭档**（谁在桌面上）、**加入出战**、**移除**。右键菜单「切换宝可梦」也可以快速切换。
+
+### 宝可梦图鉴 📖
+
+在 📖 图鉴页，按全国图鉴编号列出你**见过**和**收服过**的每一种宝可梦：收服过的显示彩色头像，只见过的显示灰色头像。鼠标停在上面能看到次数和第一次见到 / 收服的日期。
+- **算「见过」**：草丛和外出遇到的野生宝可梦、钓上来的宝可梦、跟着回来想加入的伙伴。
+- **算「收服」**：所有加入队伍的宝可梦——初始宝可梦、对战捕捉、钓鱼或外出带回并留下的、进化后的新形态。
+- **记录永久保留**：就算后来把宝可梦从队伍里移除，图鉴里的记录也不会消失。旧存档里现有的队伍会自动算作收服，钓鱼图鉴里的会算作见过。
 
 和原作一样，收集是件慢慢来的事：钓鱼和外出带回伙伴的几率都很低，草丛里常见的总是那几只。
 
@@ -517,7 +524,7 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 - **Battle faces**: PMD portraits next to both HP bars react to the fight – pain when hit, joy at a super-effective move,
   surprise at a critical hit, dizzy when confused, worried when low, cheering when you win and crying when you lose.
 - **Burns, poison, paralysis and freezing from the battle come home** – treat them in the 🍓 Care tab (confusion doesn't).
-- 📖 Dex → Pokédex counts the species **seen** and **caught**.
+- Pokémon you meet and catch go into the **Pokédex** (section 10).
 
 ## 8. Every day: sign-in, tasks, holidays, weather 📅
 
@@ -569,6 +576,16 @@ You start with the one from the professor. After that, new team members **only**
 
 In the 🐾 Pokémon tab you can **switch your partner** (the one on the desktop), **add to team** and **remove**. The
 right-click "Switch Pokémon" menu switches quickly too.
+
+### Pokédex 📖
+
+The 📖 Dex tab lists every species you've **seen** or **caught**, by National Dex number: caught ones with a coloured
+portrait, seen ones greyed out. Hover for the counts and the date you first saw / caught it.
+- **Seen**: wild Pokémon in the grass and on outings, Pokémon you reel in, friends that follow you home.
+- **Caught**: everyone who joins your team – the starter, Pokémon caught in battle, fish and friends you keep, and the
+  new form after an evolution.
+- **Kept for good**: removing a Pokémon from the team never removes it from the Pokédex. In older saves the current team
+  counts as caught and the fishing records as seen.
 
 As in the games, collecting takes its time: fishing and outings rarely bring a new friend, and the grass mostly shows
 the usual faces.
@@ -644,6 +661,7 @@ the usual faces.
 | 种族值、招式、捕获率 / Base stats, moves, catch rates | `src/main/pokedata.js` | PokeAPI, cached in `userData/pokedata.json` |
 | 每日 / Daily | `src/main/daily.js` | `TASKS`, `PER_DAY`, `ALL_DONE_BONUS`, `SIGN_REWARDS` |
 | 成就 / Achievements | `src/main/achievements.js` | `ACHIEVEMENTS` |
+| 宝可梦图鉴 / Pokédex | `src/main/pokedex.js` | `see`, `caught`, `backfill` – entries are never removed |
 | 合影 / Photos | `src/main/album.js` | `RECENT`, `MAX_FAVORITES` |
 | 节日、天气 / Holidays, weather | `src/main/weather.js` | `FIXED`, `LUNAR`, `HOLIDAY_GIFT` |
 | 番茄钟默认值 / Pomodoro defaults | `src/main/store.js` | `pomodoro: { focus: 25, short: 5, long: 15, longEvery: 4 }` |

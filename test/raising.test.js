@@ -623,3 +623,24 @@ test('a tired pond: later bites within the hour are often junk and come slower',
   assert.equal(Object.keys(d.fishdex).length, 0);
   assert.equal(d.stats.fishJunk, 1);
 });
+
+test('the Pokédex records seen and caught species and never forgets them', () => {
+  const Pokedex = require('../src/main/pokedex');
+  const d = {};
+  Pokedex.see(d, 16, { en: 'Pidgey', zh: '波波' }, 100);
+  Pokedex.see(d, 16, null, 200);
+  Pokedex.caught(d, 25, { en: 'Pikachu', zh: '皮卡丘' }, { shiny: true }, 300);
+  assert.deepEqual(d.pokedex[16], { seen: 2, caught: 0, names: { en: 'Pidgey', zh: '波波' }, firstSeen: 100 });
+  assert.equal(d.pokedex[25].seen, 1);
+  assert.equal(d.pokedex[25].caught, 1);
+  assert.equal(d.pokedex[25].shiny, true);
+  assert.deepEqual(Pokedex.counts(d), { seen: 2, caught: 1 });
+  // older saves: the team counts as caught, the fishing records as seen – adding only, never twice
+  Pokedex.backfill(d, [{ dex: 25 }, { dex: 4, names: { en: 'Charmander', zh: '小火龙' } }], [{ dex: 129, names: { en: 'Magikarp', zh: '鲤鱼王' } }]);
+  Pokedex.backfill(d, [{ dex: 4 }], [{ dex: 129 }]);
+  assert.equal(d.pokedex[25].caught, 1);
+  assert.equal(d.pokedex[4].caught, 1);
+  assert.equal(d.pokedex[129].seen, 1);
+  assert.equal(d.pokedex[129].caught, 0);
+  assert.deepEqual(Pokedex.list(d).map((e) => e.dex), [4, 16, 25, 129]);
+});
