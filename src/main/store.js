@@ -27,8 +27,11 @@ function defaults(lang) {
       reactInput: true,
       reminderMin: 30,
       launchAtLogin: false,
+      hideOnFullscreen: true,   // step aside when a fullscreen app (video, game, slides) is in front
       checkUpdates: true,   // look for a new release on GitHub at startup
       ai: { enabled: false, provider: 'anthropic', baseUrl: '', model: '' },   // optional AI chat (ai.js)
+      weather: { enabled: false, city: '', place: '', lat: null, lon: null },   // off by default; city typed by the user
+      greetings: true,      // holiday and anniversary greetings (local, no network)
       petPos: null,
       petHidden: false
     },
@@ -57,7 +60,9 @@ function defaults(lang) {
     fishdex: {},        // dex -> { caught, first (ms), best (size) }
     souvenirs: [],      // { id, region, at } brought back from travels
     photos: [],         // { id, file, expId, region, petId, at } – group photos from expeditions (userData/photos)
-    aiKeys: {}          // provider -> encrypted API key (never sent to the windows)
+    aiKeys: {},         // provider -> encrypted API key (never sent to the windows)
+    greeted: { holiday: null, weather: null, weatherKind: null },   // last day / time something was greeted
+    weatherNow: null    // { kind, temp, isDay, at } – the last weather report
   };
 }
 

@@ -24,6 +24,7 @@
   <nav class="tabs" role="tablist">
     <button data-tab="work"><i>💼</i><span data-i18n="tab.work"></span></button>
     <span class="tab-sep" aria-hidden="true"></span>
+    <button data-tab="today"><i>📅</i><span data-i18n="tab.today"></span></button>
     <button data-tab="care"><i>🍓</i><span data-i18n="tab.care"></span></button>
     <button data-tab="expedition"><i>🧭</i><span data-i18n="tab.expedition"></span></button>
     <button data-tab="dex"><i>📖</i><span data-i18n="tab.dex"></span></button>
@@ -114,6 +115,17 @@
       <p id="careEarn" class="hint"></p>
     </section>
 
+    <!-- TODAY: sign-in and daily tasks -->
+    <section id="tab-today" class="tab">
+      <h3 data-i18n="today.sign"></h3>
+      <div id="signRow" class="sign-row"></div>
+      <div class="sign-foot"><span id="signStreak" class="hint"></span><button id="signBtn" class="primary"></button></div>
+      <p class="hint" data-i18n="today.signHint"></p>
+      <h3 data-i18n="today.tasks"></h3>
+      <div id="taskList" class="task-list"></div>
+      <p id="taskBonus" class="hint"></p>
+    </section>
+
     <!-- EXPEDITION -->
     <section id="tab-expedition" class="tab">
       <div id="expStats" class="exp-stats"></div>
@@ -191,7 +203,20 @@
       <label class="check"><input type="checkbox" id="setReact"> <span data-i18n="set.reactInput"></span></label>
       <label class="check"><input type="checkbox" id="setSound"> <span data-i18n="set.sound"></span></label>
       <label class="check"><input type="checkbox" id="setLogin"> <span data-i18n="set.login"></span></label>
+      <label class="check"><input type="checkbox" id="setFullscreen"> <span data-i18n="set.hideFullscreen"></span></label>
       <button id="resetPos" class="secondary" data-i18n="set.resetPos"></button>
+
+      <h3 data-i18n="wx.title"></h3>
+      <div class="wx-box">
+        <label class="check"><input type="checkbox" id="setGreetings"> <span data-i18n="wx.greetings"></span></label>
+        <label class="check"><input type="checkbox" id="wxEnabled"> <span data-i18n="wx.enable"></span></label>
+        <p class="hint" data-i18n="wx.hint"></p>
+        <form id="wxForm" class="ai-model hidden" autocomplete="off">
+          <input id="wxCity" type="text" data-i18n-placeholder="wx.cityPlaceholder">
+          <button class="secondary" type="submit" data-i18n="wx.find"></button>
+        </form>
+        <p id="wxStatus" class="hint"></p>
+      </div>
 
       <h3 data-i18n="ai.title"></h3>
       <div class="ai-box">

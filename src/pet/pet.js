@@ -238,6 +238,69 @@
       P.happy(900);
       P.showBubble(e.text, { priority: 2, ms: Math.min(20000, 4000 + e.text.length * 90), emotion: 'Happy' });
     },
+    // ---- desktop play
+    'fling-start'() {
+      P.interacted();
+      pet.flying = true;
+      pet.mode = 'idle';
+      P.hideBubble(true);
+      Sound.play('switch');
+    },
+    'fling-bounce'() { P.stars(3); Sound.play('pat'); },
+    'fling-end'(e) {
+      pet.flying = false;
+      pet.tilt = 0;
+      P.dizzy();
+      if (e.berry) setTimeout(() => P.floatText('+1 🍓'), 600);
+      setTimeout(() => { if (!P.bubbleBusy()) P.showBubble(say('flung'), { ms: 2500 }); }, 900);
+    },
+    peek(e) {
+      pet.peek = e.side;
+      pet.mode = 'idle';
+      pet.dir = e.side === 'left' ? 1 : -1;
+      P.hideBubble(true);
+    },
+    unpeek(e) {
+      pet.peek = null;
+      P.jump(1, 0.8);
+      if (e.talk && !P.bubbleBusy()) P.showBubble(say('unpeek'), { ms: 2000 });
+    },
+    holiday(e) {
+      if (P.isAway()) return;
+      Sound.play('fanfare');
+      P.stars(14);
+      if (!P.playAnim(['Pose', 'Hop'], { times: 2 })) P.jump(2);
+      const text = e.holiday ? say(`holiday_${e.holiday}`) : e.anniv.years ? say('anniversaryYears', { n: e.anniv.years }) : say('anniversary100');
+      P.showBubble(`${text}\n+${e.gift} 🍓`, { priority: 2, ms: 8000, emotion: 'Joyous' });
+    },
+    weather(e) {
+      if (P.isAway() || P.bubbleBusy()) return;
+      P.showBubble(say(e.line, { temp: e.temp, place: e.place }), { ms: 6000 });
+    },
+    'sign-in-reminder'() {
+      if (P.isAway() || P.bubbleBusy()) return;
+      P.showBubble(say('signReminder'), {
+        priority: 2, ms: 60000,
+        actions: [
+          { label: tr('today.signBtn'), primary: true, run: () => api.send('pet:action', 'signin') },
+          P.laterAction()
+        ]
+      });
+    },
+    'signed-in'(e) {
+      Sound.play('chime');
+      P.stars(10);
+      P.floatText(`+${e.berries} 🍓`);
+      if (!P.isAway()) P.showBubble(say(e.item ? 'signedInBig' : 'signedIn', { n: e.streak }), { ms: 3500 });
+    },
+    'task-done'(e) {
+      if (P.isAway() || P.bubbleBusy()) return;
+      P.hearts(1);
+      P.showBubble(say('taskDone', { task: tr(`task.${e.id}`) }), {
+        priority: 2, ms: 8000,
+        actions: [{ label: tr('btn.open'), primary: true, run: () => api.send('pet:action', 'open', 'today') }]
+      });
+    },
     starter(e) {
       P.stars(16);
       if (!P.playAnim(['Pose', 'Hop'])) P.jump(2);

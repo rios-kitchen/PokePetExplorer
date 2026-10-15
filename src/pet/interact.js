@@ -146,13 +146,14 @@
     if (e.button !== 0) return;
     if (e.target.closest('.bubble, .pill')) return;
     if (!hitTest(e.clientX, e.clientY)) return;
-    down = { sx: e.screenX, sy: e.screenY, dragging: false };
+    down = { sx: e.screenX, sy: e.screenY, cx: e.clientX, cy: e.clientY, dragging: false };
     document.body.style.cursor = 'grabbing';
   });
 
   function endPointer() {
     if (!down) return;
     const wasDrag = down.dragging;
+    const wasAt = { x: down.cx, y: down.cy };
     down = null;
     document.body.style.cursor = 'grab';
     if (wasDrag) {
@@ -162,7 +163,7 @@
       P.playAnim(['HitGround', 'Trip', 'Cringe']);
       if (!P.bubbleBusy()) P.showBubble(say('dropped'), { ms: 1500 });
     } else {
-      pat();
+      pat(wasAt);
     }
   }
   window.addEventListener('mouseup', (e) => { if (e.button === 0) endPointer(); });
@@ -191,26 +192,57 @@
   });
 
   let lastPat = 0;
-  function pat() {
+  // where it was poked: head (pats), belly (giggles), feet (ticklish); too many pokes and it's annoyed
+  const pokes = [];
+  function zoneAt(at) {
+    if (!at) return 'head';
+    const g = P.geometry();
+    const k = (at.y - g.top) / Math.max(1, g.h);
+    return k < 0.4 ? 'head' : k < 0.75 ? 'belly' : 'feet';
+  }
+
+  function pat(at) {
     const now = Date.now();
     const wasSleeping = pet.mode === 'sleep';
     P.interacted();
     if (wasSleeping) return;
+    if (pet.peek) { api.send('pet:unpeek'); return; }   // come out from the screen edge
     if (now - lastPat < 250) return;
     lastPat = now;
     if (P.isFainted()) {
-      P.showBubble(say('needFainted'), { priority: 2, actions: [P.careAction('potion', P.tr('btn.potion')), P.laterAction()] });
+      P.showBubble(say('needFainted'), { priority: 2, actions: [P.careAction('revive', P.tr('item.revive')), P.laterAction()] });
+      return;
+    }
+    pokes.push(now);
+    while (pokes.length && now - pokes[0] > 3000) pokes.shift();
+    if (pokes.length >= 6 && !P.isEgg()) {
+      pokes.length = 0;
+      P.playAnim(['Cringe', 'Shake', 'Pain']);
+      P.sweat();
+      if (!P.bubbleBusy()) P.showBubble(say('pokeTooMuch'), { ms: 2200 });
       return;
     }
     api.invoke('pet:pat');
     Sound.play('pat');
     const focus = P.phase() === 'focus';
+    const zone = P.isEgg() ? 'head' : zoneAt(at);
     P.hearts(focus ? 1 : 2);
-    P.happy(700);
     if (focus) {
+      P.happy(700);
       if (!P.bubbleBusy()) P.showBubble(say('petFocus', { time: P.fmt(P.timeLeft()) }), { ms: 2500 });
       return;
     }
+    if (zone === 'belly') {
+      if (!P.playAnim(['Hop', 'Pose'], { times: 2 })) P.jump(2, 0.6);
+      if (!P.bubbleBusy() && Math.random() < 0.6) P.showBubble(say('pokeBelly'), { ms: 2000 });
+      return;
+    }
+    if (zone === 'feet') {
+      if (!P.playAnim(['Shake', 'Cringe', 'Hop'])) P.jump(1, 0.5);
+      if (!P.bubbleBusy() && Math.random() < 0.6) P.showBubble(say('pokeFeet'), { ms: 2000 });
+      return;
+    }
+    P.happy(700);
     P.jump(1, 0.7);
     if (!P.bubbleBusy() && Math.random() < 0.45) {
       P.showBubble(say(P.phase() === 'idle' ? 'pet' : 'petBreak', { cry: P.cry() }), { ms: 2200 });

@@ -14,11 +14,14 @@ const Achievements = require('./src/main/achievements');
 const Secrets = require('./src/main/secrets');
 const Album = require('./src/main/album');
 const Fishing = require('./src/main/fishing');
+const Daily = require('./src/main/daily');
+const Weather = require('./src/main/weather');
 const { Updater } = require('./src/main/updater');
 const AI = require('./src/main/ai');
 
 let updater = null;   // created when the app is ready
 const { KeyActivity } = require('./src/main/keys');
+const { FullscreenWatch } = require('./src/main/fullscreen');
 
 const keys = new KeyActivity();
 const png = require('./src/main/png');
@@ -185,6 +188,8 @@ function snapshot() {
     photos: d.photos,
     album: { recent: Album.RECENT, maxFavorites: Album.MAX_FAVORITES },
     fish: Fishing.FISH,
+    weatherNow: d.weatherNow,
+    dailyInfo: { signRewards: Daily.SIGN_REWARDS, signItem: Daily.SIGN_ITEM, allDoneBonus: Daily.ALL_DONE_BONUS },
     timer: { ...timer },
     platform: process.platform
   };
@@ -377,6 +382,7 @@ function checkExpedition() {
   const before = levelOf(petOf(store.data, out.petId).xp);
   petOf(store.data, out.petId).xp += out.xp;
   store.data.stats.expeditions = (store.data.stats.expeditions || 0) + 1;
+  taskProgress(out.kind === 'training' ? 'train' : 'outing');
   if (out.kind === 'travel') store.data.stats.travels = (store.data.stats.travels || 0) + 1;
   if (S().pokemon === out.petId) petEvent('expedition-back', out);
   levelChanged(out.petId, before);
@@ -395,6 +401,25 @@ function shopBuy(itemId, n = 1) {
   store.data.inventory[itemId] = (store.data.inventory[itemId] || 0) + n;
   changed();
   return { ok: true };
+}
+
+// ---------- fullscreen apps ----------
+const fullscreen = new FullscreenWatch((full) => {
+  const show = !full && !S().petHidden;
+  for (const w of [petWin, ...poopWins.values()]) {
+    if (!w || w.isDestroyed()) continue;
+    if (show) w.showInactive(); else w.hide();
+  }
+});
+
+/** Apply the "hide over fullscreen apps" setting (macOS: Space visibility; Windows: the watcher). */
+function applyFullscreenSetting() {
+  const hide = S().hideOnFullscreen;
+  if (IS_MAC) {
+    for (const w of [petWin, ...poopWins.values()]) {
+      if (w && !w.isDestroyed()) w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: !hide });
+    }
+  } else if (hide) fullscreen.start(); else fullscreen.stop();
 }
 
 /** The app was called "PokePet Plus" before: bring its save, sprites and photos over once. */
@@ -600,7 +625,7 @@ function createPetWindow() {
     webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true, backgroundThrottling: false }
   });
   petWin.setAlwaysOnTop(true, 'floating');
-  if (IS_MAC) petWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  if (IS_MAC) petWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: !S().hideOnFullscreen });
   petWin.setIgnoreMouseEvents(true, { forward: true });
   if (process.env.POKEPET_TEST) petWin.webContents.on("console-message", (e) => console.log("[pet]", e.message));
   petWin.loadFile(path.join(__dirname, 'src', 'pet', 'pet.html'));
@@ -746,6 +771,7 @@ function fishLand(token) {
   bites.delete(token);
   if (!hidden) return { ok: false };
   const res = Fishing.land(store.data, hidden);
+  if (res) taskProgress('fish');
   if (!res) return { ok: false };
   // fishing together: the active Pokémon has fun and learns a little
   const pet = activePet();
@@ -755,6 +781,82 @@ function fishLand(token) {
   const join = res.wantsToJoin ? offerJoin({ dex: res.dex, names: res.names, shiny: res.shiny, from: 'fishing' }) : null;
   changed();
   return { ok: true, ...res, join: join ? join.token : null };
+}
+
+// ---------- desktop play: fling (丢丢乐) and peeking from the screen edge ----------
+let flingIv = null;
+let peek = null;          // { side: 'left' | 'right' } while hiding halfway off the screen
+let lastFlingBerry = 0;
+
+function stopFling() { clearInterval(flingIv); flingIv = null; }
+
+/** Throw the pet: it flies with gravity, bounces off the screen edges and floor, then lands dizzy. */
+function fling(vx, vy) {
+  if (!petWin) return;
+  stopFling();
+  petEvent('fling-start');
+  const b = petWin.getBounds();
+  const wa = screen.getDisplayMatching(b).workArea;
+  const half = b.width / 2;
+  const floor = wa.y + wa.height - b.height, ceil = wa.y - b.height * 0.4;
+  const minX = wa.x + 30 - half, maxX = wa.x + wa.width - 30 - half;
+  let x = b.x, y = b.y, last = Date.now(), bounces = 0;
+  const started = last;
+  vx = Math.max(-4000, Math.min(4000, vx)); vy = Math.max(-4000, Math.min(4000, vy));
+  flingIv = setInterval(() => {
+    if (!petWin || petWin.isDestroyed()) { stopFling(); return; }
+    const now = Date.now(), dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    vy += 2600 * dt;
+    x += vx * dt; y += vy * dt;
+    let hit = false;
+    if (x < minX) { x = minX; vx = -vx * 0.55; hit = true; }
+    if (x > maxX) { x = maxX; vx = -vx * 0.55; hit = true; }
+    if (y < ceil) { y = ceil; vy = -vy * 0.5; hit = true; }
+    if (y > floor) {
+      y = floor;
+      if (Math.abs(vy) > 160) { vy = -vy * 0.45; hit = true; } else vy = 0;
+      vx *= 0.82;   // friction on the ground
+    }
+    if (hit && Math.abs(vx) + Math.abs(vy) > 300) { bounces++; petEvent('fling-bounce'); }
+    petWin.setPosition(Math.round(x), Math.round(y));
+    const resting = y >= floor && Math.abs(vy) < 1 && Math.abs(vx) < 40;
+    if (resting || now - started > 5000) {
+      stopFling();
+      addMood(3);
+      let berry = 0;
+      if (now - lastFlingBerry > 10 * 60e3) { lastFlingBerry = now; berry = 1; store.data.berries += 1; }
+      petEvent('fling-end', { bounces, berry });
+      changed();
+      settleAtEdge();
+      savePetPos();
+    }
+  }, 16);
+}
+
+/** Dropped right at the left/right screen edge: hide halfway and peek out. */
+function settleAtEdge() {
+  if (!petWin) return;
+  const b = petWin.getBounds();
+  const wa = screen.getDisplayMatching(b).workArea;
+  const cx = b.x + b.width / 2;
+  const side = cx < wa.x + 40 ? 'left' : cx > wa.x + wa.width - 40 ? 'right' : null;
+  if (!side) return;
+  peek = { side };
+  petWin.setPosition(Math.round((side === 'left' ? wa.x : wa.x + wa.width) - b.width / 2), b.y);
+  petEvent('peek', { side });
+}
+
+/** Come out from the edge (clicked, or picked up). */
+function unpeek(talk = true) {
+  if (!peek || !petWin) return;
+  const b = petWin.getBounds();
+  const wa = screen.getDisplayMatching(b).workArea;
+  const cx = peek.side === 'left' ? wa.x + 90 : wa.x + wa.width - 90;
+  peek = null;
+  petWin.setPosition(Math.round(cx - b.width / 2), b.y);
+  petEvent('unpeek', { talk });
+  savePetPos();
 }
 
 // ---------- AI chat (optional, off by default) ----------
@@ -925,6 +1027,8 @@ function completePhase(skipped) {
       Diary.addSession(d, timer.startedAt || Date.now() - d.pomodoro.focus * 60000, d.pomodoro.focus);
       addMood(15);
       addXp(20);
+      taskProgress('focus');
+      taskProgress('focusMin', d.pomodoro.focus);
       // studying together: the pet learns too (+1 Smart per 25 minutes of focus)
       const smart = Math.max(1, Math.round(d.pomodoro.focus / 25));
       if (!activeAway() && activePet().stage !== 'egg') activePet().attrs.smart += smart;
@@ -1021,12 +1125,85 @@ function careStep(hours, asleep) {
   }
 }
 
-function dailyBerries() {
-  const d = store.data;
-  if (d.lastRewardDay === today()) return;
-  d.lastRewardDay = today();
-  d.berries += Care.REWARD.daily;
-  setTimeout(() => petEvent('daily-berries', { n: Care.REWARD.daily }), 4000);
+/** New day: new daily tasks, and the pet reminds the trainer to sign in. */
+function dailyRoll() {
+  if (Daily.roll(store.data, today()) || !store.data.daily.signedIn) {
+    if (hasPet() && !remindedSignIn) {
+      remindedSignIn = true;
+      setTimeout(() => petEvent('sign-in-reminder', { streak: store.data.daily.streak }), 5000);
+    }
+  }
+}
+let remindedSignIn = false;
+
+function signIn() {
+  const res = Daily.signIn(store.data, today());
+  if (res.ok) {
+    petEvent('signed-in', res);
+    changed();
+  }
+  return res;
+}
+
+// ---------- holidays and weather ----------
+/** Once a day: a holiday or a partner anniversary gets a greeting (and a little gift). */
+function greetHoliday() {
+  const d = store.data, day = today();
+  if (!S().greetings || !hasPet() || d.greeted.holiday === day) return;
+  d.greeted.holiday = day;
+  const holiday = Weather.holidayOn(day);
+  const anniv = Weather.anniversary(activePet().hatchedAt, day);
+  if (!holiday && !anniv) return;
+  d.berries += Weather.HOLIDAY_GIFT;
+  setTimeout(() => petEvent('holiday', { holiday, anniv, gift: Weather.HOLIDAY_GIFT }), 9000);
+  changed();
+}
+
+const WEATHER_EVERY = 2 * 3600e3;
+let weatherBusy = false;
+/** Ask Open-Meteo for the weather (only when the user turned it on); remark on it now and then. */
+async function checkWeather(force = false) {
+  const w = S().weather, d = store.data;
+  if (!w.enabled || w.lat == null || weatherBusy) return;
+  if (!force && d.weatherNow && Date.now() - d.weatherNow.at < WEATHER_EVERY) return;
+  weatherBusy = true;
+  try {
+    d.weatherNow = await Weather.current(w.lat, w.lon);
+    const line = Weather.remark(d.weatherNow);
+    // remark once a day, and again when it starts raining / snowing / storming
+    const newDay = d.greeted.weather !== today();
+    const turned = d.greeted.weatherKind && d.greeted.weatherKind !== d.weatherNow.kind && ['rain', 'snow', 'storm'].includes(d.weatherNow.kind);
+    if (hasPet() && line && (newDay || turned)) petEvent('weather', { line, temp: d.weatherNow.temp, place: w.place });
+    d.greeted.weather = today();
+    d.greeted.weatherKind = d.weatherNow.kind;
+    changed();
+  } catch { /* offline: try again later */ } finally {
+    weatherBusy = false;
+  }
+}
+
+async function setWeatherCity(query) {
+  try {
+    const c = await Weather.findCity(query, lang());
+    S().weather = { ...S().weather, city: String(query).trim(), place: c.country ? `${c.name}, ${c.country}` : c.name, lat: c.lat, lon: c.lon };
+    store.data.weatherNow = null;
+    changed();
+    checkWeather(true);
+    return { ok: true, place: S().weather.place };
+  } catch (e) {
+    return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
+  }
+}
+
+/** Something that daily tasks count happened. */
+function taskProgress(kind, n = 1) {
+  for (const t of Daily.progress(store.data, kind, n)) petEvent('task-done', { id: t.id, reward: t.reward });
+}
+
+function claimTask(id) {
+  const res = Daily.claim(store.data, id);
+  if (res.ok) changed();
+  return res;
 }
 
 function checkWeekly() {
@@ -1049,7 +1226,7 @@ function createPoopWindow(p) {
     webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
   });
   win.setAlwaysOnTop(true, 'floating');
-  if (IS_MAC) win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  if (IS_MAC) win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: !S().hideOnFullscreen });
   win.loadFile(path.join(__dirname, 'src', 'poop', 'poop.html'), { query: { id: p.id, lang: lang() } });
   win.once('ready-to-show', () => { if (!S().petHidden) win.showInactive(); });
   win.on('closed', () => poopWins.delete(p.id));
@@ -1130,7 +1307,9 @@ function slowTick() {
   }
 
   store.rollDay();
-  dailyBerries();
+  dailyRoll();
+  greetHoliday();
+  checkWeather();
   checkWeekly();
   Diary.prune(store.data);
   store.data.lastSeen = Date.now();
@@ -1151,6 +1330,8 @@ function useCareItem(itemId) {
   const res = Care.useItem(store.data, S().pokemon, itemId);
   if (res.ok) {
     const field = { food: 'fed', bath: 'baths', med: 'meds', revive: 'meds' }[res.kind];
+    if (res.kind === 'food') taskProgress('feed');
+    if (res.kind === 'bath') taskProgress('bath');
     if (res.kind === 'food' && !store.data.poopDueAt && Math.random() < 0.6) {
       store.data.poopDueAt = Date.now() + (20 + Math.random() * 25) * 60000;
     }
@@ -1196,6 +1377,7 @@ function setTodoDone(id, done) {
     Diary.record(store.data, 'todos');
     addMood(8);
     addXp(10);
+    taskProgress('todo');
     petEvent('todo-done', { task: t.text, allDone: openTodos().length === 0 });
   }
   changed();
@@ -1365,7 +1547,11 @@ function setSettings(patch) {
   const s = S();
   const oldScale = s.scale;
   for (const [k, v] of Object.entries(patch || {})) {
-    if (k in s && k !== 'petPos' && k !== 'ai') s[k] = v;
+    if (k in s && k !== 'petPos' && k !== 'ai' && k !== 'weather') s[k] = v;
+  }
+  if (patch && patch.weather && typeof patch.weather === 'object') {
+    s.weather = { ...s.weather, enabled: !!patch.weather.enabled };
+    if (s.weather.enabled) checkWeather(true);
   }
   if (patch && patch.ai && typeof patch.ai === 'object') {
     const a = patch.ai;
@@ -1379,6 +1565,7 @@ function setSettings(patch) {
   }
   s.scale = Math.max(2, Math.min(5, Number(s.scale) || 3));
   if (s.scale !== oldScale) resizePet();
+  if ('hideOnFullscreen' in patch) applyFullscreenSetting();
   if ('launchAtLogin' in patch) {
     try { app.setLoginItemSettings({ openAtLogin: !!s.launchAtLogin }); } catch { /* unsupported */ }
   }
@@ -1412,23 +1599,35 @@ function registerIpc() {
   });
   ipcMain.on('pet:drag-start', () => {
     if (!petWin || drag) return;
+    stopFling();
+    if (peek) unpeek(false);
     const c = screen.getCursorScreenPoint();
     const [x, y] = petWin.getPosition();
-    drag = { dx: c.x - x, dy: c.y - y };
+    drag = { dx: c.x - x, dy: c.y - y, trail: [] };
     drag.iv = setInterval(() => {
       if (!petWin) return;
       const p = screen.getCursorScreenPoint();
       petWin.setPosition(p.x - drag.dx, p.y - drag.dy);
+      drag.trail.push({ t: Date.now(), x: p.x, y: p.y });
+      if (drag.trail.length > 8) drag.trail.shift();
     }, 16);
   });
   ipcMain.on('pet:drag-end', () => {
     if (!drag) return;
     clearInterval(drag.iv);
+    // how fast was it moving when let go? (px/s over the last ~100 ms)
+    const tr = drag.trail.filter((q) => Date.now() - q.t < 120);
     drag = null;
+    if (tr.length >= 2) {
+      const a = tr[0], b = tr[tr.length - 1], dt = Math.max(16, b.t - a.t) / 1000;
+      const vx = (b.x - a.x) / dt, vy = (b.y - a.y) / dt;
+      if (Math.hypot(vx, vy) > 900) { fling(vx, vy); return; }
+    }
+    settleAtEdge();
     savePetPos();
   });
   ipcMain.handle('pet:move-by', (_e, dx) => {
-    if (!petWin || drag) return null;
+    if (!petWin || drag || flingIv || peek) return null;
     const b = petWin.getBounds();
     const wa = screen.getDisplayMatching(b).workArea;
     const minX = wa.x - Math.round(b.width * 0.3);
@@ -1442,8 +1641,10 @@ function registerIpc() {
     return blocked;
   });
   ipcMain.on('pet:menu', () => { if (petWin) buildMenu().popup({ window: petWin }); });
+  ipcMain.on('pet:unpeek', () => unpeek(true));
   ipcMain.handle('pet:pat', () => {
     Diary.record(store.data, 'pats');
+    taskProgress('pat');
     addMood(2);
     const now = Date.now();
     if (now - lastPatXp > 15000) { lastPatXp = now; addXp(1); }
@@ -1457,6 +1658,7 @@ function registerIpc() {
       case 'open': openPanel(arg); break;
       case 'care': useCareItem(arg); break;
       case 'diagnose': diagnosePet(); break;
+      case 'signin': signIn(); break;
       case 'evolve': evolve(S().pokemon, arg).then((r) => { if (!r.ok) petEvent('evolve-failed', { error: r.error }); }); break;
       case 'evolve-later': snoozeEvolution(); break;
       case 'expedition': startExpedition(arg); break;
@@ -1529,6 +1731,9 @@ function registerIpc() {
   ipcMain.handle('care:diagnose', () => diagnosePet());
   ipcMain.handle('shop:buy', (_e, itemId, n) => shopBuy(String(itemId || ''), n));
   ipcMain.handle('settings:extra', (_e, text) => runSecret(text));
+  ipcMain.handle('daily:sign', () => signIn());
+  ipcMain.handle('weather:city', (_e, q) => setWeatherCity(q));
+  ipcMain.handle('daily:claim', (_e, id) => claimTask(String(id || '')));
   ipcMain.handle('starter:choose', (_e, id) => chooseStarter(String(id || '')));
   ipcMain.on('starter:open', () => openStarter());
   ipcMain.handle('join:answer', (_e, token, keep) => answerJoin(String(token || ''), !!keep));
@@ -1893,6 +2098,50 @@ async function selfTest(dir) {
   await panelWin.webContents.executeJavaScript("document.querySelector('#fishHead').scrollIntoView()");
   await wait(1500);
   await shot(panelWin, '28-panel-fishdex');
+
+  // ---- daily sign-in and tasks
+  await step('daily', async () => {
+    console.log('[test] sign in:', JSON.stringify(signIn()));
+    for (const t of store.data.daily.tasks.slice(0, 2)) taskProgress(t.kind, t.goal);
+    console.log('[test] claim:', JSON.stringify(claimTask(store.data.daily.tasks[0].id)));
+  });
+  send(panelWin, 'panel:tab', 'today');
+  await wait(1500);
+  await shot(panelWin, '29-panel-today');
+
+  // ---- weather (a real lookup) and the settings section
+  await step('weather', async () => {
+    setSettings({ weather: { enabled: true } });
+    console.log('[test] weather city:', JSON.stringify(await setWeatherCity('Shanghai')));
+    await wait(3000);
+    console.log('[test] weather now:', JSON.stringify(store.data.weatherNow));
+  });
+  send(panelWin, 'panel:tab', 'settings');
+  await wait(1200);
+  await panelWin.webContents.executeJavaScript("document.querySelector('[data-i18n=\"wx.title\"]').scrollIntoView(); 0");
+  await wait(600);
+  await shot(panelWin, '30-panel-weather');
+
+  // ---- desktop play: fling, then peek from the left edge, then a holiday greeting
+  await step('fling', async () => fling(1600, -1400));
+  await wait(450);
+  await shot(petWin, '31-pet-flying');
+  await wait(5500);
+  await shot(petWin, '32-pet-landed');
+  await step('peek', async () => {
+    const b = petWin.getBounds();
+    const wa = screen.getDisplayMatching(b).workArea;
+    petWin.setPosition(Math.round(wa.x + 10 - b.width / 2), b.y);
+    settleAtEdge();
+    console.log('[test] peek:', JSON.stringify(peek));
+  });
+  await wait(2000);
+  await shot(petWin, '33-pet-peek');
+  await step('unpeek', async () => unpeek(true));
+  await wait(1500);
+  await step('holiday', async () => petEvent('holiday', { holiday: 'midAutumn', anniv: null, gift: 3 }));
+  await wait(1500);
+  await shot(petWin, '34-pet-holiday');
   quitting = true;
   app.quit();
 }
@@ -1912,7 +2161,8 @@ if (!app.requestSingleInstanceLock()) {
     deletePhotoFiles(Album.prune(store.data.photos));   // older saves kept up to 60 photos
     migrate();
     offlineCare();
-    dailyBerries();
+    dailyRoll();
+    setTimeout(() => { greetHoliday(); checkWeather(); }, 6000);
     setTimeout(checkWeekly, 15000);
     setTimeout(() => ensurePmdSkins().catch((e) => console.error("PMD download failed", e)), 3000);
     if (IS_MAC && app.dock) app.dock.hide();
@@ -1926,6 +2176,7 @@ if (!app.requestSingleInstanceLock()) {
       setTimeout(openStarter, 600);
     }
     keys.start();
+    applyFullscreenSetting();
     setInterval(tick, 1000);
     setInterval(slowTick, 60000);
     setInterval(pollInput, 60);
@@ -1948,6 +2199,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     quitting = true;
     keys.stop();
+    fullscreen.stop();
     if (store) store.flush();
   });
 

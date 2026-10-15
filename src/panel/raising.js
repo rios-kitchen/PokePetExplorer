@@ -43,6 +43,46 @@ window.PanelRaising = function PanelRaising(env) {
     }));
   }
 
+  // ================================================================ TODAY (sign-in, daily tasks)
+  let todayKey = '';
+  function renderToday(state) {
+    const d = state.daily, info = state.dailyInfo;
+    const key = JSON.stringify([L(), d, state.berries]);
+    if (key === todayKey) return;
+    todayKey = key;
+    // which slot of the 7-day cycle is today: after signing in it's the current streak, before it the next one
+    const yesterdayStreak = d.signedIn ? d.streak : (d.lastSignDay && isYesterday(d.lastSignDay, d.day) ? d.streak : 0);
+    const todaySlot = d.signedIn ? (d.streak - 1) % 7 : yesterdayStreak % 7;
+    $('#signRow').replaceChildren(...info.signRewards.map((n, i) => el('div', {
+      class: `sign-day${i < todaySlot || (i === todaySlot && d.signedIn) ? ' got' : ''}${i === todaySlot ? ' today' : ''}`
+    }, el('span', { class: 'hint' }, t('today.day', { n: i + 1 })), el('b', {}, `${n} 🍓`), i + 1 === info.signItem.day ? el('span', {}, t(`item.${info.signItem.item}`).split(' ')[0]) : null)));
+    $('#signStreak').textContent = d.streak && (d.signedIn || yesterdayStreak) ? t('today.streak', { n: d.signedIn ? d.streak : yesterdayStreak }) : '';
+    const btn = $('#signBtn');
+    btn.textContent = d.signedIn ? t('today.signed') : t('today.signBtn');
+    btn.disabled = d.signedIn ? true : null;
+    btn.onclick = () => api.invoke('daily:sign');
+    $('#taskList').replaceChildren(...(d.tasks || []).map((tk) => {
+      const pct = Math.round((tk.progress / tk.goal) * 100);
+      const done = tk.progress >= tk.goal;
+      return el('div', { class: `task${tk.claimed ? ' claimed' : done ? ' done' : ''}` },
+        el('div', { class: 'task-main' },
+          el('b', {}, t(`task.${tk.id}`)),
+          el('div', { class: 'meter' }, el('div', { style: `width:${pct}%` })),
+          el('span', { class: 'hint' }, `${tk.progress}/${tk.goal}`)),
+        el('button', {
+          class: done && !tk.claimed ? 'primary' : 'secondary', disabled: !done || tk.claimed ? true : null,
+          onclick: () => api.invoke('daily:claim', tk.id)
+        }, tk.claimed ? t('today.claimed') : `${t('today.claim')} +${tk.reward} 🍓`));
+    }));
+    $('#taskBonus').textContent = d.bonusClaimed ? t('today.bonusDone') : t('today.bonus', { n: info.allDoneBonus });
+  }
+  function isYesterday(a, b) {
+    if (!a || !b) return false;
+    const [y, m, dd] = b.split('-').map(Number);
+    const x = new Date(y, m - 1, dd - 1);
+    return a === `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  }
+
   // ================================================================ EXPEDITION
   function statsBox(state) {
     const id = state.settings.pokemon;
@@ -245,6 +285,7 @@ window.PanelRaising = function PanelRaising(env) {
   return {
     render(state, tab) {
       if (tab === 'care') renderShop(state);
+      if (tab === 'today') renderToday(state);
       if (tab === 'expedition') renderExpedition(state);
       if (tab === 'dex') renderDex(state);
     },

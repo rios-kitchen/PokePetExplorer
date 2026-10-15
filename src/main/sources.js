@@ -18,8 +18,10 @@ const PMD_VERSION = 2;
 //   pokeapi.co                 species names, evolutions
 //   raw.githubusercontent.com  PMD sprites, portraits, artist credits
 //   api.github.com, github.com the app's own releases (update check / installer download)
+//   *.open-meteo.com           weather, only when the user turned it on and typed a city (weather.js)
 // The optional AI chat talks to the endpoint the user enters – see ai.js.
-const ALLOWED_HOSTS = new Set(['pokeapi.co', 'raw.githubusercontent.com', 'api.github.com', 'github.com']);
+const ALLOWED_HOSTS = new Set(['pokeapi.co', 'raw.githubusercontent.com', 'api.github.com', 'github.com',
+  'geocoding-api.open-meteo.com', 'api.open-meteo.com']);
 
 function fetchAllowed(url) {
   const u = new URL(url);

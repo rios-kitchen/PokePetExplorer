@@ -440,9 +440,11 @@
     $('#setSound').checked = s.sound;
     $('#setReact').checked = s.reactInput;
     $('#setLogin').checked = s.launchAtLogin;
+    $('#setFullscreen').checked = s.hideOnFullscreen;
     $('#setUpdates').checked = s.checkUpdates;
     renderUpdate();
     renderAI();
+    renderWeather();
     $('#stToday').textContent = state.stats.todayPomos;
     $('#stPomos').textContent = state.stats.totalPomos;
     $('#stMinutes').textContent = state.stats.focusMinutes;
@@ -456,8 +458,30 @@
   $('#setSound').addEventListener('change', (e) => api.send('settings:set', { sound: e.target.checked }));
   $('#setReact').addEventListener('change', (e) => api.send('settings:set', { reactInput: e.target.checked }));
   $('#setLogin').addEventListener('change', (e) => api.send('settings:set', { launchAtLogin: e.target.checked }));
+  $('#setFullscreen').addEventListener('change', (e) => api.send('settings:set', { hideOnFullscreen: e.target.checked }));
   $('#resetPos').addEventListener('click', () => api.send('pet:reset-pos'));
   $('#goStarter').addEventListener('click', () => api.send('starter:open'));
+
+  // ---------------------------------------------------------------- weather & holidays
+  const WX_ICON = { clear: '☀️', cloudy: '☁️', fog: '🌫️', rain: '🌧️', snow: '❄️', storm: '⛈️' };
+  function renderWeather() {
+    const w = state.settings.weather;
+    $('#setGreetings').checked = state.settings.greetings;
+    $('#wxEnabled').checked = w.enabled;
+    $('#wxForm').classList.toggle('hidden', !w.enabled);
+    if (document.activeElement !== $('#wxCity') && !$('#wxCity').value) $('#wxCity').value = w.city || '';
+    const now = state.weatherNow;
+    $('#wxStatus').textContent = !w.enabled ? '' : !w.place ? t('wx.noCity')
+      : now ? `${w.place} · ${WX_ICON[now.kind] || ''} ${now.temp}°C` : w.place;
+  }
+  $('#setGreetings').addEventListener('change', (e) => api.send('settings:set', { greetings: e.target.checked }));
+  $('#wxEnabled').addEventListener('change', (e) => api.send('settings:set', { weather: { enabled: e.target.checked } }));
+  $('#wxForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('#wxStatus').textContent = t('ai.working');
+    const res = await api.invoke('weather:city', $('#wxCity').value);
+    $('#wxStatus').textContent = res.ok ? res.place : t(`wx.error.${res.error}`);
+  });
 
   // ---------------------------------------------------------------- AI chat (optional)
   const AI_PROVIDERS = ['anthropic', 'openai', 'gemini', 'deepseek', 'moonshot', 'qwen', 'zhipu', 'siliconflow',

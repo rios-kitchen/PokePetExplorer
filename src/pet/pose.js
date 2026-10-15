@@ -41,6 +41,7 @@
     const pick = (...names) => names.find((n) => A[n]) || 'Idle';
     if (P.isFainted()) return { name: pick('Faint', 'Laying', 'Sleep'), once: !!A.Faint };
     if (pet.held) return { name: pick('Hurt', 'Idle') };
+    if (pet.flying) return { name: pick('Tumble', 'Hurt', 'Idle') };
     if (pet.action && now < pet.action.until) return { name: pet.action.name, start: pet.action.start };
     pet.action = null;
     if (pet.mode === 'sleep') return { name: pick('Sleep', 'EventSleep', 'Laying') };

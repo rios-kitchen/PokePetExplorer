@@ -405,3 +405,62 @@ test('a bite hides the species; landing records it and pays out', () => {
   assert.equal(d.stats.fishCaught, 2);
   assert.equal(Fishing.land(d, { dex: 25, size: 40 }), null, 'not a fishing Pokémon');
 });
+
+// ---------------------------------------------------------------- daily, holidays, weather
+const Daily = require('../src/main/daily');
+const Weather = require('../src/main/weather');
+
+test('a new day brings 4 tasks for 4 different activities', () => {
+  const d = fresh();
+  assert.equal(Daily.roll(d, '2026-10-15', seq(0.1, 0.5, 0.9, 0.3, 0.7)), true);
+  assert.equal(d.daily.tasks.length, 4);
+  assert.equal(new Set(d.daily.tasks.map((t) => t.kind)).size, 4);
+  assert.equal(Daily.roll(d, '2026-10-15'), false, 'same day: nothing changes');
+});
+
+test('sign-in streak: rewards climb over 7 days, a gap starts over', () => {
+  const d = fresh();
+  d.berries = 0;
+  const days = ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07'];
+  const got = days.map((day) => Daily.signIn(d, day));
+  assert.deepEqual(got.map((r) => r.berries), Daily.SIGN_REWARDS);
+  assert.equal(got[6].item, 'candy');
+  assert.equal(d.inventory.candy, 1);
+  assert.equal(Daily.signIn(d, '2026-10-07').reason, 'done');
+  assert.equal(Daily.signIn(d, '2026-10-09').streak, 1, 'missed a day');
+  assert.equal(Daily.yesterdayOf('2026-03-01'), '2026-02-28');
+});
+
+test('tasks count activities, pay once, and all four pay a bonus', () => {
+  const d = fresh();
+  Daily.roll(d, '2026-10-15');
+  d.berries = 0;
+  const kinds = d.daily.tasks.map((t) => t.kind);
+  assert.equal(Daily.claim(d, d.daily.tasks[0].id).reason, 'notDone');
+  for (const t of d.daily.tasks) Daily.progress(d, t.kind, t.goal);
+  assert.ok(Daily.progress(d, kinds[0], 1).length === 0, 'already complete');
+  let total = 0;
+  const results = d.daily.tasks.map((t) => Daily.claim(d, t.id));
+  for (const r of results) total += r.berries;
+  assert.equal(results[3].bonus, true);
+  assert.equal(d.berries, total);
+  assert.equal(Daily.claim(d, d.daily.tasks[0].id).reason, 'claimed');
+});
+
+test('holidays and anniversaries', () => {
+  assert.equal(Weather.holidayOn('2026-12-25'), 'christmas');
+  assert.equal(Weather.holidayOn('2027-02-06'), 'springFestival');
+  assert.equal(Weather.holidayOn('2026-09-25'), 'midAutumn');
+  assert.equal(Weather.holidayOn('2026-10-15'), null);
+  const met = new Date(2026, 0, 10, 15, 0).getTime();
+  assert.deepEqual(Weather.anniversary(met, '2026-04-20'), { days: 100 });
+  assert.deepEqual(Weather.anniversary(met, '2028-01-10'), { years: 2 });
+  assert.equal(Weather.anniversary(met, '2026-01-10'), null);
+});
+
+test('weather codes and what the pet says', () => {
+  assert.deepEqual([0, 2, 45, 61, 73, 95].map(Weather.kindOf), ['clear', 'cloudy', 'fog', 'rain', 'snow', 'storm']);
+  assert.equal(Weather.remark({ kind: 'clear', temp: 35, isDay: true }), 'weatherHot');
+  assert.equal(Weather.remark({ kind: 'rain', temp: 35, isDay: true }), 'weatherRain');
+  assert.equal(Weather.remark({ kind: 'clear', temp: 20, isDay: true }), 'weatherSunny');
+});

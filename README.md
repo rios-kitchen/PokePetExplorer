@@ -16,7 +16,7 @@ A pixel Pokémon desktop pet for **macOS and Windows** with **QQ-Pet style raisi
 themselves: a fish you reel in may want to come along, and a happy Pokémon sometimes brings a wild
 friend back from an outing. (Battles and catching are planned for a later update.)
 
-**Work in progress:** daily tasks and weather greetings are still to come.
+**Coming later:** battles and catching Pokémon.
 
 ## Run
 
@@ -109,7 +109,7 @@ while you're away or the app is closed (max. 12 h are counted).
 
 ### The panel
 
-Tabs are grouped: **💼 Work** (Pomodoro timer and to-do list together) | **🍓 Care** (bag and shop),
+Tabs are grouped: **💼 Work** (Pomodoro timer and to-do list together) | **📅 Today** (sign-in, daily tasks), **🍓 Care** (bag and shop),
 **🧭 Outing** (expeditions), **📖 Dex** (achievements, souvenirs), **🐾 Pokémon** (your team),
 **📔 Diary** | **⚙️ Settings**.
 
@@ -159,6 +159,25 @@ fast. Some catches would rather come along with you than swim off. 24 water Pok�
 Gyarados), each with a random size and a rare shiny – collected in **Dex → Fishing Pokédex**, with
 berries for rare and new catches and a little XP for your partner.
 
+### Every day
+
+**📅 Today** has the daily sign-in (a 7-day streak, with a Rare Candy on day 7) and four daily tasks
+that mix work and play – finish a Pomodoro, check off to-dos, feed or bathe your Pokémon, go on an
+outing, catch something fishing… Collect each reward; finishing all four adds a bonus. On holidays
+(New Year, Spring Festival, Mid-Autumn, Pokémon Day, Christmas …) and on anniversaries with your
+partner, it greets you with a little gift. Weather talk is optional (Settings → Weather & holidays,
+off by default): type your city and your Pokémon mentions sun, rain, snow, heat or cold.
+
+### Playing on the desktop
+
+- **Fling it**: drag your Pokémon and let go mid-swing – it flies, bounces off the screen edges and
+  lands a bit dizzy (and happy).
+- **Peekaboo**: drop it right at the left or right screen edge and it hides halfway, peeking out;
+  click it to bring it back.
+- **Poke it**: a pat on the head, a giggle when you poke its belly, a squeak at its feet – but poke too
+  much and it gets annoyed.
+- It steps aside while a fullscreen app (video, game, slides) is in front (Settings, on by default).
+
 ### Studying together
 
 Every finished Pomodoro also teaches your Pokémon something: **+1 Smart** per 25 minutes of focus.
@@ -179,12 +198,14 @@ Updates** downloads the installer for your system to your Downloads folder and o
 
 - The app only ever contacts **pokeapi.co** (species names, evolutions), **raw.githubusercontent.com**
   (PMD sprites, portraits, artist credits) and **api.github.com / github.com** (this app's releases, for
-  the update check) – downloads only; other hosts are blocked in code (`src/main/sources.js`,
+  the update check) and, only if you turn weather on, **open-meteo.com** with the city you typed – downloads
+  only; other hosts are blocked in code (`src/main/sources.js`,
   `ALLOWED_HOSTS`). No telemetry, analytics or accounts.
 - **AI chat is off unless you turn it on.** Then the chat and your Pokémon's state (name, level, mood,
   needs) go to the provider you chose – nothing else. Your API key is stored with the system keychain
   (Electron `safeStorage`) and never shown to the app's windows. The conversation isn't saved.
-- The keyboard helper only knows *when* a key was pressed, never which one. The clipboard, the screen
+- The keyboard helper only knows *when* a key was pressed, never which one. On Windows, the fullscreen
+  check reads only the size of the window in front, never its title or contents. The clipboard, the screen
   and other apps' windows are never read. Everything stays in one local JSON file.
 - The QQ Pet projects used as design references (see [Reference projects](#reference-projects--参考项目))
   were only read, not used: none of their code or assets is included. Things some desktop-pet clients
@@ -201,6 +222,10 @@ src/main/expedition.js  dungeons, contest training, travel
 src/main/achievements.js milestones and their berry rewards
 src/main/ai.js          optional AI chat (Anthropic SDK + OpenAI-compatible providers)
 src/main/fishing.js     fishing: species table, bites, catches, rewards
+src/main/daily.js       daily sign-in and tasks
+src/main/weather.js     holidays, anniversaries, optional weather (Open-Meteo)
+src/main/fullscreen.js  hide over fullscreen apps (Windows helper)
+src/starter/            choosing the first Pokémon
 src/main/album.js       photo album rules (3 recent + up to 20 favourites)
 src/fishing/            fishing window (pond, cast / wait / reel)
 src/main/updater.js     GitHub release check and installer download

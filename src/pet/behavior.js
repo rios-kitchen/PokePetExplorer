@@ -76,7 +76,14 @@
   }
 
   function decide(now) {
-    if (P.isAway()) return;
+    if (P.isAway() || pet.flying) return;
+    if (pet.peek) {
+      // peeking from the screen edge: just look out now and then
+      pet.mode = 'idle';
+      pet.dir = pet.peek === 'left' ? 1 : -1;
+      if (now > pet.nextDecision) { pet.nextDecision = now + rand(4000, 9000); P.playAnim(['LookUp', 'Nod']); }
+      return;
+    }
     if (P.isEgg()) {
       // an egg just sits there and wobbles now and then
       pet.mode = 'idle';
@@ -150,7 +157,7 @@
   }
 
   function walkStep() {
-    if (P.bubbleBusy() || P.isAway() || P.isEgg()) return;   // stand still while asking something
+    if (P.bubbleBusy() || P.isAway() || P.isEgg() || pet.peek || pet.flying) return;   // stand still while asking something
     const walkOn = P.state.settings.walk;
     if (pet.mode !== 'walk' || pet.held || !walkOn || P.phase() === 'focus' || P.isFainted()) {
       if (pet.mode === 'walk' && (P.phase() === 'focus' || !walkOn || P.isFainted())) pet.mode = 'idle';
@@ -180,7 +187,8 @@
     }
     if (pet.squash > 0) pet.squash--;
 
-    pet.tilt = pet.held ? Math.sin(now / 90) * 0.12
+    pet.tilt = pet.flying ? pet.tilt + 0.35
+      : pet.held ? Math.sin(now / 90) * 0.12
       : now < pet.dizzyUntil ? Math.sin(now / 65) * 0.2
         : now < pet.bathUntil ? Math.sin(now / 120) * 0.08
           : now < (pet.wobbleUntil || 0) ? Math.sin(now / 70) * 0.18

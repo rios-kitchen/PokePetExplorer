@@ -20,7 +20,7 @@
     diagnosed: 'Worried', statusWorse: 'Pain', wrongMedicine: 'Pain', revived: 'Joyous',
     hatched: 'Joyous', evolveReady: 'Surprised', evolved: 'Inspired', evolveOffline: 'Sad', evolveNoSprite: 'Sad',
     expStart_dungeon: 'Determined', expStart_training: 'Determined', expStart_travel: 'Happy', expRecalled: 'Normal',
-    expBack: 'Happy', expBackTraining: 'Happy', expBackTravel: 'Joyous', expBackHurt: 'Pain', achievement: 'Joyous', hatchedShiny: 'Joyous', fishNew: 'Surprised', fishBig: 'Joyous', starter: 'Joyous', joined: 'Happy', companion: 'Happy'
+    expBack: 'Happy', expBackTraining: 'Happy', expBackTravel: 'Joyous', expBackHurt: 'Pain', achievement: 'Joyous', hatchedShiny: 'Joyous', fishNew: 'Surprised', fishBig: 'Joyous', starter: 'Joyous', joined: 'Happy', companion: 'Happy', flung: 'Dizzy', unpeek: 'Happy', pokeBelly: 'Joyous', pokeFeet: 'Surprised', pokeTooMuch: 'Angry', weatherSunny: 'Joyous', weatherCloudy: 'Normal', weatherRain: 'Sad', weatherSnow: 'Surprised', weatherStorm: 'Worried', weatherFog: 'Normal', weatherHot: 'Sigh', weatherCold: 'Worried', signReminder: 'Happy', signedIn: 'Joyous', signedInBig: 'Inspired', taskDone: 'Happy'
   };
 
   /** The face also depends on how the pet is doing right now. */
