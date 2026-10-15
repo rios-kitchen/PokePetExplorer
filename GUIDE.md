@@ -22,7 +22,7 @@
 
 | 操作 | 效果 |
 |---|---|
-| 第一次打开 | 弹出「大木博士」窗口，从**妙蛙种子、小火龙、杰尼龟**里选一只作为第一只搭档（和原作一样 1/4096 概率是闪光）。关掉了也可以从右键菜单「🔴 选择你的第一只宝可梦…」重新打开。 |
+| 第一次打开 | 弹出「大木博士」窗口，从**妙蛙种子、小火龙、杰尼龟**里选一只作为第一只搭档（和原作一样 1/4096 概率是闪光）。右上角的按钮可以切换中文 / English。关掉了也可以从右键菜单「🔴 选择你的第一只宝可梦…」重新打开。三只初始宝可梦的形象已经装在安装包里，第一次打开不联网也能看到。 |
 | 单击宝可梦 | 摸摸它：冒爱心、心情上升；每 15 秒最多 +1 经验，每天最多 20 点。 |
 | 拖动宝可梦 | 把它放到屏幕任意位置。外出时桌面上的小地图也可以拖动。 |
 | 拖着甩出去再松手 | 它会飞出去、在屏幕边缘反弹，落地时有点晕（但很开心）。 |
@@ -265,6 +265,7 @@
 ## 11. 日记、表情和其他
 
 - **日记**：宝可梦每天用自己的话写日记（专注、待办、吃饭、洗澡、生病、摸摸）；每 7 天总结这周开心、一般还是难过。📔 日记页能看到每天的专注分钟和时间线。
+- **形象**：所有宝可梦都用 PMD SpriteCollab 的形象。新伙伴的形象第一次要联网下载，下载好之前先显示它的精灵球。
 - **表情和动作**：形象来自 PMD SpriteCollab，每只有约 35 个动作（待机、8 方向走路、睡觉、吃东西、受伤、倒下、蹦跳、攻击…），动作跟着它在做的事变化；气泡里显示 PMD 头像，表情随心情和状态变化（开心、担心、难过、疼、晕…）。
 - **对键盘鼠标做出反应**（可关）：你打字时它坐下陪你打字，连续打字 15 分钟没开番茄钟会建议你开一个；鼠标移动时它会看向光标；鼠标停在它身上会害羞，快速晃鼠标它会晕；离开 3 分钟它会睡觉。
 - **全屏时躲开**：前台是全屏应用（视频、游戏、演示）时自动隐藏（设置里可关，默认开）。
@@ -299,7 +300,7 @@
 
 | Action | Result |
 |---|---|
-| First launch | Professor Oak's window opens: pick **Bulbasaur, Charmander or Squirtle** as your first partner (1 in 4096 is shiny, as in the games). If you close it, reopen it from the right-click menu "🔴 Choose your first Pokémon…". |
+| First launch | Professor Oak's window opens: pick **Bulbasaur, Charmander or Squirtle** as your first partner (1 in 4096 is shiny, as in the games). The button at the top right switches between English and 中文. If you close it, reopen it from the right-click menu "🔴 Choose your first Pokémon…". The three starters' sprites come with the installer, so this works offline. |
 | Click the pet | Pat it: hearts, mood up; at most +1 XP every 15 s, 20 a day. |
 | Drag the pet | Move it anywhere on screen. While it's away, the little map on the desktop can be dragged too. |
 | Drag, swing and let go | It flies, bounces off the screen edges and lands a bit dizzy (and happy). |
@@ -584,6 +585,8 @@ the usual faces.
 
 - **Diary**: the pet writes a daily entry in its own words (focus, to-dos, meals, baths, sickness, pats) and every 7 days
   says whether the week was happy, okay or sad. 📔 Diary shows focus minutes per day and a timeline.
+- **Sprites**: every Pokémon uses its PMD SpriteCollab sprite. A new team member's sprite is downloaded the first time;
+  until then its Poké Ball is shown.
 - **Animations and emotions**: sprites come from PMD SpriteCollab, about 35 animations each (idle, walking in 8
   directions, sleeping, eating, hurt, fainting, hopping, attacks…) that follow what it's doing; speech bubbles show its
   PMD portrait, matching its mood and state (happy, worried, sad, pain, dizzy…).

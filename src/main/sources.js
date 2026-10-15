@@ -3,7 +3,9 @@
 // Everything is downloaded once and cached in the app's data folder.
 const fs = require('fs');
 const path = require('path');
-const { net } = require('electron');
+// Electron's network stack in the app; plain fetch when run from Node (tools/bundle-starters.js)
+const electron = require('electron');
+const fetchUrl = typeof electron === 'object' && electron.net ? (u) => electron.net.fetch(u) : (u) => fetch(u);
 
 const API = 'https://pokeapi.co/api/v2';
 const PMD = 'https://raw.githubusercontent.com/PMDCollab/SpriteCollab/master';
@@ -28,7 +30,7 @@ function fetchAllowed(url) {
   if (u.protocol !== 'https:' || !ALLOWED_HOSTS.has(u.hostname)) {
     return Promise.reject(new Error(`blocked host: ${u.hostname}`));
   }
-  return net.fetch(u.href);
+  return fetchUrl(u.href);
 }
 
 const notFound = () => Object.assign(new Error('not-found'), { code: 'not-found' });
@@ -200,12 +202,21 @@ async function pmdCredits(dex, dir) {
 
 async function downloadPmd(dex, shiny, dir) {
   const base = `${PMD}/sprite/${dex4(dex)}${shiny ? '/0000/0001' : ''}`;
+  // already here in the current format (downloaded before, or bundled with the app): no network needed
+  const cached = path.join(dir, `pmd-${dex4(dex)}${shiny ? '-shiny' : ''}`);
+  try {
+    if (JSON.parse(fs.readFileSync(path.join(cached, 'pmd.json'), 'utf8')).v === PMD_VERSION
+      && fs.existsSync(path.join(cached, 'anims.json'))) {
+      return { source: 'pmd', style: 'pmd', dir: path.basename(cached), v: PMD_VERSION };
+    }
+  } catch { /* not cached yet */ }
   const xmlBuf = await getBuffer(`${base}/AnimData.xml`);
   if (!xmlBuf) throw notFound();
   const all = parseAnimData(xmlBuf.toString('utf8'));
   const folder = `pmd-${dex4(dex)}${shiny ? '-shiny' : ''}`;
   const out = path.join(dir, folder);
   fs.mkdirSync(out, { recursive: true });
+  const meta = { source: 'pmd', style: 'pmd', dir: folder, v: PMD_VERSION };
 
   const anims = {};
   for (const name of Object.keys(all)) {
@@ -223,8 +234,9 @@ async function downloadPmd(dex, shiny, dir) {
   }
   if (!anims.Idle && !anims.Walk) throw notFound();
   fs.writeFileSync(path.join(out, 'anims.json'), JSON.stringify(anims));
+  fs.writeFileSync(path.join(out, 'pmd.json'), JSON.stringify({ v: PMD_VERSION }));
   await pmdCredits(dex, dir);   // cache the artists' names for the panel
-  return { source: 'pmd', style: 'pmd', dir: folder, v: PMD_VERSION };
+  return meta;
 }
 
 /** Download a species' PMD sprite ("skin"). Throws code 'not-found' when PMD has none. */

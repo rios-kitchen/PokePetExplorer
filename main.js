@@ -78,11 +78,10 @@ function petList() {
   });
 }
 
-/** The sprite ("skin") a Pokémon uses: its PMD sprite, or the built-in pixel art while that downloads. */
+/** The sprite ("skin") a Pokémon uses: its PMD sprite (a Poké Ball is shown while that downloads). */
 function skinOf(id) {
   const skin = store.data.skins[id];
-  if (skin && skin.style === 'pmd') return skin;
-  return Sprites.DEFS[id] ? { source: 'hd' } : { source: 'none' };
+  return skin && skin.style === 'pmd' ? skin : { source: 'none' };
 }
 
 function skinInUse(meta, exceptId) {
@@ -102,6 +101,25 @@ function migrate() {
  * Give every Pokémon without a PMD sprite its download, and upgrade older PMD downloads
  * to the full animation set. Runs in the background; offline → retried next start.
  */
+/**
+ * The starters' PMD sprites and portraits ship with the app (assets/pmd, see tools/bundle-starters.js): copy them
+ * into the sprite cache so the professor's window and the first partner work without the internet.
+ */
+function seedBundledSprites() {
+  const from = path.join(__dirname, 'assets', 'pmd');
+  const to = spritesDir();
+  const copy = (rel) => {
+    const src = path.join(from, rel), dst = path.join(to, rel);
+    if (fs.statSync(src).isDirectory()) {
+      fs.mkdirSync(dst, { recursive: true });
+      for (const f of fs.readdirSync(src)) copy(path.join(rel, f));
+    } else if (!fs.existsSync(dst)) fs.writeFileSync(dst, fs.readFileSync(src));
+  };
+  try {
+    for (const f of fs.readdirSync(from)) if (f !== 'CREDITS.txt') copy(f);
+  } catch { /* not bundled (running from source without it) */ }
+}
+
 async function ensurePmdSkins() {
   for (const p of petList()) {
     if (!p.dex) continue;   // still an egg
@@ -2022,7 +2040,7 @@ function registerIpc() {
         return { kind: 'pmd', anims };
       }
     } catch { /* missing files */ }
-    return Sprites.DEFS[id] ? { kind: 'grid', hd: true } : null;
+    return null;
   });
   ipcMain.handle('care:use', (_e, itemId) => useCareItem(itemId));
   ipcMain.handle('care:diagnose', () => diagnosePet());
@@ -2120,9 +2138,13 @@ async function selfTest(dir) {
   // a new player starts at the professor's: pick a starter (Charmander), then the test also uses a Pikachu
   await wait(2000);
   if (starterWin) {
-    await starterWin.webContents.executeJavaScript("document.querySelectorAll('.card')[1].click(); 0");
-    await wait(500);
+    await shot(starterWin, '00-starter-closed');
+    await starterWin.webContents.executeJavaScript("document.querySelector('#lang').click(); document.querySelectorAll('.card')[1].click(); 0");
+    await wait(1500);
     await shot(starterWin, '00-starter');
+    console.log('[test] starter lang:', S().lang);
+    await starterWin.webContents.executeJavaScript("document.querySelector('#lang').click(); 0");
+    await wait(300);
   }
   await step('starter', async () => console.log('[test] starter:', JSON.stringify(chooseStarter('charmander'))));
   await wait(2500);
@@ -2613,6 +2635,7 @@ if (!app.requestSingleInstanceLock()) {
     const sysLang = (app.getLocale() || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
     carryOverOldData();
     store = new Store(app.getPath('userData'), sysLang);
+    seedBundledSprites();
     deletePhotoFiles(Album.prune(store.data.photos));   // older saves kept up to 60 photos
     migrate();
     offlineCare();

@@ -79,9 +79,6 @@
         return c;
       });
       pet = { frames, durs: a.durs.map((d) => (d * 1000) / 60), w: a.fw, h: a.fh, cx: a.fw / 2, cy: a.fh / 2 + 8 };
-    } else if (SP.DEFS[id]) {
-      const c = toCanvas(SP.rgba(id, 'open', false));
-      pet = { frames: [c], durs: [1000], w: c.width, h: c.height, cx: c.width / 2, cy: c.height };
     }
   }
 

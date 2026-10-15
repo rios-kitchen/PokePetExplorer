@@ -106,8 +106,9 @@
       return holder;
     }
     assets(id).then((asset) => {
-      if (!asset || asset.kind === 'grid') {
-        const img = SP.rgba(SP.DEFS[id] ? id : 'pikachu', 'open', !asset || asset.hd);
+      if (!asset || asset.kind !== 'pmd') {
+        // sprite still downloading: its Poké Ball meanwhile
+        const img = SP.ballRgba(eggSeed(id), 0);
         const c = document.createElement('canvas');
         c.width = img.width; c.height = img.height;
         c.getContext('2d').putImageData(new ImageData(img.data, img.width, img.height), 0, 0);

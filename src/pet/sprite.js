@@ -57,16 +57,6 @@
     return out;
   }
 
-  async function buildGrid(id, hd) {
-    const v = (name) => canvasFrom(SP.rgba(id, name, hd));
-    const open = v('open'), closed = v('closed'), lookL = v('lookL'), lookR = v('lookR');
-    const pair = (c) => ({ n: c, f: flipped(c) });
-    return {
-      kind: 'grid', hd, w: open.width, h: open.height,
-      img: { open: pair(open), closed: pair(closed), [-1]: pair(lookL), [1]: pair(lookR) }
-    };
-  }
-
   async function buildPmd(asset) {
     const anims = {};
     for (const [name, a] of Object.entries(asset.anims)) {
@@ -127,8 +117,7 @@
     let built = null;
     try {
       const asset = await api.invoke('pokemon:assets', id);
-      if (asset && asset.kind === 'grid') built = await buildGrid(id, asset.hd);
-      else if (asset && asset.kind === 'pmd') built = await buildPmd(asset);
+      if (asset && asset.kind === 'pmd') built = await buildPmd(asset);
     } catch (e) {
       console.error('sprite load failed', e);
     }

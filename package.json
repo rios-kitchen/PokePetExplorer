@@ -8,13 +8,13 @@
   "private": true,
   "license": "CC-BY-NC-4.0",
   "scripts": {
-    "start": "electron .",
+    "start": "node tools/bundle-starters.js && electron .",
     "test": "node --test test/",
     "icon": "node tools/make-icon.js",
-    "preview-sprites": "node tools/preview-sprites.js",
-    "dist:mac": "node tools/make-icon.js && electron-builder --mac && node tools/clean-install.js",
-    "dist:win": "node tools/make-icon.js && electron-builder --win && node tools/clean-install.js",
-    "dist": "node tools/make-icon.js && electron-builder --mac --win && node tools/clean-install.js"
+    "dist:mac": "node tools/make-icon.js && npm run bundle && electron-builder --mac && node tools/clean-install.js",
+    "dist:win": "node tools/make-icon.js && npm run bundle && electron-builder --win && node tools/clean-install.js",
+    "dist": "node tools/make-icon.js && npm run bundle && electron-builder --mac --win && node tools/clean-install.js",
+    "bundle": "node tools/bundle-starters.js --required"
   },
   "build": {
     "appId": "local.pokepetexplorer.app",
@@ -25,7 +25,8 @@
     },
     "files": [
       "main.js",
-      "src/**/*"
+      "src/**/*",
+      "assets/**/*"
     ],
     "mac": {
       "target": [

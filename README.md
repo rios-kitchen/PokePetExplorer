@@ -89,13 +89,12 @@ src/main/sources.js     PMD sprite and portrait downloads, artist credits
 src/preload.js          safe IPC bridge
 src/pet/                transparent pet window (canvas animation, behaviour, bubbles)
 src/panel/              control panel (Work / Care / Outing / Dex / Pokémon / Diary / Settings)
-src/shared/sprites.js   pixel art (edit here!) + effect glyphs
+src/shared/sprites.js   effect glyphs and Poké Balls drawn in code
 src/shared/i18n.js      all UI text and pet dialogue (en / zh)
 src/shared/sound.js     8-bit sound effects (WebAudio)
-tools/                  sprite preview + icon generator
+tools/                  icon generator, bundle-starters.js (the starters' PMD sprites for the installers)
 ```
 
-Edit sprites in `src/shared/sprites.js`, then `npm run preview-sprites` to render `sprite-preview.png`.
 
 Data file: `~/Library/Application Support/PokePet Explorer/pokepetexplorer-data.json` (macOS) or
 `%APPDATA%\PokePet Explorer\pokepetexplorer-data.json` (Windows).
@@ -130,8 +129,9 @@ for learning and fun.
 本项目的养成规则参考了腾讯的桌面宠物 **QQ宠物**，具体参考了上面两个社区项目整理的玩法和数值。它们只用于参考，
 **本项目没有包含其中的任何代码、图片、声音或其他资源**，也与这两个项目及腾讯无任何关联。QQ宠物及其美术资源归腾讯所有。
 
-Sprites are not included in this repository or the installers; the app downloads them from PMD SpriteCollab
-on demand and caches them locally.
+No sprites are committed to this repository. The installers include only the three starters' PMD sprites and
+portraits (so the first launch works offline, see `tools/bundle-starters.js` and `assets/pmd/CREDITS.txt`); all
+others are downloaded from PMD SpriteCollab on demand and cached locally.
 
 ## License & disclaimer
 
@@ -144,8 +144,9 @@ on demand and caches them locally.
   sprites originate from Spike Chunsoft; QQ Pet (QQ宠物) belongs to Tencent. **PokePet Explorer is an
   unofficial fan project and is not affiliated with, endorsed, sponsored or approved by any of them.**
   No copyright or trademark infringement is intended.
-- No Pokémon sprites are included in this repository or the installers. They are downloaded on demand
-  from PMD SpriteCollab (CC BY-NC 4.0), with their artists credited in the app.
+- No Pokémon sprites are committed to this repository. The installers include the PMD SpriteCollab sprites and
+  portraits of the three starters (CC BY-NC 4.0, artists credited in `assets/pmd/CREDITS.txt` and in the app); all
+  others are downloaded on demand from PMD SpriteCollab, with their artists credited in the app.
 - The software is provided **"as is", without warranty of any kind**. Use it at your own risk; the
   authors are not liable for any damage or loss arising from it.
 - By downloading or using this project you agree to these terms.
@@ -166,7 +167,7 @@ will be removed or changed promptly.
 - Pokémon 及宝可梦角色名称是任天堂的商标，宝可梦角色、名称与形象版权归 Nintendo / Creatures Inc. /
   GAME FREAK inc. / The Pokémon Company 所有；《宝可梦不可思议的迷宫》精灵图源自 Spike Chunsoft；QQ宠物归腾讯所有。
   **宝可宠探索（PokePet Explorer）是非官方的粉丝作品，与上述公司均无任何关联，也未获得其认可或授权。** 无意侵犯任何版权或商标。
-- 本仓库和安装包中不包含任何宝可梦精灵图，均在使用时从 PMD SpriteCollab（CC BY-NC 4.0）下载，并在应用内署名作者。
+- 本仓库中不包含任何宝可梦精灵图。安装包里只附带三只初始宝可梦的 PMD SpriteCollab 精灵图和头像（CC BY-NC 4.0，作者署名见 `assets/pmd/CREDITS.txt` 和应用内），其余的都在使用时从 PMD SpriteCollab 下载，并在应用内署名作者。
 - 本软件按**「现状」**提供，**不作任何保证**。使用风险自负，作者不对因使用本软件造成的任何损失负责。
 - 下载或使用本项目即表示你同意以上条款。
 
