@@ -230,3 +230,26 @@ test('training raises its stat more at higher levels; recall gives nothing', () 
   assert.equal(d.expedition, null);
   assert.equal(petOf(d, 'pikachu').attrs.tough, 0);
 });
+
+// ---------------------------------------------------------------- achievements
+const Ach = require('../src/main/achievements');
+
+test('achievements unlock once and pay berries', () => {
+  const d = fresh();
+  d.berries = 0;
+  d.stats.totalPomos = 1;
+  const first = Ach.unlockNew(d, 123);
+  assert.ok(first.includes('focus1'));
+  assert.ok(!first.includes('focus25'));
+  assert.equal(d.achievements.focus1, 123);
+  const paid = first.reduce((s, id) => s + Ach.ACHIEVEMENTS[id].reward, 0);
+  assert.equal(d.berries, paid);
+  assert.deepEqual(Ach.unlockNew(d), [], 'nothing twice');
+
+  petOf(d, 'pikachu').evolutions = 1;
+  d.souvenirs.push({ region: 'kanto' }, { region: 'kanto' });
+  assert.ok(Ach.unlockNew(d).includes('evolve'));
+  const travel = Ach.list(d).find((a) => a.id === 'travelAll');
+  assert.equal(travel.progress, 1);
+  assert.equal(travel.at, null);
+});

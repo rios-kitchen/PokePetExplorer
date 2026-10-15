@@ -20,18 +20,22 @@
     </div>
   </header>
 
+  <!-- work | raising & fun | settings -->
   <nav class="tabs" role="tablist">
-    <button data-tab="focus" data-i18n="tab.focus"></button>
-    <button data-tab="todos" data-i18n="tab.todos"></button>
-    <button data-tab="care" data-i18n="tab.care"></button>
-    <button data-tab="diary" data-i18n="tab.diary"></button>
-    <button data-tab="pokemon" data-i18n="tab.pokemon"></button>
-    <button data-tab="settings" data-i18n="tab.settings"></button>
+    <button data-tab="work"><i>💼</i><span data-i18n="tab.work"></span></button>
+    <span class="tab-sep" aria-hidden="true"></span>
+    <button data-tab="care"><i>🍓</i><span data-i18n="tab.care"></span></button>
+    <button data-tab="expedition"><i>🧭</i><span data-i18n="tab.expedition"></span></button>
+    <button data-tab="dex"><i>📖</i><span data-i18n="tab.dex"></span></button>
+    <button data-tab="pokemon"><i>🐾</i><span data-i18n="tab.pokemon"></span></button>
+    <button data-tab="diary"><i>📔</i><span data-i18n="tab.diary"></span></button>
+    <span class="tab-sep" aria-hidden="true"></span>
+    <button data-tab="settings"><i>⚙️</i><span data-i18n="tab.settings"></span></button>
   </nav>
 
   <main>
-    <!-- FOCUS -->
-    <section id="tab-focus" class="tab">
+    <!-- WORK: Pomodoro + to-dos (everything about getting things done) -->
+    <section id="tab-work" class="tab">
       <div class="ring-wrap">
         <svg class="ring" viewBox="0 0 120 120">
           <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
@@ -56,6 +60,21 @@
         <span id="todayTomatoes" class="tomatoes"></span>
       </div>
 
+
+      <h3 id="todoHead" data-i18n="todo.title"></h3>
+      <form id="todoForm" class="todo-form">
+        <input id="todoText" type="text" maxlength="200" autocomplete="off" data-i18n-placeholder="todo.placeholder">
+        <button type="submit" class="primary" data-i18n="todo.add"></button>
+        <label class="due-toggle" data-i18n-title="todo.due">⏰<input id="todoDue" type="datetime-local"></label>
+      </form>
+      <div class="seg" id="todoFilter">
+        <button data-filter="open" data-i18n="todo.active"></button>
+        <button data-filter="done" data-i18n="todo.done"></button>
+      </div>
+      <ul id="todoList" class="todo-list"></ul>
+      <p id="todoEmpty" class="empty"></p>
+      <button id="clearDone" class="link" data-i18n="todo.clearDone"></button>
+
       <details class="card">
         <summary data-i18n="pomo.durations"></summary>
         <div class="grid2">
@@ -77,22 +96,6 @@
       </details>
     </section>
 
-    <!-- TODOS -->
-    <section id="tab-todos" class="tab">
-      <form id="todoForm" class="todo-form">
-        <input id="todoText" type="text" maxlength="200" autocomplete="off" data-i18n-placeholder="todo.placeholder">
-        <button type="submit" class="primary" data-i18n="todo.add"></button>
-        <label class="due-toggle" data-i18n-title="todo.due">⏰<input id="todoDue" type="datetime-local"></label>
-      </form>
-      <div class="seg" id="todoFilter">
-        <button data-filter="open" data-i18n="todo.active"></button>
-        <button data-filter="done" data-i18n="todo.done"></button>
-      </div>
-      <ul id="todoList" class="todo-list"></ul>
-      <p id="todoEmpty" class="empty"></p>
-      <button id="clearDone" class="link" data-i18n="todo.clearDone"></button>
-    </section>
-
     <!-- CARE -->
     <section id="tab-care" class="tab">
       <div id="careStatus" class="care-status"></div>
@@ -100,7 +103,26 @@
       <h3 data-i18n="care.shop"></h3>
       <div id="careItems" class="care-items"></div>
       <p id="careMsg" class="hint"></p>
+      <h3 data-i18n="shop.title"></h3>
+      <p class="hint" data-i18n="shop.hint"></p>
+      <div id="shopItems" class="shop-items"></div>
       <p id="careEarn" class="hint"></p>
+    </section>
+
+    <!-- EXPEDITION -->
+    <section id="tab-expedition" class="tab">
+      <div id="expStats" class="exp-stats"></div>
+      <div id="expActive"></div>
+      <div id="expList"></div>
+      <p id="expMsg" class="hint"></p>
+    </section>
+
+    <!-- DEX: achievements and collections -->
+    <section id="tab-dex" class="tab">
+      <h3 data-i18n="dex.achievements"></h3>
+      <div id="achList" class="ach-list"></div>
+      <h3 data-i18n="dex.souvenirs"></h3>
+      <div id="souvenirList" class="souvenirs"></div>
     </section>
 
     <!-- DIARY -->
@@ -126,6 +148,10 @@
 
     <!-- POKEMON -->
     <section id="tab-pokemon" class="tab">
+      <div class="egg-row">
+        <button id="adoptEgg" class="secondary" data-i18n="egg.adopt"></button>
+        <span id="eggStatus" class="hint" data-i18n="egg.hint"></span>
+      </div>
       <h3 data-i18n="poke.builtin"></h3>
       <div id="pokeGrid" class="poke-grid"></div>
       <h3 data-i18n="poke.more"></h3>
@@ -176,7 +202,6 @@
       <div class="about">
         <p><b>PMD SpriteCollab</b> – <span data-i18n="about.pmd"></span></p>
         <p><b>PokéAPI</b> – <span data-i18n="about.pokeapi"></span></p>
-        <p><b>Pokémon Showdown / Smogon</b> – <span data-i18n="about.showdown"></span></p>
         <p class="hint" data-i18n="about.disclaimer"></p>
         <p class="hint" data-i18n="about.license"></p>
       </div>
@@ -187,6 +212,7 @@
   <script src="../shared/sprites.js"></script>
   <script src="../shared/sound.js"></script>
   <script src="care-diary.js"></script>
+  <script src="raising.js"></script>
   <script src="panel.js"></script>
 </body>
 </html>

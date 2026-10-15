@@ -1,4 +1,5 @@
-/* PokePet – control panel (Pomodoro, to-dos, Pokémon, settings). */
+/* PokePet Plus – control panel. Tabs: work (Pomodoro + to-dos) | care, expedition, dex, Pokémon,
+ * diary (raising & fun, see care-diary.js and raising.js) | settings. */
 (() => {
   const api = window.api;
   const I18N = window.PokeI18N;
@@ -7,7 +8,10 @@
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
   let state = null;
-  let tab = new URLSearchParams(location.search).get('tab') || 'focus';
+  // the timer and the to-do list share the "work" tab; older names still open it
+  const TAB_ALIAS = { focus: 'work', todos: 'work' };
+  const requestedTab = new URLSearchParams(location.search).get('tab') || 'work';
+  let tab = TAB_ALIAS[requestedTab] || requestedTab;
   let filter = 'open';
   const imageCache = {};   // custom id -> data URL
 
@@ -33,12 +37,21 @@
     return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   }
 
+  const isEgg = (id) => !!(state.pets[id] && state.pets[id].stage === 'egg');
+
   function petName(id) {
+    if (isEgg(id)) return t('egg.name');
     const sp = state.pets[id] && state.pets[id].species;   // evolved
     if (sp) return sp.names[L()] || sp.names.en;
     if (SP.DEFS[id]) return SP.DEFS[id].name[L()];
     const c = state.custom.find((x) => x.id === id);
     return c ? c.names[L()] || c.names.en : id;
+  }
+
+  function dexOf(id) {
+    if (SP.DEFS[id]) return SP.DEFS[id].dex;
+    const c = state.custom.find((x) => x.id === id);
+    return c ? c.dex : null;
   }
 
   // ---------------------------------------------------------------- sprites in the panel
@@ -80,6 +93,14 @@
   function spriteNode(id, size) {
     const cv = el('canvas', { width: String(size), height: String(size) });
     const holder = el('div', { class: 'sprite-box', style: `width:${size}px;height:${size}px` }, cv);
+    if (isEgg(id)) {
+      const img = SP.eggRgba(dexOf(id) || 0, 0);
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      c.getContext('2d').putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
+      fitInto(cv, c, 0, 0, img.width, img.height, false);
+      return holder;
+    }
     assets(id).then((asset) => {
       if (!asset || asset.kind === 'grid') {
         const img = SP.rgba(SP.DEFS[id] ? id : 'pikachu', 'open', !asset || asset.hd);
@@ -114,11 +135,15 @@
       name = 'diary';
       if (typeof ext !== 'undefined') ext.showWeek(-1);
     }
+    const wanted = name;
+    name = TAB_ALIAS[name] || name;
     tab = name;
     $$('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     $$('.tab').forEach((s) => s.classList.toggle('active', s.id === `tab-${name}`));
-    if (state && typeof ext !== 'undefined') ext.render(state, name);
-    if (name === 'todos') setTimeout(() => $('#todoText').focus(), 50);
+    if (state && typeof ext !== 'undefined') { ext.render(state, name); raising.render(state, name); }
+    if (wanted === 'todos') {
+      setTimeout(() => { $('#todoHead').scrollIntoView({ block: 'start' }); $('#todoText').focus(); }, 50);
+    }
   }
   $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   api.on('panel:tab', showTab);
@@ -128,7 +153,8 @@
   function renderHero() {
     const id = state.settings.pokemon;
     const emotion = ext.moodEmotion(state);
-    const heroKey = `${id}|${emotion}|${JSON.stringify(state.skins[id])}`;
+    const rec = state.pets[id] || {};
+    const heroKey = `${id}|${emotion}|${JSON.stringify(state.skins[id])}|${rec.stage}|${rec.species ? rec.species.dex : ''}`;
     if (heroId !== heroKey) {
       heroId = heroKey;
       const node = spriteNode(id, 58);
@@ -146,7 +172,7 @@
     $('#heroName').textContent = petName(id);
     $('#heroLevel').textContent = t('poke.level', { n: lv });
     $('#heroXp').style.width = `${Math.round(((xp - base) / (next - base)) * 100)}%`;
-    $('#heroXpText').textContent = t('poke.xp', { xp, next });
+    $('#heroXpText').textContent = `${t('poke.xp', { xp, next })} · ${t('poke.growth', { n: Math.round((state.growthRate ?? 1) * 100) })}`;
     $('#heroBerries').textContent = `🍓 ${state.berries}`;
     const m = state.mood;
     $('#heroMood').textContent = `${m >= 70 ? '😊' : m >= 40 ? '🙂' : m >= 20 ? '😕' : '😢'} ${m}`;
@@ -341,7 +367,8 @@
   let pokeKey = '';
   function renderPokemon() {
     const all = SP.ORDER.map((id) => ({ id, builtin: true })).concat(state.custom.map((c) => ({ id: c.id, builtin: false })));
-    const key = JSON.stringify([L(), state.settings.pokemon, all.map((p) => p.id), Object.fromEntries(Object.entries(state.pets).map(([k, v]) => [k, v.xp])), state.skins]);
+    const key = JSON.stringify([L(), state.settings.pokemon, all.map((p) => p.id),
+      Object.fromEntries(Object.entries(state.pets).map(([k, v]) => [k, [v.xp, v.stage, v.attrs, v.species]])), state.skins, state.expedition]);
     if (key === pokeKey) return;
     pokeKey = key;
     const grid = $('#pokeGrid');
@@ -362,10 +389,21 @@
         el('div', { class: 'n' }, petName(p.id)),
         el('div', { class: 'l' }, t('poke.level', { n: lv })),
         el('div', { class: 'bar' }, el('div', { style: `width:${pct}%` })),
-        skinSelect(p),
+        attrLine(p.id),
+        isEgg(p.id) ? null : skinSelect(p),
         creditLines(state.skins[p.id]?.credits));
       grid.append(card);
     }
+  }
+
+  /** Contest stats (😎 cool, 🎀 cute, 📚 smart, 💪 tough), and 🧭 when away. */
+  function attrLine(id) {
+    const rec = state.pets[id];
+    const away = state.expedition && state.expedition.petId === id;
+    if (!rec || !rec.attrs) return away ? el('div', { class: 'attrs' }, '🧭') : null;
+    const icons = { cool: '😎', cute: '🎀', smart: '📚', tough: '💪' };
+    return el('div', { class: 'attrs', title: Object.keys(icons).map((a) => `${t(`attr.${a}`)} ${rec.attrs[a] || 0}`).join(' · ') },
+      away ? '🧭 ' : '', Object.entries(icons).map(([a, ic]) => `${ic}${rec.attrs[a] || 0}`).join(' '));
   }
 
   /** PMD SpriteCollab artists (CC BY-NC 4.0 attribution) for a card. */
@@ -397,6 +435,15 @@
     });
     return sel;
   }
+
+  $('#adoptEgg').addEventListener('click', async () => {
+    const btn = $('#adoptEgg');
+    btn.disabled = true;
+    $('#eggStatus').textContent = t('egg.searching');
+    const res = await api.invoke('egg:adopt');
+    btn.disabled = false;
+    $('#eggStatus').textContent = res.ok ? t('egg.adopted') : t(`egg.error.${res.error}`);
+  });
 
   $('#pokeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -449,6 +496,7 @@
   // ---------------------------------------------------------------- state
   let lastLang = null;
   const ext = window.PanelExt({ api, el, t, L, getState: () => state, petName, spriteNode });
+  const raising = window.PanelRaising({ api, el, t, L, getState: () => state, petName });
   function render() {
     if (L() !== lastLang) {
       lastLang = L();
@@ -461,10 +509,11 @@
     renderPokemon();
     renderSettings();
     ext.render(state, tab);
+    raising.render(state, tab);
   }
 
   api.on('state', (s) => { state = s; render(); });
-  setInterval(renderClock, 500);
+  setInterval(() => { renderClock(); raising.tick(state, tab); }, 500);
 
   (async () => {
     state = await api.invoke('state:get');

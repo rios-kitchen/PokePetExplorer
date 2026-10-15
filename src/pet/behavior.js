@@ -77,6 +77,15 @@
 
   function decide(now) {
     if (P.isAway()) return;
+    if (P.isEgg()) {
+      // an egg just sits there and wobbles now and then
+      pet.mode = 'idle';
+      if (now > pet.nextDecision) {
+        pet.nextDecision = now + rand(4000, 11000);
+        pet.wobbleUntil = now + 900;
+      }
+      return;
+    }
     if (pet.held || pet.lift !== 0 || pet.eating || pet.pooping || now < pet.bathUntil) return;
     const ph = P.phase();
     if (P.isFainted()) { pet.mode = 'idle'; return; }
@@ -141,7 +150,7 @@
   }
 
   function walkStep() {
-    if (P.bubbleBusy() || P.isAway()) return;   // stand still while asking something
+    if (P.bubbleBusy() || P.isAway() || P.isEgg()) return;   // stand still while asking something
     const walkOn = P.state.settings.walk;
     if (pet.mode !== 'walk' || pet.held || !walkOn || P.phase() === 'focus' || P.isFainted()) {
       if (pet.mode === 'walk' && (P.phase() === 'focus' || !walkOn || P.isFainted())) pet.mode = 'idle';
@@ -174,7 +183,8 @@
     pet.tilt = pet.held ? Math.sin(now / 90) * 0.12
       : now < pet.dizzyUntil ? Math.sin(now / 65) * 0.2
         : now < pet.bathUntil ? Math.sin(now / 120) * 0.08
-          : pet.tilt * 0.8;
+          : now < (pet.wobbleUntil || 0) ? Math.sin(now / 70) * 0.18
+            : pet.tilt * 0.8;
     P.updateLook(now);
 
     if (now > pet.nextBlink) {

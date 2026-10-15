@@ -652,5 +652,42 @@
     return { width: w, height: h, data };
   }
 
-  return { DEFS, ORDER, GLYPHS, buildGrid, rgba, glyphRgba, pokeballRgba };
+  // ---------------------------------------------------------------- mystery egg
+  // A 16×20 pixel egg: cream shell, spots in a colour picked from the seed (the species' dex),
+  // outline and shading like the other pixel art. `crack` 0–2 draws hatching cracks.
+  const EGG_SPOTS = ['#6bbf59', '#e2603b', '#4a8fd6', '#d9a62e', '#9b6bd6', '#e07aa8', '#4fb3a8', '#8a6a4a'];
+
+  function eggRgba(seed = 0, crack = 0) {
+    const w = 16, h = 20;
+    const data = new Uint8ClampedArray(w * h * 4);
+    const cx = 7.5;
+    const inside = (x, y) => {
+      if (y < 0 || y >= h || x < 0 || x >= w) return false;
+      // narrower at the top: an egg, not an ellipse
+      const t = (y + 0.5) / h;
+      const rx = 7.6 * Math.sqrt(Math.max(0, 1 - Math.pow((t - 0.58) / 0.6, 2))) * (t < 0.58 ? 0.9 + 0.1 * t / 0.58 : 1);
+      return Math.abs(x + 0.5 - (cx + 0.5)) <= rx;
+    };
+    const spot = hexToRgb(EGG_SPOTS[Math.abs(seed) % EGG_SPOTS.length]);
+    const spots = [[4, 6], [10, 4], [11, 11], [5, 13], [8, 9], [3, 9]].slice(0, 4 + (seed % 3));
+    const set = (x, y, [r, g, b]) => {
+      const i = (y * w + x) * 4;
+      data[i] = r; data[i + 1] = g; data[i + 2] = b; data[i + 3] = 255;
+    };
+    const cracks = crack > 0 ? [[5, 7], [6, 8], [7, 7], [8, 8], [9, 7], [10, 8]].concat(crack > 1 ? [[7, 6], [7, 5], [9, 9], [6, 9]] : []) : [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!inside(x, y)) continue;
+      const edge = !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1);
+      if (edge) { set(x, y, [40, 36, 30]); continue; }
+      let c = [246, 238, 220];
+      if (spots.some(([sx, sy]) => (x - sx) ** 2 + (y - sy) ** 2 <= 2.2)) c = spot;
+      if (x > 10 || y > 15) c = c.map((v) => Math.round(v * 0.86));        // shade
+      if (x === 4 && y >= 3 && y <= 5) c = [255, 255, 255];                  // shine
+      if (cracks.some(([qx, qy]) => qx === x && qy === y)) c = [40, 36, 30];
+      set(x, y, c);
+    }
+    return { width: w, height: h, data };
+  }
+
+  return { DEFS, ORDER, GLYPHS, buildGrid, rgba, glyphRgba, pokeballRgba, eggRgba };
 });

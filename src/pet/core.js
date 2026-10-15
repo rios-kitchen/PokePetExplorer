@@ -70,6 +70,12 @@ window.Pet = (() => {
   };
   P.isSick = () => P.care().sick;
   P.isFainted = () => P.care().fainted;
+  /** Still an egg (adopted, not hatched yet): no walking, wobbles instead. */
+  P.isEgg = () => {
+    const s = P.state;
+    const rec = s && s.pets[s.settings.pokemon];
+    return !!(rec && rec.stage === 'egg');
+  };
   /** On an expedition: the pet has left the desktop (see pet.js expedition handlers). */
   P.isAway = () => {
     const s = P.state;

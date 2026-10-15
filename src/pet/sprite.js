@@ -107,7 +107,23 @@
     return { kind: 'pmd', anims, w: base.w, h: base.h, maxW: 2 * Math.max(left, right), maxH: up, groundOff };
   }
 
+  /** A mystery egg: the same pixel egg for every pose (it has no eyes to blink). */
+  function buildEgg(seed) {
+    const c = canvasFrom(SP.eggRgba(seed, 0));
+    const pair = { n: c, f: flipped(c) };
+    return { kind: 'grid', hd: false, egg: true, w: c.width, h: c.height, img: { open: pair, closed: pair, [-1]: pair, [1]: pair } };
+  }
+
   async function loadSprite(id) {
+    if (P.state.pets[id] && P.state.pets[id].stage === 'egg') {
+      const c = P.state.custom.find((x) => x.id === id);
+      const name = { en: P.I18N.t('en', 'egg.name'), zh: P.I18N.t('zh', 'egg.name') };
+      P.sprite = { id, cry: { en: '…', zh: '……' }, name, ...buildEgg(c ? c.dex : 0) };
+      P.pet.anim = null;
+      P.pet.action = null;
+      updateUnit();
+      return;
+    }
     let built = null;
     try {
       const asset = await api.invoke('pokemon:assets', id);

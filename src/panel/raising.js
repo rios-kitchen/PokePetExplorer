@@ -1,0 +1,184 @@
+/* PokePet Plus – raising parts of the control panel: shop (Care tab), Expedition tab, Dex tab. */
+window.PanelRaising = function PanelRaising(env) {
+  const { api, el, t, L } = env;
+  const $ = (sel) => document.querySelector(sel);
+
+  const ATTR_ICON = { cool: '😎', cute: '🎀', smart: '📚', tough: '💪' };
+  const levelOf = (xp) => 1 + Math.floor(Math.sqrt((xp || 0) / 25));
+
+  function fmt(ms) {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    const mm = `${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    return s >= 3600 ? `${Math.floor(s / 3600)}:${mm}` : mm;
+  }
+
+  function flash(sel, text) {
+    const n = $(sel);
+    n.textContent = text;
+    clearTimeout(n._timer);
+    n._timer = setTimeout(() => { n.textContent = ''; }, 4000);
+  }
+
+  // ================================================================ SHOP (Care tab)
+  let shopKey = '';
+  function renderShop(state) {
+    const key = JSON.stringify([L(), state.berries, state.inventory]);
+    if (key === shopKey) return;
+    shopKey = key;
+    const buyable = Object.entries(state.items).filter(([, item]) => item.cost > 0);
+    $('#shopItems').replaceChildren(...buyable.map(([id, item]) => {
+      const have = state.inventory[id] || 0;
+      const buy = (n) => el('button', {
+        class: 'ghost', disabled: state.berries < item.cost * n ? true : null,
+        onclick: async () => {
+          const res = await api.invoke('shop:buy', id, n);
+          if (!res.ok) flash('#careMsg', t(`care.refused.${res.reason}`));
+        }
+      }, `+${n}`);
+      return el('div', { class: 'shop-item' },
+        el('span', { class: 'si-name' }, t(`item.${id}`)),
+        el('span', { class: 'si-have' }, have ? t('shop.have', { n: have }) : ''),
+        el('span', { class: 'si-cost' }, `${item.cost} 🍓`),
+        el('span', { class: 'si-buy' }, buy(1), buy(5)));
+    }));
+  }
+
+  // ================================================================ EXPEDITION
+  function statsBox(state) {
+    const id = state.settings.pokemon;
+    const rec = state.pets[id] || {};
+    const attrs = rec.attrs || {};
+    return el('div', { class: 'exp-stats-row' },
+      ...Object.entries(ATTR_ICON).map(([a, ic]) => el('div', { class: 'stat' },
+        el('b', {}, `${ic} ${attrs[a] || 0}`), el('span', {}, t(`attr.${a}`)))));
+  }
+
+  /** "Lv.8+ · Tough 10+" */
+  function needText(exp) {
+    const parts = [t('poke.level', { n: exp.level }) + '+'];
+    for (const [a, v] of Object.entries(exp.need || {})) parts.push(`${t(`attr.${a}`)} ${v}+`);
+    return parts.join(' · ');
+  }
+
+  /** "2–4 🍓 · +15 XP · Tough +1 · 🎁" */
+  function rewardText(exp) {
+    const parts = [];
+    if (exp.berries) parts.push(`${exp.berries[0]}–${exp.berries[1]} 🍓`);
+    if (exp.xp) parts.push(`+${exp.xp} XP`);
+    for (const [a, v] of Object.entries(exp.gain || {})) parts.push(`${t(`attr.${a}`)} +${v}`);
+    if (exp.train) parts.push(`${t(`attr.${exp.train}`)} ++`);
+    if (exp.kind === 'travel') parts.push(t('exp.souvenir'));
+    if (exp.loot) parts.push('🎁');
+    return parts.join(' · ');
+  }
+
+  /** Why the active Pokémon can't go – mirrors expedition.js blocker(). */
+  function blocker(state, exp) {
+    const id = state.settings.pokemon;
+    const rec = state.pets[id] || {};
+    const care = rec.care || {};
+    if (state.expedition) return 'busy';
+    if (rec.stage === 'egg') return 'egg';
+    if (care.fainted || care.status || care.sick) return 'unwell';
+    if (care.hunger < 30) return 'hungry';
+    if (care.clean < 30) return 'dirty';
+    if (levelOf(rec.xp) < exp.level) return 'level';
+    for (const [a, v] of Object.entries(exp.need || {})) if (((rec.attrs || {})[a] || 0) < v) return 'stats';
+    return null;
+  }
+
+  let expKey = '';
+  function renderExpedition(state) {
+    const e = state.expedition;
+    const key = JSON.stringify([L(), state.settings.pokemon, state.pets[state.settings.pokemon], e]);
+    if (key !== expKey) {
+      expKey = key;
+      $('#expStats').replaceChildren(statsBox(state));
+      const groups = ['dungeon', 'training', 'travel'];
+      $('#expList').replaceChildren(...groups.map((kind) => el('div', {},
+        el('h3', {}, t(`exp.kind.${kind}`)),
+        el('div', { class: 'exp-list' }, ...Object.entries(state.expeditions)
+          .filter(([, x]) => x.kind === kind)
+          .map(([id, exp]) => {
+            const why = blocker(state, exp);
+            const hazard = exp.hazard ? el('span', { class: 'exp-hazard' }, `⚠ ${t(`status.${exp.hazard[0]}`)} ${Math.round(exp.hazard[1] * 100)}%`) : null;
+            return el('div', { class: `exp-card${why ? ' blocked' : ''}` },
+              el('div', { class: 'exp-head' },
+                el('b', {}, t(`exp.${id}`)),
+                el('span', { class: 'hint' }, `${exp.min} ${t('unit.min')}`)),
+              el('div', { class: 'exp-line' }, rewardText(exp)),
+              el('div', { class: 'exp-line muted' },
+                needText(exp), ' · ',
+                t('exp.cost', { h: exp.cost.hunger, c: exp.cost.clean }), hazard ? ' · ' : '', hazard),
+              el('button', {
+                class: 'primary', disabled: why ? true : null,
+                title: why ? t(`exp.blocked.${why}`) : '',
+                onclick: async () => {
+                  const res = await api.invoke('expedition:start', id);
+                  if (!res.ok) flash('#expMsg', t(`exp.blocked.${res.reason}`));
+                }
+              }, why === 'level' || why === 'stats' ? t(`exp.blocked.${why}`) : t('exp.go')));
+          })))));
+    }
+
+    // the running expedition, with a live countdown
+    if (!e) { $('#expActive').replaceChildren(); return; }
+    const total = e.endsAt - e.startAt;
+    const pct = Math.min(100, Math.round(((Date.now() - e.startAt) / total) * 100));
+    let box = $('#expActive .exp-now');
+    if (!box || box.dataset.key !== `${e.petId}|${e.startAt}`) {
+      box = el('div', { class: 'card exp-now', 'data-key': `${e.petId}|${e.startAt}` },
+        el('div', { class: 'exp-head' },
+          el('b', {}, t('exp.away', { name: env.petName(e.petId), place: t(`exp.${e.id}`) })),
+          el('span', { class: 'exp-left' })),
+        el('div', { class: 'meter' }, el('div', { class: 'exp-fill' })),
+        el('button', { class: 'link', onclick: () => api.send('expedition:recall') }, t('menu.recall')));
+      $('#expActive').replaceChildren(box);
+    }
+    box.querySelector('.exp-left').textContent = fmt(e.endsAt - Date.now());
+    box.querySelector('.exp-fill').style.width = `${pct}%`;
+  }
+
+  // ================================================================ DEX
+  let dexKey = '';
+  function renderDex(state) {
+    const key = JSON.stringify([L(), state.achievements, state.souvenirs.length]);
+    if (key === dexKey) return;
+    dexKey = key;
+    const done = state.achievements.filter((a) => a.at).length;
+    $('#achList').replaceChildren(
+      el('p', { class: 'hint' }, t('dex.achProgress', { n: done, total: state.achievements.length })),
+      ...state.achievements.map((a) => el('div', { class: `ach${a.at ? ' done' : ''}` },
+        el('span', { class: 'ach-icon' }, a.at ? '🏅' : '🔒'),
+        el('div', { class: 'ach-text' },
+          el('b', {}, t(`ach.${a.id}`)),
+          el('span', { class: 'hint' }, t(`achdesc.${a.id}`, { n: a.goal }))),
+        el('div', { class: 'ach-side' },
+          a.at ? el('span', { class: 'hint' }, new Date(a.at).toLocaleDateString(L() === 'zh' ? 'zh-CN' : 'en'))
+            : el('span', { class: 'hint' }, `${a.progress}/${a.goal}`),
+          el('span', { class: 'ach-reward' }, `+${a.reward} 🍓`)))));
+
+    // souvenirs: one badge per region, with how many were brought back
+    const count = {};
+    for (const s of state.souvenirs) count[s.region] = (count[s.region] || 0) + 1;
+    const regions = ['kanto', 'johto', 'hoenn', 'sinnoh', 'unova', 'kalos', 'alola', 'galar', 'paldea'];
+    $('#souvenirList').replaceChildren(
+      ...regions.map((r) => el('div', { class: `souvenir${count[r] ? ' got' : ''}` },
+        el('span', {}, count[r] ? '🎐' : '❔'),
+        el('b', {}, t(`region.${r}`)),
+        el('span', { class: 'hint' }, count[r] ? `×${count[r]}` : ''))),
+      state.souvenirs.length ? null : el('p', { class: 'hint full' }, t('dex.noSouvenirs')));
+  }
+
+  return {
+    render(state, tab) {
+      if (tab === 'care') renderShop(state);
+      if (tab === 'expedition') renderExpedition(state);
+      if (tab === 'dex') renderDex(state);
+    },
+    /** called every second while the panel is open (expedition countdown) */
+    tick(state, tab) {
+      if (tab === 'expedition' && state && state.expedition) renderExpedition(state);
+    }
+  };
+};

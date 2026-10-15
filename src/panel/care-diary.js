@@ -118,6 +118,7 @@ window.PanelExt = function PanelExt(env) {
   const portraitCache = {};
 
   function dexOf(state, petId) {
+    if (state.pets[petId] && state.pets[petId].stage === 'egg') return null;   // a surprise until it hatches
     const sp = state.pets[petId] && state.pets[petId].species;   // evolved
     if (sp) return sp.dex;
     if (SP.DEFS[petId]) return SP.DEFS[petId].dex;

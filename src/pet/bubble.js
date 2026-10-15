@@ -20,7 +20,7 @@
     diagnosed: 'Worried', statusWorse: 'Pain', wrongMedicine: 'Pain', revived: 'Joyous',
     hatched: 'Joyous', evolveReady: 'Surprised', evolved: 'Inspired', evolveOffline: 'Sad', evolveNoSprite: 'Sad',
     expStart_dungeon: 'Determined', expStart_training: 'Determined', expStart_travel: 'Happy', expRecalled: 'Normal',
-    expBack: 'Happy', expBackTraining: 'Happy', expBackTravel: 'Joyous', expBackHurt: 'Pain'
+    expBack: 'Happy', expBackTraining: 'Happy', expBackTravel: 'Joyous', expBackHurt: 'Pain', achievement: 'Joyous'
   };
 
   /** The face also depends on how the pet is doing right now. */
@@ -36,6 +36,7 @@
 
   const faceCache = {};
   function dexOf(id) {
+    if (P.isEgg()) return null;   // a surprise until it hatches
     const sp = P.state && P.state.pets[id] && P.state.pets[id].species;   // evolved
     if (sp) return sp.dex;
     if (SP.DEFS[id]) return SP.DEFS[id].dex;

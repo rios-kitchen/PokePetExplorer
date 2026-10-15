@@ -4,12 +4,13 @@ const {
 } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { Store, today, petOf } = require('./src/main/store');
+const { Store, today, petOf, freshPet } = require('./src/main/store');
 const Sources = require('./src/main/sources');
 const Care = require('./src/main/care');
 const Diary = require('./src/main/diary');
 const Growth = require('./src/main/growth');
 const Expedition = require('./src/main/expedition');
+const Achievements = require('./src/main/achievements');
 const { KeyActivity } = require('./src/main/keys');
 
 const keys = new KeyActivity();
@@ -54,7 +55,9 @@ function petList() {
   const custom = store.data.custom.map((c) => ({ id: c.id, names: c.names, dex: c.dex, builtin: false }));
   // an evolved Pokémon keeps its id (and records) but is now another species
   return builtin.concat(custom).map((p) => {
-    const sp = store.data.pets[p.id] && store.data.pets[p.id].species;
+    const rec = store.data.pets[p.id];
+    if (rec && rec.stage === 'egg') return { ...p, names: { en: I18N.t('en', 'egg.name'), zh: I18N.t('zh', 'egg.name') }, egg: true };
+    const sp = rec && rec.species;
     return sp ? { ...p, dex: sp.dex, names: sp.names, evolved: true } : p;
   });
 }
@@ -151,7 +154,7 @@ function snapshot() {
     inventory: d.inventory,
     expedition: d.expedition,
     daily: d.daily,
-    achievements: d.achievements,
+    achievements: Achievements.list(d),
     fishdex: d.fishdex,
     souvenirs: d.souvenirs,
     timer: { ...timer },
@@ -175,8 +178,17 @@ function petEvent(type, data = {}) {
 }
 
 function changed() {
+  checkAchievements();
   store.save();
   broadcast();
+}
+
+function checkAchievements() {
+  for (const id of Achievements.unlockNew(store.data)) {
+    const a = Achievements.ACHIEVEMENTS[id];
+    petEvent('achievement', { id, reward: a.reward });
+    notify(T('notif.achievement'), `${T(`ach.${id}`)} · +${a.reward} 🍓`);
+  }
 }
 
 function notify(title, body) {
@@ -210,6 +222,7 @@ function checkGrowth(id = S().pokemon) {
   const pet = petOf(store.data, id);
   if (Growth.readyToHatch(pet)) {
     pet.stage = 'hatched';
+    pet.hatchedAt = Date.now();
     if (S().pokemon === id) petEvent('hatched', { name: petName(id) });
     notify(T('notif.hatched'), T('notif.hatchedBody', { name: petName(id) }));
     changed();
@@ -295,10 +308,50 @@ function checkExpedition() {
   if (!out) return;
   const before = levelOf(petOf(store.data, out.petId).xp);
   petOf(store.data, out.petId).xp += out.xp;
+  store.data.stats.expeditions = (store.data.stats.expeditions || 0) + 1;
+  if (out.kind === 'travel') store.data.stats.travels = (store.data.stats.travels || 0) + 1;
   if (S().pokemon === out.petId) petEvent('expedition-back', out);
   levelChanged(out.petId, before);
   notify(T('notif.expeditionBack'), T('notif.expeditionBackBody', { name: petName(out.petId), n: out.berries }));
   changed();
+}
+
+/** Buy items into the bag (the Care tab's shop). */
+function shopBuy(itemId, n = 1) {
+  const item = Care.ITEMS[itemId];
+  n = Math.max(1, Math.min(20, Math.floor(Number(n) || 1)));
+  if (!item || !item.cost) return { ok: false, reason: 'unknown' };
+  if (store.data.berries < item.cost * n) return { ok: false, reason: 'berries' };
+  store.data.berries -= item.cost * n;
+  store.data.inventory[itemId] = (store.data.inventory[itemId] || 0) + n;
+  changed();
+  return { ok: true };
+}
+
+/**
+ * Adopt a mystery egg: a random unevolved species, hidden until it hatches at Lv5.
+ * One egg at a time. Needs the internet (PokeAPI + its PMD sprite).
+ */
+let adopting = false;
+async function adoptEgg() {
+  if (adopting) return { ok: false, error: 'busy' };
+  if (Object.values(store.data.pets).some((p) => p.stage === 'egg')) return { ok: false, error: 'hasEgg' };
+  adopting = true;
+  try {
+    const taken = new Set(petList().map((p) => p.dex));
+    const sp = await Sources.randomEggSpecies(spritesDir(), taken);
+    const id = `egg-${Date.now().toString(36)}`;
+    store.data.custom.push({ id, dex: sp.dex, names: sp.names });
+    store.data.skins[id] = sp.skin;
+    store.data.pets[id] = freshPet('egg');
+    selectPokemon(id);
+    changed();
+    return { ok: true, id };
+  } catch (e) {
+    return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
+  } finally {
+    adopting = false;
+  }
 }
 
 function diagnosePet() {
@@ -752,6 +805,7 @@ function useCareItem(itemId) {
       store.data.poopDueAt = Date.now() + (20 + Math.random() * 25) * 60000;
     }
     Diary.record(store.data, field);
+    if (res.cured) store.data.stats.cures = (store.data.stats.cures || 0) + 1;
     addMood(res.item.mood || 0);
     if (res.item.xp) addXp(res.item.xp);
     petEvent('care', { item: itemId, kind: res.kind, cured: !!res.cured, wrong: !!res.wrong, fainted: (res.events || []).includes('fainted') });
@@ -1132,6 +1186,8 @@ function registerIpc() {
   });
   ipcMain.handle('care:use', (_e, itemId) => useCareItem(itemId));
   ipcMain.handle('care:diagnose', () => diagnosePet());
+  ipcMain.handle('shop:buy', (_e, itemId, n) => shopBuy(String(itemId || ''), n));
+  ipcMain.handle('egg:adopt', () => adoptEgg());
   ipcMain.handle('expedition:start', (_e, expId) => startExpedition(String(expId || '')));
   ipcMain.on('expedition:recall', () => recallExpedition());
   ipcMain.handle('evolution:choose', (_e, dex) => evolve(S().pokemon, dex));
@@ -1323,6 +1379,40 @@ async function selfTest(dir) {
   send(panelWin, 'panel:tab', 'diary');
   await wait(2000);
   await shot(panelWin, '13-panel-diary-zh');
+
+  // ---- step 6 panel: work tab (timer + to-dos), shop, expedition, dex, egg → hatch
+  addTodo({ text: '写周报' });
+  addTodo({ text: '整理照片' });
+  send(panelWin, 'panel:tab', 'work');
+  await wait(1200);
+  await shot(panelWin, '14-panel-work');
+  await step('shop', async () => { store.data.berries = 40; shopBuy('antidote', 2); shopBuy('revive', 1); });
+  send(panelWin, 'panel:tab', 'care');
+  await wait(1200);
+  await shot(panelWin, '15-panel-care-shop');
+  await step('expedition-panel', async () => {
+    Object.assign(careOfActive(), { hunger: 90, clean: 90 });
+    startExpedition('coolClass');
+  });
+  send(panelWin, 'panel:tab', 'expedition');
+  await wait(2500);
+  await shot(panelWin, '16-panel-expedition');
+  recallExpedition();
+  send(panelWin, 'panel:tab', 'dex');
+  await wait(1200);
+  await shot(panelWin, '17-panel-dex');
+  await step('adopt-egg', async () => console.log('[test] adopt egg:', JSON.stringify(await adoptEgg())));
+  send(panelWin, 'panel:tab', 'pokemon');
+  await wait(4000);
+  await shot(petWin, '18-pet-egg');
+  await shot(panelWin, '19-panel-pokemon-egg');
+  await step('hatch', async () => {
+    activePet().xp = Growth.xpFor(Growth.HATCH_LEVEL);
+    checkGrowth();
+    console.log('[test] hatched:', activePet().stage, petName());
+  });
+  await wait(3500);
+  await shot(petWin, '20-pet-hatched');
   quitting = true;
   app.quit();
 }

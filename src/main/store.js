@@ -38,7 +38,10 @@ function defaults(lang) {
     lastRewardDay: null,
     lastSeen: null,
     diary: null,
-    stats: { day: today(), todayPomos: 0, totalPomos: 0, focusMinutes: 0, todosDone: 0, todayTodos: 0 },
+    stats: {
+      day: today(), todayPomos: 0, totalPomos: 0, focusMinutes: 0, todosDone: 0, todayTodos: 0,
+      expeditions: 0, travels: 0, cures: 0   // for achievements
+    },
 
     // ---- raising (PokePet Plus)
     inventory: {},      // itemId -> count (bought in the shop, used later)
@@ -63,7 +66,8 @@ function freshPet(stage = 'hatched') {
     species: null,       // after evolving: { dex, names } – the id keeps its records, the species changes
     evolutions: 0,
     evolution: null,     // pending: { options: [{ dex, names }], snoozeUntil }
-    finalForm: false     // no further evolution exists
+    finalForm: false,    // no further evolution exists
+    hatchedAt: null      // when it came out of its egg (pets adopted as eggs)
     // care: added by care.js (careOf)
   };
 }

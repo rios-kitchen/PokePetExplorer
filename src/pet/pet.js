@@ -199,7 +199,8 @@
     },
 
     // ---- growth
-    hatched(e) {
+    async hatched(e) {
+      await P.loadSprite(P.state.settings.pokemon);
       Sound.play('levelup');
       P.stars(20);
       P.jump(2);
@@ -227,6 +228,12 @@
     },
     'evolve-failed'(e) {
       P.showBubble(say(e.error === 'net' ? 'evolveOffline' : 'evolveNoSprite'), { priority: 2, ms: 5000 });
+    },
+
+    achievement(e) {
+      Sound.play('fanfare');
+      P.stars(12);
+      if (!P.bubbleBusy()) P.showBubble(say('achievement', { name: tr(`ach.${e.id}`), n: e.reward }), { ms: 4500 });
     },
 
     // ---- expeditions
@@ -315,7 +322,9 @@
     const prev = P.state;
     P.state = s;
     Sound.setEnabled(s.settings.sound);
-    if (!prev || prev.settings.pokemon !== s.settings.pokemon) await P.loadSprite(s.settings.pokemon);
+    const id = s.settings.pokemon;
+    const stageOf = (st) => st && st.pets[id] && st.pets[id].stage;
+    if (!prev || prev.settings.pokemon !== id || stageOf(prev) !== stageOf(s)) await P.loadSprite(id);
     else if (prev.settings.scale !== s.settings.scale) P.updateUnit();
     if (prev && prev.settings.lang !== s.settings.lang) P.hideBubble(true);
     if (s.timer.phase === 'focus' && pet.mode === 'walk') pet.mode = 'idle';

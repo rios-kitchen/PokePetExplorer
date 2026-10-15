@@ -76,6 +76,26 @@ async function evolutionOptions(dex) {
   return out;
 }
 
+/**
+ * A random unevolved, non-legendary species that PMD has drawn – for adopting an egg.
+ * Downloads its sprite on the way. Returns { dex, names, skin } (throws when nothing was found).
+ */
+async function randomEggSpecies(dir, exclude = new Set(), tries = 12) {
+  for (let i = 0; i < tries; i++) {
+    const dex = 1 + Math.floor(Math.random() * 1025);
+    if (exclude.has(dex)) continue;
+    let species;
+    try { species = await getJson(`${API}/pokemon-species/${dex}`); } catch (e) { if (e.code === 'not-found') continue; throw e; }
+    if (species.evolves_from_species || species.is_legendary || species.is_mythical) continue;
+    let skin;
+    try { skin = await downloadSkin(dex, false, dir); } catch (e) { if (e.code === 'not-found') continue; throw e; }
+    const pick = (lang) => species.names.find((n) => n.language.name === lang)?.name;
+    const names = { en: pick('en') || species.name, zh: pick('zh-hans') || pick('zh-hant') || pick('en') || species.name };
+    return { dex, names, skin };
+  }
+  throw notFound();
+}
+
 /** Parse PMD AnimData.xml → { Name: { fw, fh, durs: [ticks], copyOf } } */
 function parseAnimData(xml) {
   const anims = {};
@@ -214,4 +234,4 @@ async function portrait(dex, emotion, dir) {
   return buf;
 }
 
-module.exports = { SOURCES, PMD_VERSION, ALLOWED_HOSTS, lookupSpecies, evolutionOptions, downloadSkin, portrait, pmdCredits, cachedCredits };
+module.exports = { SOURCES, PMD_VERSION, ALLOWED_HOSTS, lookupSpecies, evolutionOptions, randomEggSpecies, downloadSkin, portrait, pmdCredits, cachedCredits };

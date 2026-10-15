@@ -102,6 +102,15 @@ while you're away or the app is closed (max. 12 h are counted).
   berries, XP, contest stats (Cool / Cute / Smart / Tough), sometimes items or a souvenir – and
   hungrier, dirtier, maybe with a status condition. The timer keeps running while the app is closed.
 
+### The panel
+
+Tabs are grouped: **💼 Work** (Pomodoro timer and to-do list together) | **🍓 Care** (bag and shop),
+**🧭 Outing** (expeditions), **📖 Dex** (achievements, souvenirs), **🐾 Pokémon** (team, adopt an egg),
+**📔 Diary** | **⚙️ Settings**.
+
+- **Adopt an egg** in the Pokémon tab: a random unevolved species, kept secret until it hatches at Lv 5.
+- **Achievements** pay berries once (focus, to-dos, levels, hatching, evolving, outings, travel, cures…).
+
 ### Emotions
 
 Speech bubbles show the Pokémon’s **PMD portrait with a matching emotion** (happy, joyous,
@@ -151,13 +160,14 @@ main.js                 main process: windows, tray, timer, to-dos, persistence
 src/main/care.js        hunger / cleanliness / health, status conditions, medicine, items, berries
 src/main/growth.js      levels, passive growth rate, hatching, evolution
 src/main/expedition.js  dungeons, contest training, travel
+src/main/achievements.js milestones and their berry rewards
 src/main/diary.js       daily records, weekly report
 src/main/store.js       data file: defaults, pet records, migration from PokePet's data
 test/                   unit tests (node --test)
 src/main/sources.js     PMD sprite and portrait downloads, artist credits
 src/preload.js          safe IPC bridge
 src/pet/                transparent pet window (canvas animation, behaviour, bubbles)
-src/panel/              control panel (Focus / To-dos / Care / Diary / Pokémon / Settings)
+src/panel/              control panel (Work / Care / Outing / Dex / Pokémon / Diary / Settings)
 src/shared/sprites.js   pixel art (edit here!) + effect glyphs
 src/shared/i18n.js      all UI text and pet dialogue (en / zh)
 src/shared/sound.js     8-bit sound effects (WebAudio)
