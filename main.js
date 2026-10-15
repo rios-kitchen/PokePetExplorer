@@ -425,6 +425,13 @@ function savePhoto({ dataUrl, expId, region, petId }) {
 async function runSecret(text) {
   const { cmd, args } = Secrets.parse(text);
   if (!cmd) return { ok: false };
+  if (cmd === 'return') {
+    // the expedition ends right now, with its full rewards
+    if (!store.data.expedition) return { ok: false };
+    store.data.expedition.endsAt = Date.now();
+    checkExpedition();
+    return { ok: true };
+  }
   if (cmd === 'berries') {
     store.data.berries += 10;
     changed();
@@ -1532,7 +1539,12 @@ async function selfTest(dir) {
   });
   await wait(4000);
   await shot(petWin, '10d-pet-expedition-away');
-  await step('expedition-back', async () => { store.data.expedition.endsAt = Date.now(); });
+  await step('expedition-back', async () => {
+    let words = null;
+    try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* none */ }
+    if (words && words.return) console.log('[test] return code:', JSON.stringify(await runSecret(words.return)));
+    else store.data.expedition.endsAt = Date.now();
+  });
   await wait(3000);
   await shot(petWin, '10e-pet-expedition-back');
   await wait(6000);

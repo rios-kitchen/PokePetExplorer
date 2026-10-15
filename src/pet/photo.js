@@ -1,4 +1,4 @@
-/* PokePet Explorer – pet window: the map thumbnail while the pet is away, and the photo it brings home
+/* PokePet Explorer – pet window: the destination icon while the pet is away, and the photo it brings home
  * (the place's pixel scene, the Pokémon in a random pose and a random portrait expression). */
 (() => {
   const P = window.Pet;
@@ -19,28 +19,32 @@
     return sceneCache[k];
   }
 
-  /** While away: a little framed map where the pet stands, with a blinking pin. */
+  const iconCache = {};
+  function icon(expId) {
+    if (!iconCache[expId]) {
+      const img = Maps.iconRgba(expId);
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      c.getContext('2d').putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
+      iconCache[expId] = c;
+    }
+    return iconCache[expId];
+  }
+
+  /** While away: a small pixel icon of where the pet is, gently bobbing, with its shadow. */
   function drawAwayMap(ctx, now) {
     const e = P.state && P.state.expedition;
     if (!e) return;
-    const sc = scene(e.id);
-    const room = Math.min(P.W - 8, (P.H - P.GROUND_PAD) * 1.6);
-    const s = Math.max(1, Math.min(2, Math.floor(room / sc.width)));
-    const w = sc.width * s, h = sc.height * s;
-    const x = Math.round((P.W - w) / 2), y = P.H - P.GROUND_PAD - h;
-    ctx.fillStyle = '#2a2a2a';
-    ctx.fillRect(x - 3, y - 3, w + 6, h + 6);
-    ctx.fillStyle = '#fbf8f0';
-    ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
-    ctx.drawImage(sc, x, y, w, h);
-    // the pin moves slowly across the map as the expedition goes on
-    const k = Math.min(1, (Date.now() - e.startAt) / (e.endsAt - e.startAt));
-    const px = x + Math.round(w * (0.15 + 0.7 * k)), py = y + Math.round(h * 0.7);
-    if (Math.floor(now / 500) % 2) {
-      ctx.fillStyle = '#e2463b';
-      ctx.fillRect(px - s, py - 4 * s, 3 * s, 3 * s);
-      ctx.fillRect(px, py - s, s, 2 * s);
-    }
+    const ic = icon(e.id);
+    const s = Math.max(2, P.fx());
+    const w = ic.width * s, h = ic.height * s;
+    const ground = P.H - P.GROUND_PAD;
+    const bob = Math.round(Math.sin(now / 600) * s * 0.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(P.W / 2, ground - 1, w * 0.32, Math.max(2, s * 1.2), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.drawImage(ic, Math.round((P.W - w) / 2), Math.round(ground - h - s * 2 + bob), w, h);
   }
 
   const EMOTIONS = ['Happy', 'Joyous', 'Normal', 'Surprised', 'Determined', 'Inspired', 'Teary-Eyed', 'Worried', 'Sigh', 'Special0'];
@@ -72,7 +76,7 @@
   /** Take the group photo at the place the pet came back from and save it to the album. */
   async function takePhoto(e) {
     if (!P.sprite || e.recalled) return null;
-    const S = 3, PAD = 8, CAP = 24;
+    const S = 2, PAD = 8, CAP = 24;   // 160×96 scene → 320×192
     const sc = scene(e.id, e.region);
     const W = sc.width * S, H = sc.height * S;
     const c = document.createElement('canvas');

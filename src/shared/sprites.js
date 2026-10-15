@@ -652,42 +652,51 @@
     return { width: w, height: h, data };
   }
 
-  // ---------------------------------------------------------------- mystery egg
-  // A 16×20 pixel egg: cream shell, spots in a colour picked from the seed (the species' dex),
-  // outline and shading like the other pixel art. `crack` 0–2 draws hatching cracks.
-  const EGG_SPOTS = ['#6bbf59', '#e2603b', '#4a8fd6', '#d9a62e', '#9b6bd6', '#e07aa8', '#4fb3a8', '#8a6a4a'];
+  // ---------------------------------------------------------------- mystery Poké Ball
+  // A 20×20 pixel Poké Ball holding a Pokémon nobody has met yet. The seed (from its id) picks the kind
+  // of ball; `open` 0–2 shows it about to open (the button glows, then a crack of light).
+  const BALLS = [
+    { top: '#e3350d', dark: '#a3220a' },                          // Poké Ball
+    { top: '#2f6fd6', dark: '#1f4c9a', stripe: '#e3350d' },       // Great Ball
+    { top: '#2c2c34', dark: '#18181e', stripe: '#f2c42c' },       // Ultra Ball
+    { top: '#f4f4f4', dark: '#c8c8c8', band: '#e3350d' }          // Premier Ball
+  ];
 
-  function eggRgba(seed = 0, crack = 0) {
-    const w = 16, h = 20;
+  function ballRgba(seed = 0, open = 0) {
+    const w = 20, h = 20, c = 9.5, R = 9.45;
     const data = new Uint8ClampedArray(w * h * 4);
-    const cx = 7.5;
-    const inside = (x, y) => {
-      if (y < 0 || y >= h || x < 0 || x >= w) return false;
-      // narrower at the top: an egg, not an ellipse
-      const t = (y + 0.5) / h;
-      const rx = 7.6 * Math.sqrt(Math.max(0, 1 - Math.pow((t - 0.58) / 0.6, 2))) * (t < 0.58 ? 0.9 + 0.1 * t / 0.58 : 1);
-      return Math.abs(x + 0.5 - (cx + 0.5)) <= rx;
-    };
-    const spot = hexToRgb(EGG_SPOTS[Math.abs(seed) % EGG_SPOTS.length]);
-    const spots = [[4, 6], [10, 4], [11, 11], [5, 13], [8, 9], [3, 9]].slice(0, 4 + (seed % 3));
-    const set = (x, y, [r, g, b]) => {
+    const kind = BALLS[Math.abs(seed) % BALLS.length];
+    const set = (x, y, hexc) => {
+      const [r, g, b] = hexToRgb(hexc);
       const i = (y * w + x) * 4;
       data[i] = r; data[i + 1] = g; data[i + 2] = b; data[i + 3] = 255;
     };
-    const cracks = crack > 0 ? [[5, 7], [6, 8], [7, 7], [8, 8], [9, 7], [10, 8]].concat(crack > 1 ? [[7, 6], [7, 5], [9, 9], [6, 9]] : []) : [];
+    const d = (x, y) => Math.hypot(x - c, y - c);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      if (!inside(x, y)) continue;
-      const edge = !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1);
-      if (edge) { set(x, y, [40, 36, 30]); continue; }
-      let c = [246, 238, 220];
-      if (spots.some(([sx, sy]) => (x - sx) ** 2 + (y - sy) ** 2 <= 2.2)) c = spot;
-      if (x > 10 || y > 15) c = c.map((v) => Math.round(v * 0.86));        // shade
-      if (x === 4 && y >= 3 && y <= 5) c = [255, 255, 255];                  // shine
-      if (cracks.some(([qx, qy]) => qx === x && qy === y)) c = [40, 36, 30];
-      set(x, y, c);
+      const r = d(x, y);
+      if (r > R) continue;
+      if (r > R - 1.2) { set(x, y, '#23201c'); continue; }                       // outline
+      const band = y >= 9 && y <= 10;
+      const shade = x + y > 25;                                                  // lower right is darker
+      if (band) { set(x, y, kind.band && Math.abs(x - c) > 4 ? kind.band : '#23201c'); continue; }
+      if (y < 9) {
+        let col = shade ? kind.dark : kind.top;
+        if (kind.stripe && (Math.abs(x - 4) <= 1 || Math.abs(x - 15) <= 1) && y > 2 && y < 8) col = kind.stripe;
+        if (kind.stripe && kind.top === '#2c2c34' && y > 1 && y < 6 && Math.abs(x - c) > 3 && Math.abs(x - c) < 7) col = kind.stripe;
+        if ((x - 6) ** 2 + (y - 4) ** 2 <= 2.2) col = '#ffffff';                 // shine
+        set(x, y, col);
+      } else {
+        set(x, y, shade ? '#c8c4bc' : '#f4f2ec');
+      }
     }
+    // the button
+    for (let y = 6; y < 14; y++) for (let x = 6; x < 14; x++) {
+      const r = d(x, y);
+      if (r <= 3.3) set(x, y, r > 2.2 ? '#23201c' : open ? (open > 1 ? '#fff6b0' : '#ffe680') : r > 1.2 ? '#e8e4dc' : '#ffffff');
+    }
+    if (open > 1) for (let x = 2; x < 18; x++) if (Math.abs(x - c) > 3.4 && d(x, 9) <= R - 1.2) set(x, 9, '#fff6b0');   // light leaks out
     return { width: w, height: h, data };
   }
 
-  return { DEFS, ORDER, GLYPHS, buildGrid, rgba, glyphRgba, pokeballRgba, eggRgba };
+  return { DEFS, ORDER, GLYPHS, buildGrid, rgba, glyphRgba, pokeballRgba, ballRgba };
 });

@@ -121,7 +121,9 @@
   function layoutOverlays() {
     const sprite = P.sprite;
     const u = sprite ? sprite.unit : 3;
-    const restTop = P.H - P.GROUND_PAD - (sprite ? sprite.h : 30) * u;
+    // while away only the small destination icon (16 px, see photo.js) stands there
+    const standing = P.isAway() ? 18 * Math.max(2, P.fx()) : (sprite ? sprite.h : 30) * u;
+    const restTop = P.H - P.GROUND_PAD - standing;
     let y = restTop - 6;
     if (!pillEl.classList.contains('hidden')) {
       pillEl.style.top = `${Math.max(0, y - pillEl.offsetHeight)}px`;

@@ -174,10 +174,10 @@ Updates** downloads the installer for your system to your Downloads folder and o
   (Electron `safeStorage`) and never shown to the app's windows. The conversation isn't saved.
 - The keyboard helper only knows *when* a key was pressed, never which one. The clipboard, the screen
   and other apps' windows are never read. Everything stays in one local JSON file.
-- The QQ Pet projects used as design references (AnkioTomas/qqpet, xuemian168/qqpet_automation) were
-  only read, not used: none of their code or assets is included. Things they do that this app
-  deliberately doesn't: IP-based weather lookups via the author's server, polling the clipboard,
-  watching the foreground app, collecting a machine ID and system info, running a LAN server.
+- The QQ Pet projects used as design references (see [Reference projects](#reference-projects--参考项目))
+  were only read, not used: none of their code or assets is included. Things some desktop-pet clients
+  do that this app deliberately leaves out: weather by IP location, reading the clipboard, watching
+  which app is in front, collecting device or system information, running a local network server.
 
 ## Project layout
 
@@ -217,35 +217,70 @@ Data file: `~/Library/Application Support/PokePet Explorer/pokepetexplorer-data.
   licensed [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 - **Pokémon names and data**: [PokéAPI](https://pokeapi.co) (please respect its
   [fair use policy](https://pokeapi.co/docs/v2#fairuse)).
-- **Game design inspiration**: the QQ Pet revival [AnkioTomas/qqpet](https://github.com/AnkioTomas/qqpet).
-  No code or assets are taken from it.
+- **Pixel scenes and icons** for expeditions are drawn from code in `src/shared/maps.js` – no third-party
+  tiles or game maps are used.
+
+### Reference projects / 参考项目
+
+The raising rules were designed after **QQ Pet (QQ宠物)**, Tencent's desktop pet, as documented by two
+community projects. They were read for reference only – **no code, images, sounds or other assets from
+them are included**, and this project is not affiliated with them or with Tencent.
+
+- [**AnkioTomas/qqpet**](https://github.com/AnkioTomas/qqpet) – an open-source revival of the QQ Pet client.
+  Referenced for the overall game design: needs and mood, growth rate, levels and stages, shop, work /
+  study / travel, daily systems.
+- [**xuemian168/qqpet_automation**](https://github.com/xuemian168/qqpet_automation) – tools and notes about
+  the QQ Pet remake's save format and game data. Referenced for its rule tables: disease chains and their
+  cures, growth penalties, need thresholds.
+
+QQ Pet and its artwork belong to Tencent. Like those projects, this one is a non-commercial fan work made
+for learning and fun.
+
+本项目的养成规则参考了腾讯的桌面宠物 **QQ宠物**，具体参考了上面两个社区项目整理的玩法和数值。它们只用于参考，
+**本项目没有包含其中的任何代码、图片、声音或其他资源**，也与这两个项目及腾讯无任何关联。QQ宠物及其美术资源归腾讯所有。
 
 Sprites are not included in this repository or the installers; the app downloads them from PMD SpriteCollab
 on demand and caches them locally.
 
 ## License & disclaimer
 
-Pokémon and Pokémon character names are trademarks of Nintendo. Pokémon characters, names and designs
-are © Nintendo / Creatures Inc. / GAME FREAK inc. / The Pokémon Company. **PokePet is an unofficial,
-non-commercial fan project. It is not affiliated with, endorsed, sponsored or approved by any of them.**
-No copyright or trademark infringement is intended.
+**For personal, non-commercial use only.** This is a free fan project for learning and fun.
+
+- **No commercial use** of any kind: don't sell it or its derivatives, charge for downloads, put it behind
+  a paywall or subscription, add advertising, or bundle it with paid products or services.
+- Pokémon and Pokémon character names are trademarks of Nintendo. Pokémon characters, names and designs
+  are © Nintendo / Creatures Inc. / GAME FREAK inc. / The Pokémon Company; *Pokémon Mystery Dungeon*
+  sprites originate from Spike Chunsoft; QQ Pet (QQ宠物) belongs to Tencent. **PokePet Explorer is an
+  unofficial fan project and is not affiliated with, endorsed, sponsored or approved by any of them.**
+  No copyright or trademark infringement is intended.
+- No Pokémon sprites are included in this repository or the installers. They are downloaded on demand
+  from PMD SpriteCollab (CC BY-NC 4.0), with their artists credited in the app.
+- The software is provided **"as is", without warranty of any kind**. Use it at your own risk; the
+  authors are not liable for any damage or loss arising from it.
+- By downloading or using this project you agree to these terms.
 
 Rio's Kitchen's own work in this repository (code, original sound effects, UI) is licensed under
 [CC BY-NC 4.0](LICENSE): you may share and adapt it **for non-commercial purposes with credit**. Selling
 it, charging for downloads or using it in any commercial product is not allowed. The license does not
 cover Pokémon intellectual property or third-party sprites; see [LICENSE](LICENSE) for details.
 
-If you are a rights holder and have concerns about this project, please open an issue and it will be
-addressed promptly.
+If you are a rights holder and have concerns about this project, please open an issue and the content
+will be removed or changed promptly.
 
 ### 版权与免责声明
 
-Pokémon 及宝可梦角色名称是任天堂的商标，宝可梦角色、名称与形象版权归 Nintendo / Creatures Inc. /
-GAME FREAK inc. / The Pokémon Company 所有。**PokePet 是非官方、非商业的粉丝作品，与上述公司无任何关联，
-也未获得其认可或授权。**
+**仅供个人学习与娱乐使用，严禁任何商业用途。** 本项目是免费的粉丝作品。
+
+- **禁止商用**：不得出售本项目或其衍生作品，不得收费下载、设置付费墙或订阅，不得加入广告，不得与任何付费产品或服务捆绑。
+- Pokémon 及宝可梦角色名称是任天堂的商标，宝可梦角色、名称与形象版权归 Nintendo / Creatures Inc. /
+  GAME FREAK inc. / The Pokémon Company 所有；《宝可梦不可思议的迷宫》精灵图源自 Spike Chunsoft；QQ宠物归腾讯所有。
+  **宝可宠探索（PokePet Explorer）是非官方的粉丝作品，与上述公司均无任何关联，也未获得其认可或授权。** 无意侵犯任何版权或商标。
+- 本仓库和安装包中不包含任何宝可梦精灵图，均在使用时从 PMD SpriteCollab（CC BY-NC 4.0）下载，并在应用内署名作者。
+- 本软件按**「现状」**提供，**不作任何保证**。使用风险自负，作者不对因使用本软件造成的任何损失负责。
+- 下载或使用本项目即表示你同意以上条款。
 
 本仓库中由 Rio's Kitchen 原创的部分（代码、原创音效、界面）采用
 [CC BY-NC 4.0（署名-非商业性使用）](LICENSE) 协议：可以在**注明出处、非商业**的前提下转载和修改；
 **禁止任何人将本项目或其衍生作品用于商业用途**（包括售卖、收费下载、捆绑付费产品等）。该协议不涵盖宝可梦相关知识产权及第三方精灵图。
 
-如果您是权利方并对本项目有任何疑虑，请提交 Issue，我们会尽快处理。
+如果您是权利方并认为本项目侵犯了您的权益，请提交 Issue，我们会尽快删除或修改相关内容。

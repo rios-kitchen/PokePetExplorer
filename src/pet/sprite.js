@@ -109,7 +109,7 @@
 
   /** A mystery egg: the same pixel egg for every pose (it has no eyes to blink). */
   function buildEgg(seed) {
-    const c = canvasFrom(SP.eggRgba(seed, 0));
+    const c = canvasFrom(SP.ballRgba(seed, 0));
     const pair = { n: c, f: flipped(c) };
     return { kind: 'grid', hd: false, egg: true, w: c.width, h: c.height, img: { open: pair, closed: pair, [-1]: pair, [1]: pair } };
   }

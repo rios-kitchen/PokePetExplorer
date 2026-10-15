@@ -97,7 +97,7 @@
     const cv = el('canvas', { width: String(size), height: String(size) });
     const holder = el('div', { class: 'sprite-box', style: `width:${size}px;height:${size}px` }, cv);
     if (isEgg(id)) {
-      const img = SP.eggRgba(eggSeed(id), 0);
+      const img = SP.ballRgba(eggSeed(id), 0);
       const c = document.createElement('canvas');
       c.width = img.width; c.height = img.height;
       c.getContext('2d').putImageData(new ImageData(img.data, img.width, img.height), 0, 0);

@@ -295,6 +295,7 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   const found = [localWords.berries, `${localWords.hatch} pikachu shiny`, localWords.shiny.toUpperCase()].map((t) => Secrets.parse(t));
   assert.deepEqual(found.map((f) => f.cmd), ['berries', 'hatch', 'shiny']);
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
+  assert.equal(Secrets.parse(localWords.return).cmd, 'return');
 });
 
 test('unknown words are not commands', () => {
