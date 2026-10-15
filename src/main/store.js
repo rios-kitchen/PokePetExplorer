@@ -11,7 +11,7 @@ const Sprites = require('../shared/sprites');
 
 // 1 = PokePet; 2 = mood per pet, raising fields; 3 = no built-ins;
 // 4 = the first Pokémon is a starter picked at the professor's (no free Poké Balls)
-const VERSION = 5;
+const VERSION = 6;
 
 const ATTRS = ['cool', 'cute', 'smart', 'tough'];   // contest-style stats, raised by expeditions and items
 
@@ -66,8 +66,8 @@ function defaults(lang) {
     aiKeys: {},         // provider -> encrypted API key (never sent to the windows)
     greeted: { holiday: null, weather: null, weatherKind: null },   // last day / time something was greeted
     weatherNow: null,   // { kind, temp, isDay, at } – the last weather report
-    // grass encounters today and in the last hour (both limited); a wild Pokémon met on an outing that waits for a battle
-    wild: { day: null, used: 0, recent: [], encounter: null },
+    wild: { encounter: null },   // a wild Pokémon met on an outing that waits for a battle
+    limits: {},                  // mini-game plays today and in the last hour (limits.js)
     pokedex: {}         // dex -> { seen, caught } from battles
   };
 }
@@ -151,6 +151,13 @@ function migrate(data) {
       if (!pet.finalForm) pet.finalForm = false;
     }
     data.shiny = { since: Date.now() };
+  }
+  if ((data.version || 1) < 6) {
+    // grass encounters moved into the shared mini-game limits
+    const w = data.wild || {};
+    data.limits = data.limits || {};
+    if (w.day) data.limits.grass = { day: w.day, used: w.used || 0, recent: w.recent || [] };
+    data.wild = { encounter: w.encounter || null };
   }
   // no team yet: the starter is chosen at the professor's (main.js openStarter)
   if (!data.custom.some((c) => c.id === data.settings.pokemon)) data.settings.pokemon = data.custom.length ? data.custom[0].id : null;

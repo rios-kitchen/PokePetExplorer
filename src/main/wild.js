@@ -17,8 +17,7 @@ const REGION_DEX = {
   kanto: [1, 151], johto: [152, 251], hoenn: [252, 386], sinnoh: [387, 493], unova: [494, 649],
   kalos: [650, 721], alola: [722, 809], galar: [810, 905], paldea: [906, 1025]
 };
-const DAILY_GRASS = 16;
-const HOURLY_GRASS = 3;      // and at most this many within any hour
+// how often the grass can be explored: see limits.js
 const ENCOUNTER_WAIT_MIN = 30;   // a wild Pokémon met on an outing waits this long for a battle
 // not "legendary" in PokeAPI's data, but just as special: Ultra Beasts and Paradox Pokémon
 const SPECIAL = new Set([793, 794, 795, 796, 797, 798, 799, 803, 804, 805, 806,
@@ -76,4 +75,4 @@ async function battlerFor({ key, dex, names, level, attrs, shiny, dir }) {
   return { key, dex, names, level, types: pk.types, base: pk.base, moves, attrs, shiny };
 }
 
-module.exports = { HABITATS, REGION_DEX, DAILY_GRASS, HOURLY_GRASS, ENCOUNTER_WAIT_MIN, SHINY_RATE, REPEAT_SEEN, SPECIAL, drawnDex, pickSpecies, battlerFor };
+module.exports = { HABITATS, REGION_DEX, ENCOUNTER_WAIT_MIN, SHINY_RATE, REPEAT_SEEN, SPECIAL, drawnDex, pickSpecies, battlerFor };

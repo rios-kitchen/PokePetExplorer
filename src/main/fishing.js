@@ -26,6 +26,22 @@ const SHINY_RATE = 1 / 4096;                      // as in the games
 // species already in the fishing Pokédex bite this many times as often as new ones, so completing it takes a while
 const REPEAT_WEIGHT = 5;
 
+// Junk that turns up once the pond is tired: no reward, not in the Pokédex.
+const JUNK = [
+  { id: 'boot', icon: '🥾', names: { en: 'An old boot', zh: '破靴子' } },
+  { id: 'can', icon: '🥫', names: { en: 'An empty can', zh: '空罐头' } },
+  { id: 'rag', icon: '🧦', names: { en: 'A soggy rag', zh: '湿破布' } },
+  { id: 'weed', icon: '🌿', names: { en: 'Some seaweed', zh: '一团水草' } },
+  { id: 'bottle', icon: '🍾', names: { en: 'An empty bottle', zh: '空瓶子' } }
+];
+// The pond gets tired: the first bites within an hour are real, after that more and more of them are junk, and
+// every bite takes longer to come (on top of the hourly and daily limits in limits.js).
+const FATIGUE = { free: 2, junkStep: 0.2, junkMax: 0.8, delayMs: 2500 };
+/** Chance that the next bite is junk, after `recent` bites within the hour. */
+const junkChance = (recent) => Math.min(FATIGUE.junkMax, Math.max(0, recent - FATIGUE.free + 1) * FATIGUE.junkStep);
+/** Extra wait before the next bite, in ms. */
+const biteDelay = (recent) => Math.max(0, recent) * FATIGUE.delayMs;
+
 // The cast's colour sets the difficulty: green (short, easy), yellow, red (long, hard – and rarer bites).
 const ZONES = [
   { name: 'easy',   pull: 0.85, bite: 1.25 },
@@ -50,8 +66,12 @@ function pickWeighted(weights, rnd) {
  * Something bites. `caught`: dex numbers already in the fishing Pokédex (they turn up more often). Returns what the window needs to play it out – the species stays secret until it's landed:
  * { tier, bite (ms to react), pull (how hard it fights), hidden: { dex, size, shiny } }
  */
-function bite(depth, rnd = Math.random, caught = new Set()) {
+function bite(depth, rnd = Math.random, caught = new Set(), recent = 0) {
   const zone = ZONES[zoneOf(depth)];
+  if (junkChance(recent) > 0 && rnd() < junkChance(recent)) {
+    const junk = JUNK[Math.floor(rnd() * JUNK.length)];
+    return { tier: 0, zone: zoneOf(depth), junk: true, bite: 1200, pull: 0.6, hidden: { junk: junk.id } };
+  }
   const tier = pickWeighted(tierWeights(depth), rnd);
   const pool = FISH.filter((f) => f.tier === tier);
   const fish = pool[pickWeighted(pool.map((f) => (caught.has(f.dex) ? REPEAT_WEIGHT : 1)), rnd)];
@@ -65,6 +85,12 @@ function bite(depth, rnd = Math.random, caught = new Set()) {
 
 /** Land a catch: record it in the fishing Pokédex and work out the rewards. Mutates data. */
 function land(data, catchInfo, now = Date.now(), rnd = Math.random) {
+  if (catchInfo.junk) {
+    const junk = JUNK.find((j) => j.id === catchInfo.junk);
+    if (!junk) return null;
+    data.stats.fishJunk = (data.stats.fishJunk || 0) + 1;
+    return { junk: junk.id, icon: junk.icon, names: junk.names, berries: 0, xp: 0 };
+  }
   const fish = FISH.find((f) => f.dex === catchInfo.dex);
   if (!fish) return null;
   const tier = TIERS[fish.tier];
@@ -87,4 +113,4 @@ function land(data, catchInfo, now = Date.now(), rnd = Math.random) {
   };
 }
 
-module.exports = { FISH, TIERS, ZONES, SHINY_RATE, REPEAT_WEIGHT, NEW_SPECIES_BONUS, JOIN_CHANCE, zoneOf, tierWeights, bite, land };
+module.exports = { FISH, JUNK, FATIGUE, junkChance, biteDelay, TIERS, ZONES, SHINY_RATE, REPEAT_WEIGHT, NEW_SPECIES_BONUS, JOIN_CHANCE, zoneOf, tierWeights, bite, land };

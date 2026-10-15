@@ -589,3 +589,37 @@ test('shinies: 1 in 4096, guaranteed once 90 days passed since the last one join
   Shiny.obtained(d, now);
   assert.equal(Shiny.roll(d, { rnd: () => 0.5, now }), false);
 });
+
+test('mini-game limits: per day and per hour', () => {
+  const Limits = require('../src/main/limits');
+  const d = {};
+  const day = '2026-10-16', t0 = Date.parse('2026-10-16T08:00:00');
+  for (let i = 0; i < 6; i++) assert.equal(Limits.use(d, 'fishing', day, t0 + i * 60e3), true);
+  let i1 = Limits.info(d, 'fishing', day, t0 + 10 * 60e3);
+  assert.equal(i1.left, 0);
+  assert.equal(Limits.blocked(i1), 'rest');
+  assert.equal(Limits.use(d, 'fishing', day, t0 + 10 * 60e3), false);
+  assert.equal(i1.nextAt, t0 + 3600e3);
+  // an hour later the first one is free again; the day still counts all of them
+  i1 = Limits.info(d, 'fishing', day, t0 + 3600e3 + 1);
+  assert.equal(i1.hourLeft, 1);
+  assert.equal(i1.dayLeft, 14);
+  // used up for the day
+  d.limits.fishing.used = 20;
+  assert.equal(Limits.blocked(Limits.info(d, 'fishing', day, t0 + 5 * 3600e3)), 'tired');
+  assert.equal(Limits.info(d, 'fishing', '2026-10-17', t0 + 24 * 3600e3).dayLeft, 20);
+});
+
+test('a tired pond: later bites within the hour are often junk and come slower', () => {
+  assert.equal(Fishing.junkChance(0), 0);
+  assert.equal(Fishing.junkChance(1), 0);
+  assert.ok(Math.abs(Fishing.junkChance(5) - 0.8) < 1e-9);
+  assert.equal(Fishing.biteDelay(3), 7500);
+  const b = Fishing.bite(0.5, () => 0.01, new Set(), 4);
+  assert.equal(b.junk, true);
+  const d = { stats: {}, fishdex: {}, berries: 0 };
+  const r = Fishing.land(d, b.hidden);
+  assert.equal(r.berries, 0);
+  assert.equal(Object.keys(d.fishdex).length, 0);
+  assert.equal(d.stats.fishJunk, 1);
+});

@@ -20,6 +20,7 @@ const Battle = require('./src/main/battle');
 const Wild = require('./src/main/wild');
 const Data = require('./src/main/pokedata');
 const Shiny = require('./src/main/shiny');
+const Limits = require('./src/main/limits');
 const { Updater } = require('./src/main/updater');
 const AI = require('./src/main/ai');
 
@@ -196,6 +197,7 @@ function snapshot() {
     party: partyIds(),
     pokedexCount: { seen: Object.keys(d.pokedex).length, caught: Object.values(d.pokedex).filter((e) => e.caught).length },
     grass: grassInfo(),
+    fishing: Limits.info(d, 'fishing', today()),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
     weatherNow: d.weatherNow,
     dailyInfo: { signRewards: Daily.SIGN_REWARDS, signItem: Daily.SIGN_ITEM, allDoneBonus: Daily.ALL_DONE_BONUS },
@@ -831,22 +833,10 @@ function partyIds() {
   return ids;
 }
 
-function wildEnergy() {
-  const w = store.data.wild;
-  if (w.day !== today()) { w.day = today(); w.used = 0; }
-  const hourAgo = Date.now() - 3600e3;
-  w.recent = (w.recent || []).filter((t) => t > hourAgo);
-  return Math.max(0, Math.min(Wild.DAILY_GRASS - w.used, Wild.HOURLY_GRASS - w.recent.length));
-}
-
-/** Grass limits for the windows: left today, left this hour, and when the next hourly one frees up. */
+/** Grass limits for the windows: left today / this hour, and when the next hourly one frees up. */
 function grassInfo() {
-  const left = wildEnergy();
-  const w = store.data.wild;
-  const dayLeft = Math.max(0, Wild.DAILY_GRASS - w.used);
-  const hourLeft = Math.max(0, Wild.HOURLY_GRASS - w.recent.length);
-  return { energy: left, max: Wild.DAILY_GRASS, dayLeft, hourLeft, hourMax: Wild.HOURLY_GRASS,
-    nextAt: hourLeft > 0 ? null : Math.min(...w.recent) + 3600e3 };
+  const i = Limits.info(store.data, 'grass', today());
+  return { ...i, energy: i.left };
 }
 
 /** The wild Pokémon an outing turned up, if it's still waiting. */
@@ -870,8 +860,8 @@ async function startBattle(source, opts = {}) {
     met = waitingEncounter();
     if (!met) { store.data.wild.encounter = null; return { ok: false, error: 'gone' }; }
     ({ place, region } = met);
-  } else if (source === 'grass' && wildEnergy() <= 0) {
-    return { ok: false, error: grassInfo().dayLeft > 0 ? 'rest' : 'tired' };
+  } else if (source === 'grass' && Limits.blocked(grassInfo())) {
+    return { ok: false, error: Limits.blocked(grassInfo()) };
   }
   const dir = spritesDir();
   try {
@@ -894,7 +884,7 @@ async function startBattle(source, opts = {}) {
     }
     const w = await Wild.battlerFor({ key: 'wild', dex: sp.dex, names: sp.names, level, attrs: {}, shiny, dir });
     const wild = Battle.makeMon({ ...w, wild: true });
-    if (source === 'grass') { store.data.wild.used++; store.data.wild.recent.push(Date.now()); }
+    if (source === 'grass') Limits.use(store.data, 'grass', today());
     if (met) store.data.wild.encounter = null;
     const seen = store.data.pokedex[sp.dex] || { seen: 0, caught: 0 };
     store.data.pokedex[sp.dex] = { ...seen, seen: seen.seen + 1 };
@@ -1045,11 +1035,17 @@ function openFishing() {
 }
 
 function fishBite(depth) {
-  const b = Fishing.bite(Number(depth) || 0, Math.random, new Set(Object.keys(store.data.fishdex).map(Number)));
+  // daily and hourly limits; the more bites this hour, the longer they take and the more of them are junk
+  const lim = Limits.info(store.data, 'fishing', today());
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  const b = Fishing.bite(Number(depth) || 0, Math.random, new Set(Object.keys(store.data.fishdex).map(Number)), lim.recent);
+  Limits.use(store.data, 'fishing', today());
+  changed();
   const token = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   bites.clear();   // one line in the water at a time
   bites.set(token, b.hidden);
-  return { token, tier: b.tier, bite: b.bite, pull: b.pull };
+  return { ok: true, token, tier: b.tier, bite: b.bite, pull: b.pull, delay: Fishing.biteDelay(lim.recent) };
 }
 
 function fishLand(token) {
@@ -1057,8 +1053,9 @@ function fishLand(token) {
   bites.delete(token);
   if (!hidden) return { ok: false };
   const res = Fishing.land(store.data, hidden);
-  if (res) taskProgress('fish');
   if (!res) return { ok: false };
+  if (res.junk) { changed(); return { ok: true, ...res }; }
+  taskProgress('fish');
   // fishing together: the active Pokémon has fun and learns a little
   const pet = activePet();
   if (!activeAway() && pet.stage !== 'egg') { addXp(res.xp); addMood(3); }
@@ -2354,8 +2351,8 @@ async function selfTest(dir) {
   if (words && words.battle) {
     // test codes: a forced battle against a chosen Pokémon, then win; another, then catch
     await step('battle-codes', async () => {
-      const used = store.data.wild.used;
-      console.log('[test] battle code:', JSON.stringify(await runSecret(`${words.battle} snorlax`)), battle && battle.b.wild.dex, store.data.wild.used === used);
+      const used = grassInfo().dayLeft;
+      console.log('[test] battle code:', JSON.stringify(await runSecret(`${words.battle} snorlax`)), battle && battle.b.wild.dex, grassInfo().dayLeft === used);
     });
     await wait(3500);
     await shot(wildWin, '20b-battle-forced');
@@ -2445,6 +2442,22 @@ async function selfTest(dir) {
   await wait(1500);
   await shot(fishWin, '27-fish-result');
   console.log('[test] fishdex:', JSON.stringify(store.data.fishdex));
+  // a tired pond: the 6th bite this hour is mostly junk, a 7th doesn't come
+  await step('fish-limits', async () => {
+    const lim = () => Limits.info(store.data, 'fishing', today());
+    lim();
+    const now = Date.now();
+    store.data.limits.fishing.recent = [now - 50 * 60e3, now - 40 * 60e3, now - 30 * 60e3, now - 20 * 60e3, now - 10 * 60e3];
+    const b = fishBite(0.5);
+    const land = fishLand(b.token);
+    console.log('[test] 6th bite this hour: delay', b.delay, 'junk?', !!land.junk, JSON.stringify(land.names), 'junk chance', Fishing.junkChance(5));
+    console.log('[test] 7th bite:', JSON.stringify(fishBite(0.5)), JSON.stringify(lim()));
+    changed();
+  });
+  await wait(1000);
+  await fishWin.webContents.executeJavaScript("document.querySelector('#resOk').click(); window.__fire('mousedown'); window.__fire('mouseup'); 0");
+  await wait(800);
+  await shot(fishWin, '27b-fish-rest');
   send(panelWin, 'panel:tab', 'dex');
   await wait(1500);
   await panelWin.webContents.executeJavaScript("document.querySelector('#fishHead').scrollIntoView()");
@@ -2546,12 +2559,13 @@ async function selfTest(dir) {
   await shot(panelWin, '39-panel-party');
   // grass: at most 3 an hour
   await step('grass-hourly', async () => {
-    store.data.wild.recent = [Date.now() - 50 * 60e3, Date.now() - 20 * 60e3, Date.now() - 60e3];
+    grassInfo();
+    store.data.limits.grass.recent = [Date.now() - 50 * 60e3, Date.now() - 20 * 60e3, Date.now() - 60e3];
     console.log('[test] 4th grass this hour:', JSON.stringify(await startBattle('grass')), JSON.stringify(grassInfo()));
   });
   // losing in the grass costs more than losing to an outing's Pokémon
   await step('grass-lose', async () => {
-    store.data.wild.recent = [];
+    store.data.limits.grass.recent = [];
     const id = partyIds()[0];
     Object.assign(Care.careOf(store.data, id), { health: 100 });
     petOf(store.data, id).mood = 100;

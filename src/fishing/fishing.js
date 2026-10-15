@@ -110,12 +110,24 @@
       waiting: 'fish.hint.waiting', bite: 'fish.hint.bite', reel: 'fish.hint.reel', result: '' }[game.phase];
     $('#hint').textContent = game.message && Date.now() < game.messageUntil ? game.message : key ? t(key) : '';
     const caught = Object.keys(state.fishdex || {}).length;
-    $('#count').textContent = t('fish.count', { n: caught, total: state.fish.length });
+    const f = state.fishing;
+    $('#count').textContent = `${t('fish.count', { n: caught, total: state.fish.length })} · ${t('fish.left', { n: f.dayLeft, max: f.max, h: f.hourLeft, hmax: f.hourMax })}`;
   }
 
   // ---------------------------------------------------------------- input: mouse or space
+  const minsTo = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));
+  /** Done for now? Says why and returns true. */
+  function restNow(info) {
+    if (!info || (info.left ?? 1) > 0) return false;
+    if (info.dayLeft > 0) say('fish.rest', { m: minsTo(info.nextAt) }, 4000);
+    else say('fish.tired', null, 4000);
+    return true;
+  }
   function press() {
-    if (game.phase === 'idle') { game.phase = 'charging'; game.power = 0; game.powerDir = 1; return; }
+    if (game.phase === 'idle') {
+      if (restNow(state.fishing)) return;
+      game.phase = 'charging'; game.power = 0; game.powerDir = 1; return;
+    }
     if (game.phase === 'bite') { hook(); return; }
     if (game.phase === 'reel') game.holding = true;
     if (game.phase === 'waiting' || game.phase === 'flying') { reelIn(); }
@@ -150,6 +162,12 @@
   async function startBite() {
     const res = await api.invoke('fish:bite', game.depth).catch(() => null);
     if (!res || game.phase !== 'waiting') return;
+    if (!res.ok) { game.phase = 'idle'; restNow({ left: 0, dayLeft: res.error === 'rest' ? 1 : 0, nextAt: res.nextAt }); return; }
+    // the pond is getting tired: the fish take longer to bite
+    if (res.delay) {
+      await new Promise((r) => setTimeout(r, res.delay));
+      if (game.phase !== 'waiting') { api.send('fish:lost', res.token); return; }
+    }
     game.bite = res;
     game.phase = 'bite';
     game.biteUntil = Date.now() + res.bite;
@@ -175,7 +193,7 @@
     const res = await api.invoke('fish:land', game.bite.token).catch(() => null);
     game.bite = null;
     if (!res || !res.ok) { game.phase = 'idle'; return; }
-    Sound.play('fanfare');
+    Sound.play(res.junk ? 'switch' : 'fanfare');
     showResult(res);
   }
 
@@ -183,6 +201,19 @@
   const TIER_KEYS = ['common', 'uncommon', 'rare', 'veryRare'];
   async function showResult(r) {
     $('#resName').textContent = r.names[L()] || r.names.en;
+    $('#resJunk').textContent = r.junk ? r.icon : '';
+    $('#resJunk').classList.toggle('hidden', !r.junk);
+    $('#resFace').classList.toggle('hidden', !!r.junk);
+    if (r.junk) {
+      $('#resSize').textContent = t('fish.junkText');
+      $('#resReward').textContent = '';
+      $('#resTags').replaceChildren(Object.assign(document.createElement('span'), { className: 'tier', textContent: t('fish.tag.junk') }));
+      $('#resJoin').classList.add('hidden');
+      $('#resOk').classList.remove('hidden');
+      $('#resOk').textContent = t('fish.again');
+      $('#result').classList.remove('hidden');
+      return;
+    }
     $('#resSize').textContent = t('fish.size', { n: r.size });
     $('#resReward').textContent = [r.berries ? `+${r.berries} 🍓` : null, t('fish.xp', { n: r.xp })].filter(Boolean).join(' · ');
     $('#resTags').replaceChildren(...[

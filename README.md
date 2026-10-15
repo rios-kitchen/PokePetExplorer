@@ -72,6 +72,7 @@ src/main/typechart.js   the 18-type chart
 src/main/pokedata.js    base stats, moves and capture rates from PokeAPI (cached)
 src/main/wild.js        which wild Pokémon appear where
 src/main/shiny.js       shiny rate and the 90-day guarantee
+src/main/limits.js      daily / hourly limits for the mini-games (grass, fishing, …)
 src/wild/               grass exploring and battle window
 src/main/weather.js     holidays, anniversaries, optional weather (Open-Meteo)
 src/main/fullscreen.js  hide over fullscreen apps (Windows helper)

@@ -149,7 +149,8 @@
 - 第一次钓到某种额外 **+2 🍓**。所有记录在 📖 图鉴 → 钓鱼图鉴（次数、最大尺寸）。
 - **已经钓到过的种类更容易再上钩**：同一稀有度里，已在图鉴中的种类上钩概率是新种类的 **5 倍**，所以越往后越难集齐全图鉴。
 - 钓到的宝可梦有时**想跟你走**：选「欢迎加入！」它就成为新伙伴。
-- 钓鱼**没有每日次数限制**。
+- **次数限制**：每天最多上钩 **20 次**，任意 1 小时内最多 **6 次**（有东西上钩就算一次，钓没钓上来都算）。次数用完时不能甩竿，会提示还要等几分钟或明天再来。
+- **池塘会累**：1 小时内的前 2 次上钩一定是宝可梦；之后每多一次，钓上**破靴子、空罐头、湿破布、水草、空瓶子**这类垃圾的几率就多 20%（第 6 次时 80%），而且每次上钩都要多等 2.5 秒。垃圾没有任何奖励，也不算每日任务。所以最划算的是每小时钓两三次。
 
 ## 7. 对战与捕捉 🌿
 
@@ -279,7 +280,7 @@
 | 外出 | 同时只能一只；时长 30–90 分钟 |
 | 签到 | 每天 1 次，7 天一轮 |
 | 每日任务 | 每天 4 个 + 全部完成奖励 |
-| 钓鱼 | 不限次数（已钓到的种类上钩概率 ×5） |
+| 钓鱼 | 每天 20 次上钩，任意 1 小时内 6 次；1 小时内第 3 次起越来越多垃圾 |
 | 节日礼物 | 每个节日 1 次 |
 | 摸摸给经验 | 每 15 秒最多 1 点，每天最多 20 点 |
 | 进化 | 原作等级，且加入满 7 天 / 上次进化后满 14 天 |
@@ -442,7 +443,11 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 - **Species you've already caught bite more often**: within a rarity, a species already in the Pokédex is **5 times** as
   likely as a new one, so completing the Pokédex takes a while.
 - A catch may **want to come along**: "Welcome to the team!" makes it a new team member.
-- Fishing has **no daily limit**.
+- **Limits**: at most **20 bites a day** and **6 within any hour** (every bite counts, landed or not). When they're
+  used up you can't cast, and it tells you how many minutes to wait (or to come back tomorrow).
+- **A tired pond**: the first 2 bites within an hour are always Pokémon; after that each bite is 20% more likely to be
+  **junk** – an old boot, an empty can, a soggy rag, seaweed, an empty bottle (80% by the 6th) – and each one takes
+  2.5 s longer to come. Junk gives nothing and doesn't count for daily tasks, so a couple of casts an hour is best.
 
 ## 7. Battles and catching 🌿
 
@@ -600,7 +605,7 @@ the usual faces.
 | Outings | one Pokémon at a time; 30–90 minutes |
 | Sign-in | once a day, 7-day cycle |
 | Daily tasks | 4 a day + an all-done bonus |
-| Fishing | unlimited (caught species bite 5× as often) |
+| Fishing | 20 bites a day, 6 within any hour; from the 3rd bite in an hour, more and more junk |
 | Holiday gifts | once per holiday |
 | XP from patting | at most 1 every 15 s, 20 a day |
 | Evolution | the games' level, plus 7 days on the team / 14 days since the last one |
@@ -615,7 +620,7 @@ the usual faces.
 
 # 开发者附录 / Developer appendix
 
-**当前版本 / Current version:** 1.0.0 + unreleased changes · Electron + vanilla JS · 数据文件版本 / store version 5（旧存档的等级会按新曲线保留 / old saves keep their levels on the new curve）
+**当前版本 / Current version:** 1.0.0 + unreleased changes · Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等级会按新曲线保留 / old saves keep their levels on the new curve）
 
 ## 数值在哪里改 / Where the numbers live
 
@@ -626,9 +631,10 @@ the usual faces.
 | 闪光 / Shinies | `src/main/shiny.js` | `RATE` (1/4096), `PITY_DAYS` (90); `data.shiny.since` |
 | 外出 / Outings | `src/main/expedition.js` | `EXPEDITIONS`, `LOOT`, `companionChance()` |
 | 外出遭遇 / Outing encounters | `main.js` `checkExpedition` / `offerOutingEncounter` / `checkEncounter` | 0.3 chance; `Wild.ENCOUNTER_WAIT_MIN` (30); saved in `data.wild.encounter` |
-| 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `TIERS`, `ZONES`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
+| 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `JUNK`, `FATIGUE`, `TIERS`, `ZONES`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |
-| 野生宝可梦 / Wild species | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `DAILY_GRASS`, `HOURLY_GRASS`, `REPEAT_SEEN`, `SPECIAL`, `SHINY_RATE` |
+| 小游戏次数 / Mini-game limits | `src/main/limits.js` | `LIMITS` (grass 16/day 3/hour, fishing 20/day 6/hour) – 新的小游戏也加在这里 / add new mini-games here |
+| 野生宝可梦 / Wild species | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `REPEAT_SEEN`, `SPECIAL`, `SHINY_RATE` |
 | 对战结算 / Battle results | `main.js` `finishBattle`, `LOSE_PENALTY` | win berries 1–3; lose: grass −30 health / −20 mood / −3 berries / 60% faint, outing −15 / −10 / 5% faint |
 | 摸摸经验 / Pat XP | `main.js` | `PAT_XP_PER_DAY` (20) |
 | 属性相克 / Type chart | `src/main/typechart.js` | 18 × 18 |
