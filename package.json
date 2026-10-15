@@ -1,0 +1,70 @@
+{
+  "name": "poke-pet-plus",
+  "productName": "PokePet Plus",
+  "version": "0.1.0",
+  "description": "A pixel Pokémon desktop pet with QQ-Pet style raising, plus Pomodoro timer and to-dos (English / 中文).",
+  "author": "Rio's Kitchen",
+  "main": "main.js",
+  "private": true,
+  "license": "CC-BY-NC-4.0",
+  "scripts": {
+    "start": "electron .",
+    "icon": "node tools/make-icon.js",
+    "preview-sprites": "node tools/preview-sprites.js",
+    "dist:mac": "node tools/make-icon.js && electron-builder --mac && node tools/clean-install.js",
+    "dist:win": "node tools/make-icon.js && electron-builder --win && node tools/clean-install.js",
+    "dist": "node tools/make-icon.js && electron-builder --mac --win && node tools/clean-install.js"
+  },
+  "build": {
+    "appId": "local.pokepetplus.app",
+    "productName": "PokePet Plus",
+    "directories": {
+      "output": "install",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "src/**/*"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "artifactName": "PokePetPlus-${version}-macOS.${ext}",
+      "category": "public.app-category.productivity",
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "dmg": {
+      "title": "PokePet Plus ${version}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "PokePetPlus-${version}-Windows-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "PokePet Plus"
+    },
+    "copyright": "Copyright © 2026 Rio's Kitchen"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  }
+}

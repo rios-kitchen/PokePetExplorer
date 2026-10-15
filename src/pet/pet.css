@@ -1,0 +1,98 @@
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  font: 600 12.5px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.hidden { display: none !important; }
+
+.bubble {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 16px);
+  width: max-content;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  background: #fffdf6;
+  color: #2a2a2a;
+  border: 2px solid #2a2a2a;
+  border-radius: 10px;
+  box-shadow: 0 2px 0 #2a2a2a;
+  animation: pop 160ms ease-out;
+  cursor: default;
+  word-break: break-word;
+}
+.bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  background: #fffdf6;
+  border-right: 2px solid #2a2a2a;
+  border-bottom: 2px solid #2a2a2a;
+  transform: rotate(45deg) scaleY(0.8);
+}
+.bubble .actions { display: flex; gap: 6px; margin-top: 6px; justify-content: center; }
+.bubble .actions:empty { display: none; }
+.bubble button {
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  border: 2px solid #2a2a2a;
+  background: #ffd84a;
+  color: #2a2a2a;
+  cursor: pointer;
+}
+.bubble button.secondary { background: #eceae2; }
+.bubble button:hover { filter: brightness(1.06); }
+.bubble button:active { transform: translateY(1px); }
+
+.pill {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(32, 32, 32, 0.82);
+  color: #fff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pill.focus { background: rgba(214, 64, 52, 0.92); }
+.pill.break { background: rgba(46, 140, 90, 0.92); }
+.pill.paused { opacity: 0.75; }
+
+@keyframes pop {
+  from { transform: translateX(-50%) scale(0.85); opacity: 0; }
+  to { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+/* PMD-style portrait with the pet's current emotion */
+.bubble { display: flex; align-items: center; gap: 8px; }
+.bubble .face {
+  width: 40px; height: 40px; flex: none;
+  image-rendering: pixelated;
+  border: 2px solid #2a2a2a; border-radius: 6px; background: #fff;
+}
+.bubble .body { min-width: 0; }

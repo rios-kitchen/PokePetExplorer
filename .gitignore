@@ -1,0 +1,5 @@
+node_modules/
+install/
+dist/
+.DS_Store
+sprite-preview.png

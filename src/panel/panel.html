@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>PokePet Plus</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header class="hero">
+    <canvas id="heroSprite" width="64" height="64"></canvas>
+    <div class="hero-info">
+      <div class="hero-name"><span id="heroName"></span> <span id="heroLevel" class="lv"></span></div>
+      <div class="bar xp"><div id="heroXp"></div></div>
+      <div class="hero-meta">
+        <span id="heroXpText"></span>
+        <span class="mood"><span id="heroBerries" class="berries"></span> · <span data-i18n="poke.mood"></span> <span id="heroMood"></span></span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button data-tab="focus" data-i18n="tab.focus"></button>
+    <button data-tab="todos" data-i18n="tab.todos"></button>
+    <button data-tab="care" data-i18n="tab.care"></button>
+    <button data-tab="diary" data-i18n="tab.diary"></button>
+    <button data-tab="pokemon" data-i18n="tab.pokemon"></button>
+    <button data-tab="settings" data-i18n="tab.settings"></button>
+  </nav>
+
+  <main>
+    <!-- FOCUS -->
+    <section id="tab-focus" class="tab">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 120 120">
+          <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+          <circle id="ringFg" class="ring-fg" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div class="ring-center">
+          <div id="phaseLabel" class="phase"></div>
+          <div id="timeLabel" class="time">25:00</div>
+          <div id="roundLabel" class="round"></div>
+        </div>
+      </div>
+
+      <div class="controls" id="timerControls"></div>
+
+      <label class="field">
+        <span data-i18n="pomo.task"></span>
+        <select id="taskSelect"></select>
+      </label>
+
+      <div class="today">
+        <span data-i18n="pomo.today"></span>
+        <span id="todayTomatoes" class="tomatoes"></span>
+      </div>
+
+      <details class="card">
+        <summary data-i18n="pomo.durations"></summary>
+        <div class="grid2">
+          <label class="field small"><span data-i18n="pomo.focusLen"></span><input type="number" min="1" max="180" data-pomo="focus"></label>
+          <label class="field small"><span data-i18n="pomo.shortLen"></span><input type="number" min="1" max="180" data-pomo="short"></label>
+          <label class="field small"><span data-i18n="pomo.longLen"></span><input type="number" min="1" max="180" data-pomo="long"></label>
+          <label class="field small"><span data-i18n="pomo.longEvery"></span><input type="number" min="1" max="12" data-pomo="longEvery"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="autoBreak"> <span data-i18n="pomo.autoBreak"></span></label>
+        <div class="sound-row">
+          <span data-i18n="pomo.sounds"></span>
+          <div class="sound-buttons">
+            <button class="ghost" data-sound="focusStart" data-i18n="pomo.snd.focusStart"></button>
+            <button class="ghost" data-sound="focusEnd" data-i18n="pomo.snd.focusEnd"></button>
+            <button class="ghost" data-sound="breakStart" data-i18n="pomo.snd.breakStart"></button>
+            <button class="ghost" data-sound="breakEnd" data-i18n="pomo.snd.breakEnd"></button>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- TODOS -->
+    <section id="tab-todos" class="tab">
+      <form id="todoForm" class="todo-form">
+        <input id="todoText" type="text" maxlength="200" autocomplete="off" data-i18n-placeholder="todo.placeholder">
+        <button type="submit" class="primary" data-i18n="todo.add"></button>
+        <label class="due-toggle" data-i18n-title="todo.due">⏰<input id="todoDue" type="datetime-local"></label>
+      </form>
+      <div class="seg" id="todoFilter">
+        <button data-filter="open" data-i18n="todo.active"></button>
+        <button data-filter="done" data-i18n="todo.done"></button>
+      </div>
+      <ul id="todoList" class="todo-list"></ul>
+      <p id="todoEmpty" class="empty"></p>
+      <button id="clearDone" class="link" data-i18n="todo.clearDone"></button>
+    </section>
+
+    <!-- CARE -->
+    <section id="tab-care" class="tab">
+      <div id="careStatus" class="care-status"></div>
+      <div id="careBars" class="care-bars"></div>
+      <h3 data-i18n="care.shop"></h3>
+      <div id="careItems" class="care-items"></div>
+      <p id="careMsg" class="hint"></p>
+      <p id="careEarn" class="hint"></p>
+    </section>
+
+    <!-- DIARY -->
+    <section id="tab-diary" class="tab">
+      <div class="week-nav">
+        <button id="weekPrev" class="ghost" aria-label="previous week">‹</button>
+        <div id="weekLabel" class="week-label"></div>
+        <button id="weekNext" class="ghost" aria-label="next week">›</button>
+      </div>
+      <div id="weekCard" class="card week-card"></div>
+      <div class="card chart-card">
+        <div class="chart-title" data-i18n="diary.focusChart"></div>
+        <div id="focusBars" class="chart"></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-title" data-i18n="diary.timeline"></div>
+        <div id="focusTimeline" class="chart"></div>
+      </div>
+      <h3 data-i18n="diary.entries"></h3>
+      <div id="diaryEntries" class="diary-entries"></div>
+      <div id="chartTip" class="chart-tip hidden"></div>
+    </section>
+
+    <!-- POKEMON -->
+    <section id="tab-pokemon" class="tab">
+      <h3 data-i18n="poke.builtin"></h3>
+      <div id="pokeGrid" class="poke-grid"></div>
+      <h3 data-i18n="poke.more"></h3>
+      <p class="hint" data-i18n="poke.moreHint"></p>
+      <form id="pokeForm" class="poke-form">
+        <input id="pokeQuery" type="text" placeholder="gengar / 94" autocomplete="off">
+        <label class="check"><input type="checkbox" id="pokeShiny"> <span data-i18n="poke.shiny"></span></label>
+        <button type="submit" class="primary" data-i18n="poke.fetch"></button>
+      </form>
+      <p id="pokeStatus" class="hint"></p>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="tab">
+      <label class="field row">
+        <span data-i18n="set.language"></span>
+        <select id="setLang"><option value="en">English</option><option value="zh">中文</option></select>
+      </label>
+      <div class="field row">
+        <span data-i18n="set.size"></span>
+        <div class="seg" id="setScale">
+          <button data-scale="2" data-i18n="size.2"></button>
+          <button data-scale="3" data-i18n="size.3"></button>
+          <button data-scale="4" data-i18n="size.4"></button>
+          <button data-scale="5" data-i18n="size.5"></button>
+        </div>
+      </div>
+      <label class="field row">
+        <span data-i18n="set.reminder"></span>
+        <select id="setReminder"></select>
+      </label>
+      <label class="check"><input type="checkbox" id="setWalk"> <span data-i18n="set.walk"></span></label>
+      <label class="check"><input type="checkbox" id="setReact"> <span data-i18n="set.reactInput"></span></label>
+      <label class="check"><input type="checkbox" id="setSound"> <span data-i18n="set.sound"></span></label>
+      <label class="check"><input type="checkbox" id="setLogin"> <span data-i18n="set.login"></span></label>
+      <button id="resetPos" class="secondary" data-i18n="set.resetPos"></button>
+
+      <h3 data-i18n="set.stats"></h3>
+      <div class="stats">
+        <div><b id="stToday"></b><span data-i18n="stat.today"></span></div>
+        <div><b id="stPomos"></b><span data-i18n="stat.totalPomos"></span></div>
+        <div><b id="stMinutes"></b><span data-i18n="stat.focusMin"></span></div>
+        <div><b id="stTodos"></b><span data-i18n="stat.todosDone"></span></div>
+      </div>
+      <p class="hint" data-i18n="set.data"></p>
+
+      <h3 data-i18n="about.title"></h3>
+      <div class="about">
+        <p><b>PMD SpriteCollab</b> – <span data-i18n="about.pmd"></span></p>
+        <p><b>PokéAPI</b> – <span data-i18n="about.pokeapi"></span></p>
+        <p><b>Pokémon Showdown / Smogon</b> – <span data-i18n="about.showdown"></span></p>
+        <p class="hint" data-i18n="about.disclaimer"></p>
+        <p class="hint" data-i18n="about.license"></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="../shared/i18n.js"></script>
+  <script src="../shared/sprites.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="care-diary.js"></script>
+  <script src="panel.js"></script>
+</body>
+</html>
