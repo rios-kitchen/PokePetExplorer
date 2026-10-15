@@ -18,6 +18,7 @@ A pixel Pokémon desktop pet for **macOS and Windows** with **QQ-Pet style raisi
 ```bash
 npm install
 npm start
+npm test     # data model unit tests
 ```
 
 ## Build an installer
@@ -122,6 +123,8 @@ Chinese) come from [PokeAPI](https://pokeapi.co); diary portraits from PMD Sprit
 main.js                 main process: windows, tray, timer, to-dos, persistence
 src/main/care.js        hunger / cleanliness / health / sickness, items, berries
 src/main/diary.js       daily records, weekly report
+src/main/store.js       data file: defaults, pet records, migration from PokePet's data
+test/                   unit tests (node --test)
 src/main/sources.js     PMD sprite and portrait downloads, artist credits
 src/preload.js          safe IPC bridge
 src/pet/                transparent pet window (canvas animation, behaviour, bubbles)

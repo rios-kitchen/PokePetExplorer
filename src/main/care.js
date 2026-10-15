@@ -1,5 +1,6 @@
 // QQ-Pet-style care: hunger, cleanliness, health, sickness. Berries are the currency
 // (earned with Pomodoros and finished to-dos) and buy food and medicine.
+const { petOf } = require('./store');
 
 const ITEMS = {
   oran:   { kind: 'food', cost: 1, hunger: 25, mood: 3 },
@@ -11,13 +12,16 @@ const ITEMS = {
 
 const REWARD = { pomodoro: 3, todo: 1, daily: 2 };
 
+// status: null or a status condition id (poison, paralysis, burn, freeze, confusion), each cured by
+// its own medicine – filled in by the raising rules; `sick` stays the general "unwell" flag.
 function freshCare() {
-  return { hunger: 80, clean: 85, health: 100, sick: false, fainted: false };
+  return { hunger: 80, clean: 85, health: 100, sick: false, fainted: false, status: null };
 }
 
 function careOf(data, id) {
-  const pet = data.pets[id] || (data.pets[id] = { xp: 0 });
+  const pet = petOf(data, id);
   if (!pet.care) pet.care = freshCare();
+  else if (pet.care.status === undefined) pet.care.status = null;
   return pet.care;
 }
 

@@ -4,7 +4,7 @@ const {
 } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { Store, today } = require('./src/main/store');
+const { Store, today, petOf } = require('./src/main/store');
 const Sources = require('./src/main/sources');
 const Care = require('./src/main/care');
 const Diary = require('./src/main/diary');
@@ -103,6 +103,7 @@ function creditsOf(p) {
 }
 
 const careOfActive = () => Care.careOf(store.data, S().pokemon);
+const activePet = () => petOf(store.data, S().pokemon);
 
 function petName(id = S().pokemon) {
   const p = petList().find((x) => x.id === id);
@@ -137,7 +138,13 @@ function snapshot() {
     reward: Care.REWARD,
     diary: { startDay: d.diary.startDay, days: d.diary.days },
     stats: d.stats,
-    mood: Math.round(d.mood),
+    mood: Math.round(activePet().mood),   // the active Pokémon's (each has its own)
+    inventory: d.inventory,
+    expedition: d.expedition,
+    daily: d.daily,
+    achievements: d.achievements,
+    fishdex: d.fishdex,
+    souvenirs: d.souvenirs,
     timer: { ...timer },
     platform: process.platform
   };
@@ -169,12 +176,13 @@ function notify(title, body) {
 }
 
 function addMood(n) {
-  store.data.mood = Math.max(0, Math.min(100, store.data.mood + n));
+  const pet = activePet();
+  pet.mood = Math.max(0, Math.min(100, pet.mood + n));
 }
 
 function addXp(n) {
   const id = S().pokemon;
-  const pet = store.data.pets[id] || (store.data.pets[id] = { xp: 0 });
+  const pet = activePet();
   const before = levelOf(pet.xp);
   pet.xp += n;
   const after = levelOf(pet.xp);
@@ -576,7 +584,7 @@ function slowTick() {
   poopTick(asleep);
   careStep(1 / 60, asleep);
   const care = careOfActive();
-  Diary.sample(store.data, store.data.mood, care.health, S().pokemon);
+  Diary.sample(store.data, activePet().mood, care.health, S().pokemon);
 
   // complain about the most urgent need, at most every 20 minutes per need
   const need = Care.urgentNeed(care);

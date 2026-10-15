@@ -9,6 +9,7 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "start": "electron .",
+    "test": "node --test test/",
     "icon": "node tools/make-icon.js",
     "preview-sprites": "node tools/preview-sprites.js",
     "dist:mac": "node tools/make-icon.js && electron-builder --mac && node tools/clean-install.js",
