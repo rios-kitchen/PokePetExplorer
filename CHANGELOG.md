@@ -5,6 +5,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **钓鱼地点和钓竿与原作一样**：每次钓鱼是原作里一个真实的钓鱼地点（按搭档等级挑选，窗口里显示地点名），水池的圈就是钓竿（浅水破旧钓竿、黄圈好钓竿、红圈和正中央厉害钓竿），钓到什么按那里的原作出现表；钓鱼图鉴从 24 种扩充到 58 种
+  **Fishing spots and rods as in the games**: each trip is a real fishing spot (suited to your partner's level, named in the window), the ring is the rod (Old / Good / Super), and what bites follows that spot's original table; the fishing Pokédex grows from 24 to 58 species
+
 ## 1.4.2 · 2026-10-16
 
 - **钓鱼按水池的圈分难度**：三圈同心圆，越靠中心越难、越稀有；新增最难的「正中央」，蓄力条中段才是最难的位置

@@ -128,7 +128,8 @@
     $('#hint').textContent = game.message && Date.now() < game.messageUntil ? game.message : key ? t(key) : '';
     const caught = Object.keys(state.fishdex || {}).length;
     const f = state.fishing;
-    $('#count').textContent = `${t('fish.count', { n: caught, total: state.fish.length })} · ${t('fish.left', { n: f.dayLeft, max: f.max, h: f.hourLeft, hmax: f.hourMax })}`;
+    const spot = state.fishSpot ? `${t('fish.spot', { name: state.fishSpot[L()] || state.fishSpot.en })}\n` : '';
+    $('#count').textContent = `${spot}${t('fish.count', { n: caught, total: state.fish.length })} · ${t('fish.left', { n: f.dayLeft, max: f.max, h: f.hourLeft, hmax: f.hourMax })}`;
   }
 
   // ---------------------------------------------------------------- input: mouse or space

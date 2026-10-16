@@ -39,3 +39,4 @@ canvas { display: block; image-rendering: pixelated; cursor: pointer; }
 .join-buttons { display: flex; gap: 8px; justify-content: center; }
 .secondary { background: #eceae2; border: 2px solid #23221f; border-radius: 10px; padding: 6px 18px; font: inherit; font-weight: 700; color: #23221f; cursor: pointer; }
 .face .hidden { display: none; }
+#count { white-space: pre-line; }
