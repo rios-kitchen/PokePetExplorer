@@ -1,6 +1,7 @@
 // Turn-based 1-on-1 battles against wild Pokémon, after the main games but simplified:
-// stats from base stats and level, the 18-type chart, same-type bonus, critical hits, a few status
-// conditions, switching between up to three party members, items from the bag, catching.
+// stats from base stats and level, the 18-type chart, same-type bonus, critical hits, stat stages (−6…+6),
+// status conditions (burn, poison, paralysis, freeze, sleep, confusion), status moves, healing and draining
+// moves, priority and multi-hit moves, switching between up to six party members, items, catching.
 // Pure functions: every random roll goes through `rnd`, so battles can be tested and simulated.
 const { effectiveness } = require('./typechart');
 
@@ -24,14 +25,23 @@ function statsFor(base, level, attrs = {}, iv = 15) {
 function makeMon({ key, dex, names, level, types, base, moves, attrs, shiny, wild }) {
   const stats = statsFor(base, level, attrs, wild ? WILD_IV : 15);
   return {
-    key, dex, names, level, types, stats, maxHp: stats.hp, hp: stats.hp, moves, status: null,
+    key, dex, names, level, types, stats, maxHp: stats.hp, hp: stats.hp, moves, status: null, stages: freshStages(),
     shiny: !!shiny, accBonus: Math.min(0.1, ((attrs && attrs.cute) || 0) / 300), fainted: false
   };
 }
 
+// ---------------------------------------------------------------- stat stages
+const freshStages = () => ({ atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 });
+/** The games' stage multipliers: ×2/8 … ×8/2 for stats, ×3/9 … ×9/3 for accuracy and evasion. */
+const stageMul = (n) => (n >= 0 ? (2 + n) / 2 : 2 / (2 - n));
+const accMul = (n) => (n >= 0 ? (3 + n) / 3 : 3 / (3 - n));
+const stat = (m, k) => m.stats[k] * stageMul((m.stages || {})[k] || 0);
+/** Moves that act on the user itself (Swords Dance, Recover …). */
+const SELF = new Set(['user', 'users-field', 'user-or-ally', 'user-and-allies', 'all-allies', 'ally']);
+
 // ---------------------------------------------------------------- the battle
 /**
- * party: up to 3 of the trainer's battlers (the first one leads); wild: the wild battler;
+ * party: up to 6 of the trainer's battlers (the first one leads); wild: the wild battler;
  * bag: { itemId: count } – what can be used in battle (balls, potions, status medicine, revives).
  */
 function create({ party, wild, bag = {} }) {
@@ -42,14 +52,14 @@ const BALLS = { pokeball: 1, greatball: 1.5, ultraball: 2 };
 const WILD_IV = 0;
 /** A wild Pokémon's level next to the partner's: mostly a little lower (like wild Pokémon in the games). */
 const wildLevel = (partnerLevel, rnd = Math.random) => Math.max(2, partnerLevel - 3 + Math.floor(rnd() * 5));
-const STATUS_CATCH = { sleep: 2, freeze: 2, paralysis: 1.5, poison: 1.5, burn: 1.5 };
+const STATUS_CATCH = { sleep: 2.5, freeze: 2.5, paralysis: 1.5, poison: 1.5, burn: 1.5 };   // as in Gen 5+
 
 const me = (b) => b.party[b.active];
 
 function damage(att, def, mv, rnd, ev) {
   const physical = mv.cls === 'physical';
-  const A = physical ? att.stats.atk : att.stats.spa;
-  const D = physical ? def.stats.def : def.stats.spd;
+  const A = stat(att, physical ? 'atk' : 'spa');
+  const D = stat(def, physical ? 'def' : 'spd');
   let dmg = Math.floor(Math.floor((((2 * att.level) / 5 + 2) * mv.power * A) / D) / 50) + 2;
   const stab = att.types.includes(mv.type) ? 1.5 : 1;
   const eff = effectiveness(mv.type, def.types);
@@ -69,6 +79,11 @@ function canAct(mon, side, rnd, events) {
     if (rnd() < 0.2) { mon.status = null; events.push({ t: 'thaw', side }); return true; }
     events.push({ t: 'frozen', side }); return false;
   }
+  if (s.id === 'sleep') {
+    s.turns -= 1;
+    if (s.turns <= 0) { mon.status = null; events.push({ t: 'wake', side }); return true; }
+    events.push({ t: 'asleep', side }); return false;
+  }
   if (s.id === 'paralysis' && rnd() < 0.25) { events.push({ t: 'paralyzed', side }); return false; }
   if (s.id === 'confusion') {
     s.turns -= 1;
@@ -83,29 +98,95 @@ function canAct(mon, side, rnd, events) {
   return true;
 }
 
-const AILMENTS = new Set(['burn', 'poison', 'paralysis', 'freeze', 'confusion']);
+const AILMENTS = new Set(['burn', 'poison', 'paralysis', 'freeze', 'sleep', 'confusion']);
+
+/** Give a condition, unless it already has one or its type is immune. Returns true if it took. */
+function inflictAilment(mon, side, ailment, rnd, events) {
+  if (mon.hp <= 0 || mon.status || !AILMENTS.has(ailment)) return false;
+  // types are immune to "their own" conditions
+  const immune = (ailment === 'burn' && mon.types.includes('fire')) || (ailment === 'freeze' && mon.types.includes('ice'))
+    || (ailment === 'poison' && (mon.types.includes('poison') || mon.types.includes('steel')))
+    || (ailment === 'paralysis' && mon.types.includes('electric'));
+  if (immune) return false;
+  const turns = ailment === 'confusion' ? 2 + Math.floor(rnd() * 3) : ailment === 'sleep' ? 1 + Math.floor(rnd() * 3) : 0;
+  mon.status = { id: ailment, turns };
+  events.push({ t: 'status', side, status: ailment });
+  return true;
+}
+
+/** Raise or lower stat stages (−6…+6). Returns true if anything changed. */
+function changeStats(mon, side, changes, events) {
+  if (mon.hp <= 0) return false;
+  mon.stages = mon.stages || freshStages();
+  let did = false;
+  for (const { stat: k, change } of changes) {
+    const before = mon.stages[k] || 0;
+    const after = Math.max(-6, Math.min(6, before + change));
+    if (after === before) { events.push({ t: 'statMax', side, stat: k, up: change > 0 }); continue; }
+    mon.stages[k] = after;
+    events.push({ t: 'stat', side, stat: k, change: after - before });
+    did = true;
+  }
+  return did;
+}
+
+function heal(mon, side, amount, events) {
+  const before = mon.hp;
+  mon.hp = Math.min(mon.maxHp, mon.hp + Math.max(1, Math.round(amount)));
+  if (mon.hp > before) { events.push({ t: 'heal', side, hp: mon.hp }); return true; }
+  return false;
+}
 
 function useMove(b, side, mv, rnd, events) {
   const att = side === 'me' ? me(b) : b.wild;
   const def = side === 'me' ? b.wild : me(b);
   const other = side === 'me' ? 'wild' : 'me';
   if (!canAct(att, side, rnd, events)) return;
-  const hitChance = (mv.acc / 100) + (side === 'me' ? att.accBonus : 0);
-  if (rnd() >= hitChance) { events.push({ t: 'miss', side, move: mv.id, names: mv.names }); return; }
-  const ev = { t: 'move', side, move: mv.id, names: mv.names, cls: mv.cls, type: mv.type };
-  const dmg = damage(att, def, mv, rnd, ev);
-  def.hp = Math.max(0, def.hp - dmg);
-  Object.assign(ev, { dmg, hp: def.hp });
-  events.push(ev);
-  if (def.hp > 0 && !def.status && AILMENTS.has(mv.ailment) && mv.ailmentChance > 0 && rnd() * 100 < mv.ailmentChance) {
-    // types are immune to "their own" conditions
-    const immune = (mv.ailment === 'burn' && def.types.includes('fire')) || (mv.ailment === 'freeze' && def.types.includes('ice'))
-      || (mv.ailment === 'poison' && (def.types.includes('poison') || def.types.includes('steel')))
-      || (mv.ailment === 'paralysis' && def.types.includes('electric'));
-    if (!immune) {
-      def.status = { id: mv.ailment, turns: mv.ailment === 'confusion' ? 2 + Math.floor(rnd() * 3) : 0 };
-      events.push({ t: 'status', side: other, status: mv.ailment });
-    }
+  const onSelf = SELF.has(mv.target);
+  // accuracy (with accuracy / evasion stages); moves on itself and "never miss" moves always hit
+  if (!onSelf && mv.acc != null) {
+    const stages = ((att.stages || {}).acc || 0) - ((def.stages || {}).eva || 0);
+    const hitChance = (mv.acc / 100) * accMul(stages) + (side === 'me' ? att.accBonus : 0);
+    if (rnd() >= hitChance) { events.push({ t: 'miss', side, move: mv.id, names: mv.names }); return; }
+  }
+
+  // status moves: conditions, stat changes, healing
+  if (mv.cls === 'status') {
+    events.push({ t: 'use', side, move: mv.id, names: mv.names, type: mv.type });
+    let did = false;
+    if (mv.healing > 0) did = heal(att, side, (att.maxHp * mv.healing) / 100, events) || did;
+    if (mv.stats && mv.stats.length) did = changeStats(onSelf ? att : def, onSelf ? side : other, mv.stats, events) || did;
+    if (AILMENTS.has(mv.ailment)) did = inflictAilment(onSelf ? att : def, onSelf ? side : other, mv.ailment, rnd, events) || did;
+    if (!did) events.push({ t: 'fail' });
+    return;
+  }
+
+  // damaging moves, some hitting several times
+  const hits = (mv.maxHits || 1) > 1 ? mv.minHits + Math.floor(rnd() * (mv.maxHits - mv.minHits + 1)) : 1;
+  let total = 0, landed = 0;
+  for (let i = 0; i < hits && def.hp > 0; i++) {
+    const ev = { t: 'move', side, move: mv.id, names: mv.names, cls: mv.cls, type: mv.type, again: i > 0 };
+    const dmg = damage(att, def, mv, rnd, ev);
+    def.hp = Math.max(0, def.hp - dmg);
+    Object.assign(ev, { dmg, hp: def.hp });
+    events.push(ev);
+    total += dmg; landed++;
+    if (ev.eff === 0) break;
+  }
+  if (landed > 1) events.push({ t: 'hits', n: landed });
+  // draining moves (Absorb, Giga Drain …) heal the user; negative drain is recoil (Double-Edge …)
+  if (mv.drain > 0 && total > 0) heal(att, side, (total * mv.drain) / 100, events);
+  if (mv.drain < 0 && total > 0) {
+    att.hp = Math.max(0, att.hp - Math.max(1, Math.round((total * -mv.drain) / 100)));
+    events.push({ t: 'recoil', side, hp: att.hp });
+  }
+  // side effects: a condition, or stat changes (on the target, or on the user for moves that raise its stats)
+  if (def.hp > 0 && AILMENTS.has(mv.ailment) && mv.ailmentChance > 0 && rnd() * 100 < mv.ailmentChance) {
+    inflictAilment(def, other, mv.ailment, rnd, events);
+  }
+  if (mv.stats && mv.stats.length && rnd() * 100 < (mv.statChance || 100)) {
+    const toSelf = mv.category === 'damage-raise' || mv.category === 'damage+raise' || onSelf;
+    changeStats(toSelf ? att : def, toSelf ? side : other, mv.stats, events);
   }
 }
 
@@ -114,7 +195,7 @@ function wildMove(b, rnd) {
   const w = b.wild, target = me(b);
   if (rnd() < 0.3) return w.moves[Math.floor(rnd() * w.moves.length)];
   return w.moves.slice().sort((x, y) => {
-    const v = (m) => m.power * (w.types.includes(m.type) ? 1.5 : 1) * effectiveness(m.type, target.types) * (m.acc / 100);
+    const v = (m) => m.power * (w.types.includes(m.type) ? 1.5 : 1) * effectiveness(m.type, target.types) * ((m.acc ?? 100) / 100);
     return v(y) - v(x);
   })[0];
 }
@@ -180,6 +261,7 @@ function act(b, action, rnd = Math.random, options = {}) {
     const to = action.to;
     if (!b.party[to] || b.party[to].fainted) return events;
     b.active = to; b.needSwitch = false; b.seen.add(to);
+    me(b).stages = freshStages();
     events.push({ t: 'switch', to });
     return events;
   }
@@ -193,6 +275,9 @@ function act(b, action, rnd = Math.random, options = {}) {
   } else if (action.type === 'switch') {
     const to = action.to;
     if (to === b.active || !b.party[to] || b.party[to].fainted) return [];
+    const out = me(b);
+    out.stages = freshStages();   // coming back in resets its stat changes and confusion
+    if (out.status && out.status.id === 'confusion') out.status = null;
     b.active = to; b.seen.add(to);
     events.push({ t: 'switch', to });
   } else if (action.type === 'item') {
@@ -223,8 +308,10 @@ function act(b, action, rnd = Math.random, options = {}) {
     if (!mv) return [];
     // faster one goes first (paralysis halves speed); the trainer's move vs the wild one's
     const wmv = wildMove(b, rnd);
-    const speed = (m) => m.stats.spe * (m.status && m.status.id === 'paralysis' ? 0.5 : 1);
-    const meFirst = speed(me(b)) > speed(b.wild) || (speed(me(b)) === speed(b.wild) && rnd() < 0.5);
+    const speed = (m) => stat(m, 'spe') * (m.status && m.status.id === 'paralysis' ? 0.5 : 1);
+    // higher priority goes first (Quick Attack …), then the faster one
+    const prio = (mv.priority || 0) - (wmv.priority || 0);
+    const meFirst = prio > 0 || (prio === 0 && (speed(me(b)) > speed(b.wild) || (speed(me(b)) === speed(b.wild) && rnd() < 0.5)));
     const order = meFirst ? [['me', mv], ['wild', wmv]] : [['wild', wmv], ['me', mv]];
     for (const [side, m] of order) {
       useMove(b, side, m, rnd, events);
@@ -246,4 +333,4 @@ function expFor(wild, participants) {
   return Math.max(1, Math.round((10 + wild.level * 2.5) / Math.max(1, participants)));
 }
 
-module.exports = { BALLS, STATUS_CATCH, WILD_IV, wildLevel, statsFor, makeMon, create, act, tryCatch, wildMove, expFor };
+module.exports = { MAX_PARTY: 6, stageMul, accMul, BALLS, STATUS_CATCH, WILD_IV, wildLevel, statsFor, makeMon, create, act, tryCatch, wildMove, expFor };

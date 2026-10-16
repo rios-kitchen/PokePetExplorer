@@ -644,3 +644,70 @@ test('the Pokédex records seen and caught species and never forgets them', () =
   assert.equal(d.pokedex[129].caught, 0);
   assert.deepEqual(Pokedex.list(d).map((e) => e.dex), [4, 16, 25, 129]);
 });
+
+test('status moves, stat stages, sleep, priority and draining', () => {
+  const base = { cls: 'physical', category: 'damage', target: 'selected-pokemon', priority: 0, ailment: 'none', ailmentChance: 0,
+    stats: [], statChance: 0, healing: 0, drain: 0, minHits: 1, maxHits: 1 };
+  const growl = { ...base, id: 'growl', names: { en: 'Growl', zh: '叫声' }, type: 'normal', power: 0, acc: 100, cls: 'status',
+    category: 'net-good-stats', stats: [{ stat: 'atk', change: -1 }] };
+  const swords = { ...base, id: 'swords-dance', names: { en: 'Swords Dance', zh: '剑舞' }, type: 'normal', power: 0, acc: null,
+    cls: 'status', category: 'net-good-stats', target: 'user', stats: [{ stat: 'atk', change: 2 }] };
+  const spore = { ...base, id: 'spore', names: { en: 'Spore', zh: '蘑菇孢子' }, type: 'grass', power: 0, acc: 100, cls: 'status',
+    category: 'ailment', ailment: 'sleep' };
+  const quick = { ...base, id: 'quick-attack', names: { en: 'Quick Attack', zh: '电光一闪' }, type: 'normal', power: 40, acc: 100, priority: 1 };
+  const drain = { ...base, id: 'giga-drain', names: { en: 'Giga Drain', zh: '终极吸取' }, type: 'grass', power: 75, acc: 100,
+    cls: 'special', category: 'damage+heal', drain: 50 };
+  assert.equal(Battle.stageMul(2), 2);
+  assert.equal(Battle.stageMul(-1), 2 / 3);
+  assert.equal(Battle.MAX_PARTY, 6);
+
+  // Growl lowers the wild one's Attack; Swords Dance raises the user's by two (and never misses)
+  let me = mon('me', 20, ['normal'], [growl, swords]);
+  let wild = mon('wild', 20, ['normal'], [{ ...base, id: 'splash', names: { en: 'x', zh: 'x' }, type: 'normal', power: 0, acc: 100, cls: 'status', category: 'net-good-stats', stats: [{ stat: 'def', change: 1 }], target: 'user' }]);
+  let b = Battle.create({ party: [me], wild });
+  Battle.act(b, { type: 'move', index: 0 }, seq(0.1));
+  assert.equal(wild.stages.atk, -1);
+  Battle.act(b, { type: 'move', index: 1 }, seq(0.99));
+  assert.equal(me.stages.atk, 2);
+
+  // Spore puts it to sleep; a sleeping Pokémon can't move until it wakes up
+  me = mon('me', 20, ['grass'], [spore]);
+  wild = mon('wild', 20, ['normal'], [quick]);
+  b = Battle.create({ party: [me], wild });
+  const ev = Battle.act(b, { type: 'move', index: 0 }, seq(0.1));
+  assert.ok(ev.some((e) => e.t === 'status' && e.status === 'sleep'));
+  assert.equal(wild.status.id, 'sleep');
+
+  // Quick Attack goes first even when slower
+  me = mon('me', 5, ['normal'], [quick]);
+  wild = mon('wild', 50, ['normal'], [{ ...quick, priority: 0, id: 'tackle' }]);
+  b = Battle.create({ party: [me], wild });
+  const order = Battle.act(b, { type: 'move', index: 0 }, seq(0.5)).filter((e) => e.t === 'move').map((e) => e.side);
+  assert.equal(order[0], 'me');
+
+  // Giga Drain heals the user by half the damage
+  me = mon('me', 30, ['grass'], [drain]);
+  me.hp = 10;
+  wild = mon('wild', 30, ['water'], [{ ...base, id: 'splash2', names: { en: 'x', zh: 'x' }, type: 'normal', power: 0, acc: 100, cls: 'status', category: 'net-good-stats', stats: [{ stat: 'def', change: 1 }], target: 'user' }]);
+  b = Battle.create({ party: [me], wild });
+  const evs = Battle.act(b, { type: 'move', index: 0 }, seq(0.5));
+  assert.ok(evs.some((e) => e.t === 'heal' && e.side === 'me'));
+  assert.ok(me.hp > 10);
+
+  // switching out resets stat stages
+  const a = mon('a', 20, ['normal'], [quick]), c = mon('c', 20, ['normal'], [quick]);
+  a.stages.atk = 3;
+  b = Battle.create({ party: [a, c], wild: mon('w', 20, ['normal'], [quick]) });
+  Battle.act(b, { type: 'switch', to: 1 }, seq(0.5));
+  assert.equal(a.stages.atk, 0);
+});
+
+test('the games\' move sets: newest level-up moves, status moves included, always one that hits', () => {
+  const Data = require('../src/main/pokedata');
+  const ok = (o) => Data.usable({ category: 'damage', power: 40, cls: 'physical', ailment: 'none', stats: [], healing: 0, ...o });
+  assert.equal(ok({}), true);
+  assert.equal(ok({ category: 'ohko', power: 0 }), false);
+  assert.equal(ok({ category: 'net-good-stats', cls: 'status', power: 0, stats: [{ stat: 'atk', change: -1 }] }), true);
+  assert.equal(ok({ category: 'unique', cls: 'status', power: 0 }), false);
+  assert.equal(ok({ category: 'ailment', cls: 'status', power: 0, ailment: 'trap' }), false);
+});

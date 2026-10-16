@@ -242,7 +242,7 @@
     const m = view.party[view.active];
     $('#menu').className = 'menu';
     $('#menu').replaceChildren(...m.moves.map((mv, i) => button(mv.names[L()] || mv.names.en, () => act({ type: 'move', index: i }),
-      { type: mv.type, sub: `${t(`type.${mv.type}`)} · ${mv.power}` })), button(t('b.back'), mainMenu, { back: true }));
+      { type: mv.type, sub: `${t(`type.${mv.type}`)} · ${mv.cls === 'status' ? t('b.statusMove') : mv.power}` })), button(t('b.back'), mainMenu, { back: true }));
   }
   function bagMenu() {
     const items = Object.entries(view.bag).filter(([, n]) => n > 0);
@@ -320,8 +320,30 @@
   async function playEvent(e) {
     const who = nm(sideMon(e.side));
     switch (e.t) {
+      case 'use': {   // a status move
+        await say(t('b.used', { name: who, move: e.names[L()] || e.names.en }), 500);
+        play(sideActor(e.side), ['Charge', 'Pose', 'Hop'], 600);
+        await sleep(400);
+        break;
+      }
+      case 'stat': {
+        const up = e.change > 0;
+        play(sideActor(e.side), up ? ['Charge', 'Pose'] : ['Hurt'], 500);
+        setFace(e.side, up ? 'Determined' : 'Worried', 1200);
+        Sound.play(up ? 'chime' : 'pat');
+        const key = Math.abs(e.change) >= 2 ? (up ? 'b.statUp2' : 'b.statDown2') : (up ? 'b.statUp' : 'b.statDown');
+        await say(t(key, { name: who, stat: t(`stat.${e.stat}`) }), 900);
+        break;
+      }
+      case 'statMax': await say(t(e.up ? 'b.statMaxUp' : 'b.statMaxDown', { name: who, stat: t(`stat.${e.stat}`) }), 900); break;
+      case 'heal': sideMon(e.side).hp = e.hp; renderBoxes(); setFace(e.side, 'Happy', 1200); Sound.play('chime'); await say(t('b.heal', { name: who }), 900); break;
+      case 'recoil': sideMon(e.side).hp = e.hp; renderBoxes(); play(sideActor(e.side), ['Hurt'], 400); setFace(e.side, 'Pain', 1100); await say(t('b.recoil', { name: who }), 900); break;
+      case 'fail': await say(t('b.fail'), 800); break;
+      case 'hits': await say(t('b.hits', { n: e.n }), 800); break;
+      case 'asleep': setFace(e.side, 'Sigh', 1100); await say(t('b.asleep', { name: who }), 800); break;
+      case 'wake': sideMon(e.side).status = null; renderBoxes(); setFace(e.side, 'Surprised', 1100); await say(t('b.wake', { name: who }), 800); break;
       case 'move': {
-        await say(t('b.used', { name: who, move: e.names[L()] || e.names.en }), 350);
+        if (!e.again) await say(t('b.used', { name: who, move: e.names[L()] || e.names.en }), 350);
         play(sideActor(e.side), e.cls === 'special' ? ['Shoot', 'Charge', 'Attack'] : ['Attack', 'Strike', 'Hop'], 600);
         await sleep(450);
         const target = e.side === 'me' ? 'wild' : 'me';
@@ -341,7 +363,7 @@
         break;
       }
       case 'miss': setFace(e.side, 'Sigh', 1100); await say(t('b.used', { name: who, move: e.names[L()] || e.names.en }), 400); await say(t('b.miss'), 700); break;
-      case 'status': sideMon(e.side).status = e.status; renderBoxes(); setFace(e.side, e.status === 'freeze' ? 'Surprised' : e.status === 'confusion' ? 'Dizzy' : 'Pain', 1200); await say(t(`b.status.${e.status}`, { name: who }), 900); break;
+      case 'status': sideMon(e.side).status = e.status; renderBoxes(); setFace(e.side, e.status === 'freeze' ? 'Surprised' : e.status === 'confusion' ? 'Dizzy' : e.status === 'sleep' ? 'Sigh' : 'Pain', 1200); await say(t(`b.status.${e.status}`, { name: who }), 900); break;
       case 'statusHurt': sideMon(e.side).hp = e.hp; renderBoxes(); setFace(e.side, 'Pain', 1100); play(sideActor(e.side), ['Hurt'], 400); await say(t(`b.hurt.${e.status}`, { name: who }), 900); break;
       case 'frozen': await say(t('b.frozen', { name: who }), 800); break;
       case 'thaw': sideMon(e.side).status = null; renderBoxes(); setFace(e.side, 'Happy', 1100); await say(t('b.thaw', { name: who }), 800); break;

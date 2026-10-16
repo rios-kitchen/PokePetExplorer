@@ -901,11 +901,11 @@ function openWild(encounter) {
   if (IS_MAC) app.focus({ steal: true });
 }
 
-/** The Pokémon that battle: the chosen party (up to 3), or the partner alone. Not eggs, not away. */
+/** The Pokémon that battle: the chosen party (up to 6), or the partner alone. Not eggs, not away. */
 function partyIds() {
   const ok = (id) => store.data.custom.some((c) => c.id === id && c.dex) && petOf(store.data, id).stage !== 'egg'
     && !Expedition.isAway(store.data, id);
-  let ids = (S().party || []).filter(ok).slice(0, 3);
+  let ids = (S().party || []).filter(ok).slice(0, Battle.MAX_PARTY);
   if (!ids.length && hasPet() && ok(S().pokemon)) ids = [S().pokemon];
   return ids;
 }
@@ -1044,7 +1044,7 @@ function finishBattle() {
   }
   // conditions from the battle come home with them (burns, poison, paralysis, freezing)
   b.party.forEach((m, i) => {
-    if (m.status && m.status.id !== 'confusion') {
+    if (m.status && m.status.id !== 'confusion' && m.status.id !== 'sleep') {
       const care = Care.careOf(d, ctx.ids[i]);
       if (!care.status) { Care.inflict(care, m.status.id); care.status.known = true; }
     }
@@ -2073,7 +2073,7 @@ function registerIpc() {
   ipcMain.on('pokemon:select', (_e, id) => selectPokemon(id));
   ipcMain.on('party:toggle', (_e, id) => {
     const cur = partyIds();
-    let next = cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < 3 ? [...cur, id] : cur;
+    let next = cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < Battle.MAX_PARTY ? [...cur, id] : cur;
     if (!next.length) next = cur;   // keep at least one
     S().party = next;
     changed();

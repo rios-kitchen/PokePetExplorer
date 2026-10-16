@@ -167,9 +167,10 @@
 
 ### 出战队伍
 
-- 在 🐾 宝可梦页点「加入出战」，**最多 3 只**。没设置的话由当前搭档出战。
+- 在 🐾 宝可梦页点「加入出战」，**最多 6 只**，和原作一样。没设置的话由当前搭档出战。
 - 外出中、晕倒、还是蛋的宝可梦不能出战。
-- 对战中可以随时换宝可梦（换人会让对方打一次）；场上的宝可梦倒下后可以免费换下一只。
+- 对战中可以随时换宝可梦（换人会让对方打一次，换下的宝可梦能力变化和混乱会清除）。
+- **车轮战**：场上的宝可梦倒下后，可以免费换下一只继续打，直到全队都倒下才算输。
 
 ### 会遇到谁
 
@@ -184,10 +185,12 @@
 
 - 回合制 1 对 1。指令：**战斗**（选招式）、**背包**、**宝可梦**（换人）、**逃跑**。
 - 能力值由种族值和等级算出（PokeAPI 数据）。自己的宝可梦个体值 15，野生的 0。四项能力会给最多 +10% 的加成：帅气→攻击和速度，强壮→防御、特防和 HP，聪明→特攻，可爱→命中。
-- 招式是该等级能学会的**攻击招式**，有威力和命中；暂时**没有变化类招式**（不造成伤害的招式）。
+- **招式和原作一样**：取自 PokeAPI，用宝可梦所在的最新一代游戏里的升级招式，带它这个等级最新学会的 **4 个**，包括**变化类招式**（叫声、剑舞、电磁波、催眠术、光合作用……）。四个里至少有一个攻击招式。一击必杀、天气场地、束缚之类暂时用不了的招式会跳过。
+- **能力变化**：攻击、防御、特攻、特防、速度、命中、闪避各有 −6～+6 级，倍率和原作一样。
+- 还支持：**先制招式**（电光一闪等先出手）、**连续攻击**（二连踢等打 2–5 次）、**吸取**（终极吸取等回复造成伤害的一部分）、**反作用力**（舍身冲撞等伤到自己）、**回复招式**（自我再生等）。
 - **18 属性相克**、属性一致加成 ×1.5、**击中要害**（1/24，×1.5）、伤害随机 85%–100%。
-- 速度快的先出手（麻痹时速度减半），同速随机。
-- **异常状态**：灼伤（每回合扣 1/16，物理伤害减半）、中毒（每回合扣 1/8）、麻痹（25% 不能行动）、冰冻（不能行动，每回合 20% 解冻）、混乱（2–4 回合，1/3 几率打自己）。火系不会灼伤，冰系不会冰冻，毒和钢系不会中毒，电系不会麻痹。
+- 先比招式的优先度，再比速度（算上能力变化，麻痹时速度减半），同速随机。
+- **异常状态**：灼伤（每回合扣 1/16，物理伤害减半）、中毒（每回合扣 1/8）、麻痹（25% 不能行动）、冰冻（不能行动，每回合 20% 解冻）、混乱（2–4 回合，1/3 几率打自己）、睡眠（1–3 回合不能行动）。睡眠和混乱不会带回家。火系不会灼伤，冰系不会冰冻，毒和钢系不会中毒，电系不会麻痹。
 - **背包**：精灵球、橙橙果（回 30% HP）、伤药（回 60%）、各种状态药、活力碎片（复活并回一半 HP）。用掉的会从背包扣除。
 - **逃跑**：基础 50%，比对方快就更容易；每多试一次 +15%。逃跑失败对方会攻击。
 
@@ -196,7 +199,7 @@
 - 在对战中从背包扔球。**捕捉率**用正作第三世代以后的公式：
   `a = (3×最大HP − 2×当前HP) × 种族捕获率 × 球的倍率 ÷ (3×最大HP) × 状态倍率`
 - 球的倍率：精灵球 ×1，超级球 ×1.5，高级球 ×2。
-- 状态倍率：冰冻 ×2；麻痹、中毒、灼伤 ×1.5。
+- 状态倍率：睡眠、冰冻 ×2.5；麻痹、中毒、灼伤 ×1.5（和第五世代以后一样）。
 - **HP 越低越好抓**，种族捕获率越高越好抓（例如绿毛虫 255、卡比兽 25）。
 - 球会摇 0–3 下，摇满并成功才算抓到。没抓到对方会攻击。
 - 球只能从商店买，不能在对战外使用。
@@ -302,7 +305,7 @@
 | 异常状态加重 | 每 6 小时一阶 |
 | 进化「以后再说」 | 6 小时后再问 |
 | 合影 | 最近 3 张 + 收藏最多 20 张 |
-| 出战队伍 | 最多 3 只 |
+| 出战队伍 | 最多 6 只 |
 
 ---
 
@@ -484,9 +487,10 @@ Right-click → "🎣 Fishing…", or 🧭 Outing → "Go fishing" (it shows how
 
 ### Your team
 
-- In the 🐾 Pokémon tab press "Add to team", **up to 3**. Without a team, your current partner battles.
+- In the 🐾 Pokémon tab press "Add to team", **up to 6**, as in the games. Without a team, your current partner battles.
 - Pokémon that are away, fainted or still eggs can't battle.
-- Switch any time in battle (the wild Pokémon gets a move); after your Pokémon faints, switching is free.
+- Switch any time in battle (the wild Pokémon gets a move; the one coming back loses its stat changes and confusion).
+- **Fight on**: when your Pokémon faints, send in the next one for free – you only lose when the whole team is down.
 
 ### Who appears
 
@@ -505,11 +509,16 @@ Right-click → "🎣 Fishing…", or 🧭 Outing → "Go fishing" (it shows how
 - Turn-based, one on one. Commands: **Fight** (pick a move), **Bag**, **Pokémon** (switch), **Run**.
 - Stats come from base stats and level (PokeAPI). Your Pokémon have IV 15, wild ones 0. Contest stats add up to
   +10%: Cool → Attack and Speed, Tough → Defense, Sp. Def and HP, Smart → Sp. Atk, Cute → accuracy.
-- Moves are the **damaging moves** it knows at its level, with power and accuracy; **status moves aren't in yet**.
+- **Moves as in the games**: from PokeAPI, the level-up moves of the newest game the Pokémon is in – the **4** it learnt
+  most recently at its level, **status moves included** (Growl, Swords Dance, Thunder Wave, Hypnosis, Synthesis …).
+  At least one of them deals damage. Moves the battles can't do yet (one-hit KOs, weather, terrain, trapping …) are skipped.
+- **Stat stages**: Attack, Defense, Sp. Atk, Sp. Def, Speed, accuracy and evasion each go from −6 to +6, with the games' multipliers.
+- Also: **priority moves** (Quick Attack goes first), **multi-hit moves** (2–5 hits), **draining moves** (heal part of the
+  damage), **recoil** (Double-Edge hurts the user) and **healing moves** (Recover …).
 - The **18-type chart**, same-type bonus ×1.5, **critical hits** (1/24, ×1.5), damage roll 85%–100%.
-- The faster Pokémon moves first (paralysis halves Speed); ties are random.
+- Higher move priority goes first, then the faster Pokémon (with stat stages; paralysis halves Speed); ties are random.
 - **Conditions**: burn (1/16 per turn, physical damage halved), poison (1/8 per turn), paralysis (25% can't move),
-  freeze (can't move, 20% thaw per turn), confusion (2–4 turns, 1/3 chance to hit itself). Fire can't be burned,
+  freeze (can't move, 20% thaw per turn), confusion (2–4 turns, 1/3 chance to hit itself), sleep (can't move for 1–3 turns). Sleep and confusion don't come home. Fire can't be burned,
   Ice can't be frozen, Poison and Steel can't be poisoned, Electric can't be paralyzed.
 - **Bag**: balls, Oran Berry (30% HP), Potion (60% HP), status medicine, Revive (back with half HP). Used items leave your bag.
 - **Run**: 50% to start, easier when you're faster, +15% for each extra try. A failed escape gives the wild Pokémon a move.
@@ -519,7 +528,7 @@ Right-click → "🎣 Fishing…", or 🧭 Outing → "Go fishing" (it shows how
 - Throw a ball from the bag during battle. The **catch chance** uses the Gen 3+ formula:
   `a = (3 × maxHP − 2 × HP) × species catch rate × ball bonus ÷ (3 × maxHP) × status bonus`
 - Ball bonus: Poké Ball ×1, Great Ball ×1.5, Ultra Ball ×2.
-- Status bonus: freeze ×2; paralysis, poison, burn ×1.5.
+- Status bonus: sleep and freeze ×2.5; paralysis, poison, burn ×1.5 (as in Gen 5+).
 - **The lower its HP, the easier**; species with a higher catch rate are easier too (Caterpie 255, Snorlax 25).
 - The ball shakes 0–3 times; it must succeed all the way. If it breaks free, the wild Pokémon gets a move.
 - Balls are only sold in the shop and can't be used outside battles.
@@ -648,7 +657,7 @@ the usual faces.
 | Status condition getting worse | one stage every 6 hours |
 | Evolution "Later" | asked again after 6 hours |
 | Photos | 3 newest + up to 20 favourites |
-| Battle team | up to 3 |
+| Battle team | up to 6 |
 
 ---
 
@@ -668,6 +677,7 @@ the usual faces.
 | 钓鱼手感 / Fishing feel | `src/fishing/fishing.js` | `REEL` (inertia, danger zone, slack drop by zone), charge speed `0.5 + 2.5 × power` |
 | 自动更新 / Updates | `main.js` | `UPDATE_EVERY_MS` (8 h), `checkForUpdate`, `promptUpdate` |
 | 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `JUNK`, `FATIGUE`, `TIERS`, `ZONES`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
+| 招式数据 / Move data | `src/main/pokedata.js` | `GAMES` (newest game first), `usable`, `movesAt` |
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |
 | 小游戏次数 / Mini-game limits | `src/main/limits.js` | `LIMITS` (grass 16/day 3/hour, fishing 20/day 6/hour) – 新的小游戏也加在这里 / add new mini-games here |
 | 野生宝可梦 / Wild species | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `REPEAT_SEEN`, `SPECIAL`, `SHINY_RATE` |
@@ -695,8 +705,8 @@ battles, and saves a screenshot of each step.
 
 ## 已知限制 / Known limitations
 
-- 对战只有攻击招式，没有变化类招式、能力升降、睡眠状态和天气场地。
-  Battles only use damaging moves: no status moves, stat changes, sleep, weather or terrain.
+- 对战还没有一击必杀、天气、场地、束缚、替身之类的招式，也没有特性和道具效果；野生宝可梦只有一只。
+  Battles don't have one-hit KOs, weather, terrain, trapping, Substitute and the like yet, nor abilities or held items; wild battles are one-on-one.
 - 野生宝可梦按 PMD 已画的物种出现；没有 PMD 精灵图的物种不会出现，也不能获得。
   Only species PMD has drawn can appear or join.
 - 精灵图和 PokeAPI 数据需要联网下载，第一次遇到某个物种会慢一点；之后会缓存。
