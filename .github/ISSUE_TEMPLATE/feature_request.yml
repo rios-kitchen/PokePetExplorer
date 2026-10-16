@@ -1,0 +1,21 @@
+name: 功能建议 / Suggestion
+description: 想要的新功能或改进 / An idea for something new or better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你的想法 / Your idea
+      description: 想加什么、改什么 / What to add or change
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: 为什么 / Why
+      description: 它能让什么更好玩或更方便 / What it would make better
+  - type: textarea
+    id: more
+    attributes:
+      label: 参考 / References
+      description: 原作或 QQ 宠物里类似的东西、截图等 / Similar things in the games or QQ Pet, pictures …

@@ -5,7 +5,7 @@ const SEND = new Set([
   'pet:ignore', 'pet:fit', 'pet:drag-start', 'pet:drag-end', 'pet:menu', 'pet:action',
   'panel:open', 'timer:cmd', 'todo:add', 'todo:set-done', 'todo:edit', 'todo:delete',
   'todo:clear-done', 'todo:reorder', 'settings:set', 'pomodoro:set', 'pet:reset-pos',
-  'pokemon:select', 'pokemon:remove', 'poop:clean', 'expedition:recall', 'evolution:later', 'update:show', 'ai:clear', 'ai:open', 'fish:lost', 'fish:open', 'starter:open', 'pet:unpeek', 'battle:close', 'wild:open', 'party:toggle', 'update:page'
+  'pokemon:select', 'pokemon:remove', 'poop:clean', 'expedition:recall', 'evolution:later', 'update:show', 'ai:clear', 'ai:open', 'fish:lost', 'fish:open', 'starter:open', 'pet:unpeek', 'battle:close', 'wild:open', 'party:toggle', 'update:page', 'link:open'
 ]);
 const INVOKE = new Set(['state:get', 'pet:move-by', 'pet:pat', 'pokemon:assets',
   'care:use', 'care:diagnose', 'diary:portrait', 'diary:week', 'expedition:start', 'evolution:choose', 'shop:buy', 'settings:extra', 'update:check', 'update:download', 'photo:save', 'photo:get', 'photo:fav', 'fish:bite', 'fish:land', 'starter:choose', 'join:answer', 'daily:sign', 'daily:claim', 'weather:city', 'wild:explore', 'wild:outing', 'wild:state', 'battle:act', 'battle:assets', 'ai:chat', 'ai:history', 'ai:set-key', 'ai:models', 'ai:test']);

@@ -494,3 +494,5 @@ body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display:
 .fish-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
 .fish-bar button { padding: 4px 12px; font-size: 12.5px; }
 .fish-bar .hint { flex: 1 1 200px; margin: 0; }
+.about-links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 10px; }
+.about-links .link { margin-top: 0; }

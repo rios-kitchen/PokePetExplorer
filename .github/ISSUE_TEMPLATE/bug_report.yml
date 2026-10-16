@@ -1,0 +1,51 @@
+name: 问题反馈 / Bug report
+description: 软件出错或和说明不一致 / Something doesn't work or doesn't match the guide
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        谢谢反馈！先看看 [Wiki](https://github.com/rios-kitchen/PokePetExplorer/wiki) 的「常见问题」，也许已经有答案。
+        Thanks! The [Wiki](https://github.com/rios-kitchen/PokePetExplorer/wiki)'s FAQ may already have the answer.
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / Version
+      description: 设置 → 更新 里能看到 / Shown in Settings → Updates
+      placeholder: "1.4.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: 系统 / System
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么 / What happened
+      description: 你做了什么，看到了什么 / What you did and what you saw
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 你期望的结果 / What you expected
+  - type: textarea
+    id: steps
+    attributes:
+      label: 怎么重现 / How to make it happen again
+      placeholder: |
+        1.
+        2.
+        3.
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图 / Screenshots
+      description: 可以直接拖进来 / Drag them in here

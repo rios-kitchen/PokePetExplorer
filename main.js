@@ -2202,6 +2202,11 @@ function registerIpc() {
   ipcMain.handle('update:download', () => updater.download());
   ipcMain.on('update:show', () => updater.openDownloaded());
   ipcMain.on('update:page', () => updater.openReleasePage());
+  // the help pages and the issue tracker on GitHub (a fixed list – the windows can't open other addresses)
+  ipcMain.on('link:open', (_e, key) => {
+    const url = { wiki: `https://github.com/${UpdaterRepo}/wiki`, issues: `https://github.com/${UpdaterRepo}/issues/new/choose` }[key];
+    if (url) shell.openExternal(url);
+  });
   ipcMain.handle('expedition:start', (_e, expId) => startExpedition(String(expId || '')));
   ipcMain.on('expedition:recall', () => recallExpedition());
   ipcMain.handle('evolution:choose', (_e, dex) => evolve(S().pokemon, dex));

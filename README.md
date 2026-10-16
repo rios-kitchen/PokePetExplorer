@@ -35,8 +35,17 @@ The builds are unsigned: on macOS right-click the app → *Open* the first time;
 ## Features
 
 What the app can do, how to use it and all the rules (care, growth and evolution, outings, fishing, battles and
-catching, daily limits) are in the **[feature guide / 功能与玩法说明](GUIDE.md)** (中文 / English).
-功能、玩法和规则（照顾、成长进化、外出、钓鱼、对战与捕捉、每日限制）都写在 **[功能与玩法说明](GUIDE.md)** 里。
+catching, daily limits) are in the **[feature guide / 功能与玩法说明](GUIDE.md)** (中文 / English), also as the
+**[Wiki](https://github.com/rios-kitchen/PokePetExplorer/wiki)**, one page per topic.
+功能、玩法和规则（照顾、成长进化、外出、钓鱼、对战与捕捉、每日限制）都写在 **[功能与玩法说明](GUIDE.md)** 里，
+也可以在 **[Wiki](https://github.com/rios-kitchen/PokePetExplorer/wiki)** 里按主题分页查看。
+
+## Feedback / 问题反馈
+
+Found a bug or have an idea? **[Open an issue](https://github.com/rios-kitchen/PokePetExplorer/issues/new/choose)** –
+there are forms for bug reports and suggestions. In the app: Settings → About → "Report a problem or suggest something".
+遇到问题或有建议？**[提交 Issue](https://github.com/rios-kitchen/PokePetExplorer/issues/new/choose)**，有「问题反馈」和「功能建议」两种表单。
+软件里：设置 → 关于与致谢 →「反馈问题或提建议」。
 
 ## Privacy
 

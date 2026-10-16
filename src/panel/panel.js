@@ -576,6 +576,10 @@
     dl.textContent = u.status === 'downloaded' ? (u.stage ? t('upd.installManual', { v: u.version }) : t('upd.show')) : t('upd.download', { v: u.version });
   }
   $('#updCheck').addEventListener('click', () => api.invoke('update:check'));
+  // help and feedback: the wiki and the issue tracker on GitHub (main opens them; only these two)
+  for (const a of document.querySelectorAll('[data-link]')) {
+    a.addEventListener('click', (e) => { e.preventDefault(); api.send('link:open', a.dataset.link); });
+  }
   $('#updTrouble').addEventListener('click', (e) => { e.preventDefault(); api.send('update:page'); });
   $('#updDownload').addEventListener('click', () => {
     if ((state.update || {}).status === 'downloaded') api.send('update:show');
