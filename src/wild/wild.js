@@ -190,6 +190,7 @@
     actors.me = actor(await ownSprite(view.party[view.active].key), 3, 140, 262);
     if (view.over) return;   // already decided (a test code): the caller shows the result
     Sound.play('alarm');
+    if (view.wild.special) { Sound.play('fanfare'); await say(t(view.wild.special === 'mythical' ? 'b.appearMythical' : 'b.appearLegend'), 1600); }
     await say(t(view.wild.shiny ? 'b.appearShiny' : 'b.appear', { name: nm(view.wild) }), 1200);
     await say(t('b.go', { name: nm(view.party[view.active]) }), 700);
     mainMenu();

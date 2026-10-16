@@ -607,9 +607,10 @@ async function runSecret(text) {
     return { ok: true };
   }
   if (cmd === 'battle') {
-    // a battle right away (no daily limit), optionally against a named Pokémon
+    // a battle right away (no daily limit), optionally against a named Pokémon, or "legend" for a special encounter
     if (battle && !battle.b.over) { openWild(false); return { ok: true }; }
-    const res = await startBattle('test', { query: args.length ? args.join('-') : null });
+    const legend = args[0] === 'legend';
+    const res = await startBattle('test', { query: args.length && !legend ? args.join('-') : null, legend });
     if (!res.ok) return { ok: false };
     if (wildWin && !wildWin.isDestroyed()) { send(wildWin, 'wild:refresh'); wildWin.show(); wildWin.focus(); } else openWild(false);
     return { ok: true };
@@ -938,6 +939,25 @@ function bagForBattle() {
 }
 
 /** Start a battle in the grass (uses an encounter) or from an outing. */
+/**
+ * Who appears: now and then a legendary or mythical Pokémon (special encounter), otherwise one from the games'
+ * encounter table of a fitting place (the older type-based pick where there are no tables).
+ * Returns { sp: { dex, names, types, capture }, level, special }.
+ */
+async function pickWild({ place, region, leadLevel, legend = false }) {
+  const dir = spritesDir();
+  const drawn = Wild.drawnDex(Sources.creditIndexCached(dir));
+  const caught = new Set(Object.entries(store.data.pokedex || {}).filter(([, e]) => e.caught > 0).map(([d]) => Number(d)));
+  const hit = Wild.pickLegend({ level: leadLevel, region, drawn, caught, force: legend })
+    || Wild.pickFromTables({ place, region, level: leadLevel, drawn });
+  if (hit) {
+    const [info, pk] = await Promise.all([Data.species(hit.dex, dir), Data.pokemon(hit.dex, dir)]);
+    return { sp: { dex: hit.dex, names: info.names, types: pk.types, capture: info.capture }, level: hit.level, special: hit.special || null };
+  }
+  const sp = await Wild.pickSpecies({ place, region, partnerLevel: leadLevel, drawn, dir, seen: Object.keys(store.data.pokedex).map(Number) });
+  return { sp, level: Battle.wildLevel(leadLevel), special: null };
+}
+
 async function startBattle(source, opts = {}) {
   if (battle && !battle.b.over) return { ok: true };
   const ids = partyIds().filter((id) => !Care.careOf(store.data, id).fainted);
@@ -954,15 +974,14 @@ async function startBattle(source, opts = {}) {
   const dir = spritesDir();
   try {
     const leadLevel = levelOf(petOf(store.data, ids[0]).xp);
-    const drawn = Wild.drawnDex(Sources.creditIndexCached(dir));
-    let sp;
-    if (met) sp = met.sp;
+    let sp, level = null, special = null;
+    if (met) ({ sp, level = null, special = null } = met);
     else if (opts.query) {
       const found = await Sources.lookupSpecies(opts.query);
       const [info, pk] = await Promise.all([Data.species(found.dex, dir), Data.pokemon(found.dex, dir)]);
       sp = { dex: found.dex, names: info.names, types: pk.types, capture: info.capture };
-    } else sp = await Wild.pickSpecies({ place, region, partnerLevel: leadLevel, drawn, dir, seen: Object.keys(store.data.pokedex).map(Number) });
-    const level = Battle.wildLevel(leadLevel);
+    } else ({ sp, level, special } = await pickWild({ place, region, leadLevel, legend: opts.legend }));
+    level = level || Battle.wildLevel(leadLevel);
     const shiny = Shiny.roll(store.data);
     const party = [];
     for (const id of ids) {
@@ -972,6 +991,7 @@ async function startBattle(source, opts = {}) {
     }
     const w = await Wild.battlerFor({ key: 'wild', dex: sp.dex, names: sp.names, level, attrs: {}, shiny, dir });
     const wild = Battle.makeMon({ ...w, wild: true });
+    wild.special = special;   // 'legendary' | 'mythical' | null
     if (source === 'grass') Limits.use(store.data, 'grass', today());
     if (met) store.data.wild.encounter = null;
     if (!met) Pokedex.see(store.data, sp.dex, sp.names);   // an outing's Pokémon was seen when it was met
@@ -988,7 +1008,7 @@ function battleView() {
   if (!battle) return null;
   const { b, ctx } = battle;
   const mon = (m) => ({ key: m.key, dex: m.dex, names: m.names, level: m.level, types: m.types, hp: m.hp, maxHp: m.maxHp,
-    status: m.status && m.status.id, fainted: m.fainted, shiny: m.shiny,
+    status: m.status && m.status.id, fainted: m.fainted, shiny: m.shiny, special: m.special || null,
     moves: m.moves.map((x) => ({ id: x.id, names: x.names, type: x.type, power: x.power, cls: x.cls })) });
   return { party: b.party.map(mon), wild: mon(b.wild), active: b.active, bag: b.bag, over: b.over, needSwitch: b.needSwitch,
     place: ctx.place, region: ctx.region, source: ctx.source, result: ctx.result || null };
@@ -1069,14 +1089,13 @@ function finishBattle() {
  * battle. The pet asks right away; after that the Pokémon leaves.
  */
 async function offerOutingEncounter(petId, place, region) {
-  let sp;
+  let sp, picked;
   try {
-    const dir = spritesDir();
-    sp = await Wild.pickSpecies({ place, region, partnerLevel: levelOf(petOf(store.data, petId).xp),
-      drawn: Wild.drawnDex(Sources.creditIndexCached(dir)), dir, seen: Object.keys(store.data.pokedex).map(Number) });
+    picked = await pickWild({ place, region, leadLevel: levelOf(petOf(store.data, petId).xp) });
+    sp = picked.sp;
   } catch { return; }   // offline: nobody this time
   const until = Date.now() + Wild.ENCOUNTER_WAIT_MIN * 60e3;
-  store.data.wild.encounter = { place, region, by: petId, sp, until };
+  store.data.wild.encounter = { place, region, by: petId, sp, until, level: picked.level, special: picked.special };
   Pokedex.see(store.data, sp.dex, sp.names);
   changed();
   const info = { name: sp.names[lang()] || sp.names.en, by: petName(petId), min: Wild.ENCOUNTER_WAIT_MIN };
@@ -2464,6 +2483,11 @@ async function selfTest(dir) {
       const n = Object.keys(store.data.pets).length;
       await runSecret(words.battle);
       console.log('[test] catch code:', JSON.stringify(await runSecret(words.catch)), Object.keys(store.data.pets).length === n + 1);
+    });
+    await step('legend-code', async () => {
+      await runSecret(`${words.battle} legend`);
+      console.log('[test] legend code:', battle && battle.b.wild.special, battle && battle.b.wild.names.en, 'Lv', battle && battle.b.wild.level, 'capture', battle && battle.ctx.capture);
+      await runSecret(words.win);
     });
     await wait(15000);
     console.log('[test] caught screen:', await wildWin.webContents.executeJavaScript("document.querySelector('#resTitle').textContent + ' | ' + document.querySelector('#result').className + ' | ' + document.querySelector('#wildBox .name').textContent"));

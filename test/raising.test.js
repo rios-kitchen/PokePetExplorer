@@ -720,3 +720,24 @@ test('after an update: nothing pending, a manual install, then the release page'
   assert.equal(stageOf({ version: '1.3.1', autoTried: true }, '1.3.0'), 'auto-failed');
   assert.equal(stageOf({ version: '1.3.1', autoTried: true, manualTried: true }, '1.3.0'), 'manual-failed');
 });
+
+test('wild encounters follow the games\' tables; legendaries are rare special encounters', () => {
+  const W = require('../src/main/wild');
+  const drawn = W.drawnDex(null);
+  // Viridian Forest (FireRed): Caterpie / Weedle 40 %, Metapod / Kakuna 10 %, Pikachu 5 %
+  const count = {};
+  for (let i = 0; i < 6000; i++) {
+    const p = W.pickFromTables({ place: 'woods', region: null, level: 4, drawn });
+    if (p && p.area === 'viridian-forest-area') count[p.dex] = (count[p.dex] || 0) + 1;
+  }
+  const total = Object.values(count).reduce((a, b) => a + b, 0);
+  assert.ok(total > 50, 'Viridian Forest comes up for a Lv4 lead');
+  assert.ok(count[10] / total > 0.3 && count[25] / total < 0.12, JSON.stringify(count));
+  // never a legendary from the tables; special ones need a strong lead and skip caught ones
+  assert.equal(W.pickLegend({ level: 10, drawn, rnd: () => 0 }), null);
+  const l = W.pickLegend({ level: 40, drawn, rnd: () => 0 });
+  assert.ok(l && W.LEGENDS.has(l.dex) && l.level === 48);
+  const all = new Set([...W.LEGENDARY, ...W.MYTHICAL]);
+  assert.equal(W.pickLegend({ level: 40, drawn, caught: all, rnd: () => 0 }), null);
+  assert.equal(W.legendLevel(80), 70);
+});

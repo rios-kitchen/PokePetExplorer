@@ -70,7 +70,8 @@ src/main/daily.js       daily sign-in and tasks
 src/main/battle.js      the battle engine (pure, testable)
 src/main/typechart.js   the 18-type chart
 src/main/pokedata.js    base stats, moves and capture rates from PokeAPI (cached)
-src/main/wild.js        which wild Pokémon appear where
+src/main/wild.js        which wild Pokémon appear where (the games' encounter tables, special encounters)
+src/main/encounters.json encounter tables from PokeAPI (npm run encounters rebuilds it)
 src/main/shiny.js       shiny rate and the 90-day guarantee
 src/main/limits.js      daily / hourly limits for the mini-games (grass, fishing, …)
 src/main/pokedex.js     the Pokédex: species seen and caught, kept for good

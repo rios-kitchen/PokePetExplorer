@@ -14,7 +14,8 @@
     "dist:mac": "node tools/make-icon.js && npm run bundle && electron-builder --mac && node tools/clean-install.js",
     "dist:win": "node tools/make-icon.js && npm run bundle && electron-builder --win && node tools/clean-install.js",
     "dist": "node tools/make-icon.js && npm run bundle && electron-builder --mac --win && node tools/clean-install.js",
-    "bundle": "node tools/bundle-starters.js --required"
+    "bundle": "node tools/bundle-starters.js --required",
+    "encounters": "node tools/build-encounters.js"
   },
   "build": {
     "appId": "local.pokepetexplorer.app",

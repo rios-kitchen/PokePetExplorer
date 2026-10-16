@@ -179,11 +179,17 @@
 
 ### 会遇到谁
 
-- PMD 已经画好的宝可梦，**不会出现传说、幻之、究极异兽和悖谬宝可梦**。
-- 草丛偏向一般、草、虫、飞行、妖精、电、毒属性；外出遇到的按地点：洞窟（岩石、地面、钢…）、火山（火、岩石、地面、龙）、冰川（冰、水、钢）、遗迹（超能力、幽灵、恶、妖精）；旅行遇到的来自那个地区的图鉴。偶尔也会出现别的属性。
-- **野生等级 = 领头宝可梦等级 −3 ～ +1**（最低 Lv2）。
-- 已进化的形态要搭档 **Lv15** 以后才会出现，最终形态要 **Lv28** 以后。
-- **常见的总是那几只**：有一半的遭遇只会从你**已经见过的种类**里出（见过 3 种以上时），所以要遇到新种类会越来越难。
+**和原作一样，按出现表来**（数据来自 PokeAPI，每个地区用一部游戏：关都 火红/叶绿、城都 心金/魂银、丰缘 绿宝石、神奥 白金、合众 黑2/白2、卡洛斯 X/Y、阿罗拉 究极之日/月、伽勒尔 剑/盾）：
+1. **先选地方**：草丛是各地区的道路；外出遇到的按目的地选真实的地方：森林（常青森林、桧皮森林……）、洞窟（月见山、暗之洞穴……）、火山（烟囱山、灯火山……）、冰雪地带（双子岛……）、遗迹（阿露福遗迹、宝可梦塔……）；旅行遇到的就是那个地区的道路和森林。只选**等级适合领头宝可梦**的地方（那里的宝可梦平均等级在领头等级 −10 ～ +3 之间）。
+2. **再按原作的出现率选宝可梦**，等级也是原作在那里的等级。比如常青森林：绿毛虫、独角虫各 40%，铁甲蛹、铁壳蛹各 10%，皮卡丘 5%。
+- 只会出现 PMD 画过的宝可梦。帕底亚地区 PokeAPI 还没有出现表，那里用旧的按属性挑选的方式。
+- 稀有的就是稀有：出现率 5% 甚至 1% 的宝可梦要多遇几次才碰得到；常见的总是那几只。
+
+**传说和幻之宝可梦（特殊遭遇）**：
+- 领头宝可梦到 **Lv30** 以后，每次遭遇有 **1/400** 的几率遇到传说宝可梦，**1/2000** 的几率遇到幻之宝可梦（旅行时优先遇到那个地区的）。
+- 等级比领头高 8 级（40～70 级），捕获率和原作一样，大多数只有 **3**：要先打到残血，再用高级球加睡眠或冰冻，也还要多试几次。
+- 每一只**收服之前都可能再遇到**，收服之后就不会再出现。逃跑或者打倒了，以后还有机会。
+- 究极异兽和悖谬宝可梦暂时不出现。
 - **1/4096** 闪光，另有保底（见第 10 节）。
 
 ### 对战规则（简化版正作规则）
@@ -508,14 +514,25 @@ Right-click → "🎣 Fishing…", or 🧭 Outing → "Go fishing" (it shows how
 
 ### Who appears
 
-- Any species PMD has drawn, **except legendary, mythical, Ultra Beasts and Paradox Pokémon**.
-- The grass favours Normal, Grass, Bug, Flying, Fairy, Electric and Poison; outing encounters follow the place: cave
-  (Rock, Ground, Steel…), volcano (Fire, Rock, Ground, Dragon), glacier (Ice, Water, Steel), ruins (Psychic, Ghost,
-  Dark, Fairy); a trip's encounter comes from that region's Pokédex. Other types turn up now and then.
-- **Wild level = your lead's level −3 to +1** (at least Lv2).
-- Evolved forms only appear once your partner is **Lv15**, fully evolved ones from **Lv28**.
-- **The usual faces**: half of all encounters come only from species you've **already seen** (once you've seen three or
-  more), so new species get harder and harder to find.
+**As in the games, from the encounter tables** (PokeAPI data, one game per region: Kanto FireRed/LeafGreen, Johto
+HeartGold/SoulSilver, Hoenn Emerald, Sinnoh Platinum, Unova Black 2/White 2, Kalos X/Y, Alola Ultra Sun/Ultra Moon,
+Galar Sword/Shield):
+1. **A place first**: the grass is the regions' routes; an outing's encounter is a real place that fits it – forests
+   (Viridian Forest, Ilex Forest …), caves (Mt. Moon, Dark Cave …), volcanoes (Mt. Chimney, Mt. Ember …), icy places
+   (Seafoam Islands, Ice Path …), ruins (Ruins of Alph, Pokémon Tower …); a trip's encounter comes from that region's
+   routes and forests. Only places **suited to your lead's level** (their Pokémon average −10 to +3 levels around it).
+2. **Then a Pokémon by its original chance there, at its level there.** Viridian Forest, for example: Caterpie and
+   Weedle 40% each, Metapod and Kakuna 10% each, Pikachu 5%.
+- Only species PMD has drawn. Paldea has no tables in PokeAPI yet, so it uses the older type-based pick.
+- Rare is rare: a 5% or 1% Pokémon takes a lot of encounters; the usual faces keep turning up.
+
+**Legendary and mythical Pokémon (special encounters)**:
+- Once your lead is **Lv30**, each encounter has a **1 in 400** chance of a legendary and **1 in 2000** of a mythical
+  Pokémon (on a trip, preferably one from that region).
+- They're 8 levels above your lead (Lv40–70) with the games' catch rates – mostly **3**: weaken it, then Ultra Balls
+  with sleep or freeze, and still expect a few tries.
+- Each can **turn up again until it's caught**, never after. Running away or knocking it out leaves another chance.
+- Ultra Beasts and Paradox Pokémon don't appear for now.
 - Shiny **1 in 4096**, with a guarantee (section 10).
 
 ### Battle rules (simplified main-series rules)
@@ -699,7 +716,9 @@ the usual faces.
 | 招式数据 / Move data | `src/main/pokedata.js` | `GAMES` (newest game first), `usable`, `movesAt` |
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |
 | 小游戏次数 / Mini-game limits | `src/main/limits.js` | `LIMITS` (grass 16/day 3/hour, fishing 20/day 6/hour) – 新的小游戏也加在这里 / add new mini-games here |
-| 野生宝可梦 / Wild species | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `REPEAT_SEEN`, `SPECIAL`, `SHINY_RATE` |
+| 出现表 / Encounter tables | `src/main/encounters.json` (built by `npm run encounters` → `tools/build-encounters.js` from PokeAPI) | `GAMES` per region, place kinds |
+| 野生宝可梦 / Wild species | `src/main/wild.js` | `pickFromTables`, `pickLegend` (`LEGEND_CHANCE` 1/400, `MYTHICAL_CHANCE` 1/2000, `LEGEND_MIN_LEVEL` 30) |
+| 野生宝可梦（旧） / Wild species (fallback) | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `REPEAT_SEEN`, `SPECIAL`, `SHINY_RATE` |
 | 对战结算 / Battle results | `main.js` `finishBattle`, `LOSE_PENALTY` | win berries 1–3; lose: grass −30 health / −20 mood / −3 berries / 60% faint, outing −15 / −10 / 5% faint |
 | 摸摸经验 / Pat XP | `main.js` | `PAT_XP_PER_DAY` (20) |
 | 属性相克 / Type chart | `src/main/typechart.js` | 18 × 18 |
