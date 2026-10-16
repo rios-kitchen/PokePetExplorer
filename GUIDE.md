@@ -1,6 +1,6 @@
 # 宝可宠探索 · PokePet Explorer — 功能与玩法说明 / Feature Guide
 
-> 版本 / Version **1.3.0**
+> 版本 / Version **1.3.1**
 >
 > 这份文档讲清楚软件里每项功能**怎么打开、怎么玩、有什么规则和每日限制**。玩家看它上手，开发者看它了解当前版本的功能和数值（数值都写在代码里的常量中，下面会注明出处）。
 > 安装、隐私、版权和项目结构请看 [README](README.md)。
@@ -115,7 +115,12 @@
 
 右键 →「🧭 外出」，或 🧭 外出页。宝可梦会**离开桌面**（原地留一个倒计时和小地图），**关掉软件也照常计时**。同一时间只能有一只外出。
 
-**出发条件：** 不是蛋、没生病没晕倒、饥饿和清洁都 ≥30，并且达到等级和能力要求。
+**出发条件**（外出**没有每日次数限制**，满足这些就能一直派）：
+- **同一时间只能有一只**在外面；它回来（或被叫回来）之后才能再派。
+- **不是蛋**，**没有生病**（异常状态）也**没有晕倒**。
+- **饥饿 ≥ 30**，**清洁 ≥ 30**。外出回来会更饿、更脏，连着派常常卡在这两项上：先在 🍓 照顾页喂一下、洗个澡（洗澡免费）。
+- **等级和能力够**：每个目的地的要求见下表（例如火山要 Lv8 和强壮 ≥ 10）。
+- 去不了的目的地，🧭 外出页的按钮上会写原因（太饿了、太脏了、等级不够……）。
 
 | 目的地 | 时长 | 要求 | 奖励 | 风险 |
 |---|---|---|---|---|
@@ -285,7 +290,10 @@
 - **对键盘鼠标做出反应**（可关）：你打字时它坐下陪你打字，连续打字 15 分钟没开番茄钟会建议你开一个；鼠标移动时它会看向光标；鼠标停在它身上会害羞，快速晃鼠标它会晕；离开 3 分钟它会睡觉。
 - **全屏时躲开**：前台是全屏应用（视频、游戏、演示）时自动隐藏（设置里可关，默认开）。
 - **AI 聊天**（默认关闭）：设置 → AI 聊天，选服务商、填自己的 API key 和模型，然后右键「💬 聊天」。宝可梦按自己的性格和当前状态回答。对话不保存。
-- **检查更新**：启动时和每天 3 次自动检查 GitHub 上的新版本（设置里可关）。有新版本时会**弹窗提醒**，选「下载并安装」会把安装包下载到「下载」文件夹并打开；也可以在 设置 → 更新 里操作。
+- **检查更新**：启动时和每天 3 次自动检查 GitHub 上的新版本（设置里可关）。有新版本时会**弹窗提醒**；也可以在 设置 → 更新 里操作。
+- **自动安装**：选「下载并自动安装」后，软件会自己完成全部步骤：下载安装包到「下载」文件夹 → 退出 → 安装新版本 → 打开新版本。
+  - 如果没能自动装好，下次启动时会提醒你，并保留下载好的安装包，点「手动安装」打开它自己装（macOS：把应用拖进「应用程序」；Windows：运行安装程序）。
+  - 如果手动也没装好，设置 → 更新 里「检查更新」下方会出现「**安装遇到问题，手动下载安装包**」，点它会打开 GitHub 的发布页面。
 
 ## 12. 每日限制和计时一览
 
@@ -418,7 +426,13 @@ Pomodoros +3, to-dos +1, daily sign-in, daily tasks, achievements, outings, fish
 Right-click → "🧭 Expedition", or the 🧭 Outing tab. The pet **leaves the desktop** (a countdown and a little map stay
 where it was) and the **timer keeps running while the app is closed**. Only one Pokémon can be away at a time.
 
-**To go:** not an egg, not sick or fainted, hunger and cleanliness ≥30, and the level / stats required.
+**To go** (there's **no daily limit** on outings – as long as these hold, you can keep sending them):
+- **Only one at a time**: wait until it's back (or call it back).
+- **Not an egg**, **not sick** (no status condition) and **not fainted**.
+- **Hunger ≥ 30** and **cleanliness ≥ 30**. It comes back hungrier and dirtier, so back-to-back outings often stop
+  here: feed it and give it a bath (free) in the 🍓 Care tab first.
+- **Level and stats**: see the table for each destination (the volcano needs Lv8 and Tough ≥ 10, for example).
+- A destination you can't go to says why on its button in the 🧭 Outing tab (too hungry, too dirty, level too low …).
 
 | Destination | Time | Needs | Rewards | Risk |
 |---|---|---|---|---|
@@ -636,8 +650,13 @@ the usual faces.
 - **AI chat** (off by default): Settings → AI chat, pick a provider, enter your own API key and a model, then right-click
   "💬 Chat…". Your Pokémon answers in character from its current state. Conversations aren't saved.
 - **Updates**: checks GitHub for a new release at start and three times a day (can be turned off in Settings). A new
-  version **pops up a reminder**; "Download and install" saves the installer to your Downloads folder and opens it.
-  Settings → Updates does the same.
+  version **pops up a reminder**; Settings → Updates works too.
+- **Installing by itself**: "Download and install automatically" does everything: downloads the installer to your
+  Downloads folder → quits → installs the new version → starts it.
+  - If that doesn't work, the next start tells you and keeps the downloaded installer: "Install by hand" opens it
+    (macOS: drag the app into Applications; Windows: run the setup).
+  - If installing by hand doesn't work either, Settings → Updates shows "**Trouble installing? Download the installer
+    by hand**" below the update check, which opens the release page on GitHub.
 
 ## 12. Daily limits and timers at a glance
 
@@ -663,7 +682,7 @@ the usual faces.
 
 # 开发者附录 / Developer appendix
 
-**当前版本 / Current version:** 1.3.0 · Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等级会按新曲线保留 / old saves keep their levels on the new curve）
+**当前版本 / Current version:** 1.3.1 · Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等级会按新曲线保留 / old saves keep their levels on the new curve）
 
 ## 数值在哪里改 / Where the numbers live
 
@@ -675,7 +694,7 @@ the usual faces.
 | 外出 / Outings | `src/main/expedition.js` | `EXPEDITIONS`, `LOOT`, `companionChance()` |
 | 外出遭遇 / Outing encounters | `main.js` `checkExpedition` / `offerOutingEncounter` / `checkEncounter` | 0.3 chance; `Wild.ENCOUNTER_WAIT_MIN` (30); saved in `data.wild.encounter` |
 | 钓鱼手感 / Fishing feel | `src/fishing/fishing.js` | `REEL` (inertia, danger zone, slack drop by zone), charge speed `0.5 + 2.5 × power` |
-| 自动更新 / Updates | `main.js` | `UPDATE_EVERY_MS` (8 h), `checkForUpdate`, `promptUpdate` |
+| 自动更新 / Updates | `main.js`, `src/main/updater.js` | `UPDATE_EVERY_MS` (8 h), `checkForUpdate`, `promptUpdate`; `install` (helper scripts `MAC_SCRIPT` / `WIN_SCRIPT`), `update-pending.json` → `stageOf` |
 | 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `JUNK`, `FATIGUE`, `TIERS`, `ZONES`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
 | 招式数据 / Move data | `src/main/pokedata.js` | `GAMES` (newest game first), `usable`, `movesAt` |
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |

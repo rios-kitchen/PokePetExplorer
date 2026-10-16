@@ -395,7 +395,7 @@ img.smooth, #heroSprite.smooth { image-rendering: auto; }
 .update-row .hint { margin: 0; }
 #updStatus { margin: 0; }
 #updStatus:empty { display: none; }
-#updProgress.hidden, #updDownload.hidden { display: none; }
+#updProgress.hidden, #updDownload.hidden, #updTrouble.hidden { display: none; }
 #updProgress > div { background: var(--blue); }
 
 /* ---- photo album */

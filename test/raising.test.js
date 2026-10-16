@@ -711,3 +711,12 @@ test('the games\' move sets: newest level-up moves, status moves included, alway
   assert.equal(ok({ category: 'unique', cls: 'status', power: 0 }), false);
   assert.equal(ok({ category: 'ailment', cls: 'status', power: 0, ailment: 'trap' }), false);
 });
+
+test('after an update: nothing pending, a manual install, then the release page', () => {
+  const { stageOf, newer } = require('../src/main/updater');
+  assert.equal(newer('1.3.1', '1.3.0'), true);
+  assert.equal(stageOf(null, '1.3.0'), null);
+  assert.equal(stageOf({ version: '1.3.1', autoTried: true }, '1.3.1'), null, 'installed');
+  assert.equal(stageOf({ version: '1.3.1', autoTried: true }, '1.3.0'), 'auto-failed');
+  assert.equal(stageOf({ version: '1.3.1', autoTried: true, manualTried: true }, '1.3.0'), 'manual-failed');
+});

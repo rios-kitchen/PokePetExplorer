@@ -52,7 +52,7 @@ async function checkForUpdate() {
   const st = await updater.check();
   store.data.updateCheckedAt = Date.now();
   changed();
-  if (st.status === 'available') promptUpdate(st);
+  if (st.status === 'available' && !st.stage) promptUpdate(st);
 }
 
 async function promptUpdate(st) {
@@ -61,19 +61,26 @@ async function promptUpdate(st) {
   try {
     if (IS_MAC) app.focus({ steal: true });
     const notes = String(st.notes || '').replace(/\*\*/g, '').split('\n').filter((l) => l.trim()).slice(0, 6).join('\n');
+    // after an install that didn't take: install by hand, or (if that failed too) download it from GitHub
+    const stage = st.stage;
     const { response } = await dialog.showMessageBox({
-      type: 'info',
+      type: stage ? 'warning' : 'info',
       title: T('update.dialogTitle'),
-      message: T('update.dialogMessage', { v: st.version, now: app.getVersion() }),
-      detail: notes,
-      buttons: [T(st.canDownload ? 'update.dialogDownload' : 'update.dialogOpen'), T('update.dialogLater')],
+      message: stage === 'auto-failed' ? T('update.autoFailedMessage', { v: st.version })
+        : stage === 'manual-failed' ? T('update.manualFailedMessage', { v: st.version })
+          : T('update.dialogMessage', { v: st.version, now: app.getVersion() }),
+      detail: stage ? '' : notes,
+      buttons: [T(stage === 'auto-failed' ? 'update.installManual' : stage === 'manual-failed' ? 'update.dialogOpen'
+        : st.canDownload ? 'update.dialogDownload' : 'update.dialogOpen'), T('update.dialogLater')],
       defaultId: 0,
       cancelId: 1,
       icon: appIcon(256)
     });
     if (response === 0) {
       openPanel('settings');
-      if (st.canDownload) updater.download(); else shell.openExternal(st.url);
+      if (stage === 'auto-failed') updater.openDownloaded();
+      else if (stage === 'manual-failed') updater.openReleasePage();
+      else if (st.canDownload) updater.download(); else shell.openExternal(st.url);
     }
   } finally {
     updateDialogOpen = false;
@@ -583,9 +590,13 @@ async function runSecret(text) {
     return { ok: true };
   }
   if (cmd === 'update') {
-    // testing: the "new version" popup, for a pretend next version (opens the releases page)
+    // testing: the "new version" popup for a pretend next version (opens the releases page); with "fail" / "fail2"
+    // the states after an install that didn't take (manual install / link to GitHub), in the popup and in Settings
     const [a, b, c] = app.getVersion().split('.').map(Number);
-    setTimeout(() => promptUpdate({ version: `${a}.${b}.${c + 1}`, notes: T('update.testNotes'), canDownload: false,
+    const version = `${a}.${b}.${c + 1}`;
+    const stage = args[0] === 'fail' ? 'auto-failed' : args[0] === 'fail2' ? 'manual-failed' : null;
+    if (stage) updater.simulate(stage, version);
+    setTimeout(() => promptUpdate(stage ? updater.state : { version, notes: T('update.testNotes'), canDownload: false,
       url: `https://github.com/${UpdaterRepo}/releases` }), 300);
     return { ok: true };
   }
@@ -2171,6 +2182,7 @@ function registerIpc() {
   ipcMain.handle('update:check', () => updater.check());
   ipcMain.handle('update:download', () => updater.download());
   ipcMain.on('update:show', () => updater.openDownloaded());
+  ipcMain.on('update:page', () => updater.openReleasePage());
   ipcMain.handle('expedition:start', (_e, expId) => startExpedition(String(expId || '')));
   ipcMain.on('expedition:recall', () => recallExpedition());
   ipcMain.handle('evolution:choose', (_e, dex) => evolve(S().pokemon, dex));
@@ -2666,6 +2678,23 @@ async function selfTest(dir) {
     dialog.showMessageBox = real;
     console.log('[test] update popup:', shown && shown.message, '|', shown && shown.buttons.join(' / '));
   });
+  // after an install that didn't take: the manual install button and the GitHub link in Settings
+  await step('update-failed-states', async () => {
+    const real = dialog.showMessageBox;
+    const seen = [];
+    dialog.showMessageBox = async (o) => { seen.push(o.message); return { response: 1 }; };
+    let words = null;
+    try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* not here */ }
+    if (words && words.update) { await runSecret(`${words.update} fail`); await wait(600); await runSecret(`${words.update} fail2`); await wait(600); }
+    dialog.showMessageBox = real;
+    console.log('[test] update failed popups:', seen.join(' | '));
+  });
+  openPanel('settings');
+  await wait(1500);
+  await panelWin.webContents.executeJavaScript("document.querySelector('#updStatus').scrollIntoView({ block: 'center' }); 0");
+  await wait(500);
+  await shot(panelWin, '41d-settings-update-trouble');
+  updater.state.stage = null; updater.state.status = 'idle';
   // the Pokédex keeps a Pokémon that left the team
   await step('pokedex-keeps', async () => {
     const leaving = store.data.custom.find((c) => c.id !== S().pokemon && c.dex);
@@ -2756,7 +2785,9 @@ if (!app.requestSingleInstanceLock()) {
     setInterval(pollInput, 60);
     // new release on GitHub? Checked at startup and three times a day (settings can turn it off); a new version
     // pops up a dialog after each check that finds it
-    updater = new Updater(() => broadcast());
+    updater = new Updater(() => broadcast(), { quit: () => { quitting = true; app.quit(); } });
+    // an update that was downloaded but didn't get installed: offer to install it by hand
+    if (updater.state.stage && !process.env.POKEPET_TEST) setTimeout(() => promptUpdate(updater.state), 6000);
     if (S().checkUpdates && !process.env.POKEPET_TEST) {
       setTimeout(() => checkForUpdate(), 8000);
       setInterval(() => {

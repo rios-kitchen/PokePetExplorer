@@ -562,17 +562,21 @@
       idle: '', checking: t('upd.checking'), none: t('upd.none'),
       available: u.canDownload ? t('upd.available', { v: u.version }) : t('upd.availableNoFile', { v: u.version }),
       downloading: t('upd.downloading', { n: Math.round((u.progress || 0) * 100) }),
-      downloaded: t('upd.downloaded'), error: t('upd.error')
+      downloaded: t('upd.downloaded'), installing: t('upd.installing'), error: t('upd.error')
     }[u.status] || '';
-    $('#updStatus').textContent = u.error && u.status === 'available' ? `${msg} ${t('upd.error')}` : msg;
+    const stageMsg = u.stage === 'auto-failed' ? t('upd.autoFailed', { v: u.version }) : u.stage === 'manual-failed' ? t('upd.manualFailed', { v: u.version }) : null;
+    $('#updStatus').textContent = stageMsg || (u.error && u.status === 'available' ? `${msg} ${t('upd.error')}` : msg);
+    // installing by hand didn't work either: download it from GitHub
+    $('#updTrouble').classList.toggle('hidden', u.stage !== 'manual-failed');
     const bar = $('#updProgress');
     bar.classList.toggle('hidden', u.status !== 'downloading');
     bar.firstElementChild.style.width = `${Math.round((u.progress || 0) * 100)}%`;
     const dl = $('#updDownload');
     dl.classList.toggle('hidden', !(u.status === 'available' && u.canDownload) && u.status !== 'downloaded');
-    dl.textContent = u.status === 'downloaded' ? t('upd.show') : t('upd.download', { v: u.version });
+    dl.textContent = u.status === 'downloaded' ? (u.stage ? t('upd.installManual', { v: u.version }) : t('upd.show')) : t('upd.download', { v: u.version });
   }
   $('#updCheck').addEventListener('click', () => api.invoke('update:check'));
+  $('#updTrouble').addEventListener('click', (e) => { e.preventDefault(); api.send('update:page'); });
   $('#updDownload').addEventListener('click', () => {
     if ((state.update || {}).status === 'downloaded') api.send('update:show');
     else api.invoke('update:download');
