@@ -399,11 +399,30 @@ test('at most 20 favourites; unstarring an old photo drops it', () => {
 
 // ---------------------------------------------------------------- fishing
 
-test('fishing table: 24 species in four tiers, names in both languages', () => {
-  assert.equal(Fishing.FISH.length, 24);
-  assert.deepEqual([0, 1, 2, 3].map((t) => Fishing.FISH.filter((f) => f.tier === t).length), [6, 9, 6, 3]);
-  for (const f of Fishing.FISH) assert.ok(f.names.en && f.names.zh && f.height > 0);
+test('fish: the classic 24 first, then every Pokémon the games let you fish, names in both languages', () => {
+  assert.deepEqual([0, 1, 2, 3].map((t) => Fishing.CLASSIC.filter((f) => f.tier === t).length), [6, 9, 6, 3]);
+  assert.deepEqual(Fishing.FISH.slice(0, 24).map((f) => f.dex), Fishing.CLASSIC.map((f) => f.dex));
+  assert.ok(Fishing.FISH.length > 40);
+  assert.equal(new Set(Fishing.FISH.map((f) => f.dex)).size, Fishing.FISH.length);
+  for (const f of Fishing.FISH) assert.ok(f.names.en && f.names.zh && f.height > 0 && f.tier >= 0 && f.tier <= 3);
   assert.equal(Fishing.FISH.find((f) => f.dex === 131).names.zh, '拉普拉斯');
+});
+
+test('fishing spots: the ring is the rod, the spot\'s table decides what bites', () => {
+  const route12 = Fishing.pickSpot(10, () => 0) && require('../src/main/encounters.json').fishing.find((f) => f.n === 'kanto-route-12-area');
+  assert.ok(route12, 'Kanto Route 12 has rod tables');
+  assert.deepEqual(Fishing.spotName(route12), { en: 'Kanto · Route 12', zh: '关都 · 12号道路' });
+  assert.equal(Fishing.rodTable(route12, 0).rod, 'old');
+  assert.equal(Fishing.rodTable(route12, 1).rod, 'good');
+  assert.equal(Fishing.rodTable(route12, 3).rod, 'super');
+  // Old Rod at Route 12 (FireRed): only Magikarp
+  for (let i = 0; i < 50; i++) assert.equal(Fishing.bite(0, Math.random, new Set(), 0, route12).hidden.dex, 129);
+  // Super Rod (FireRed / LeafGreen): Krabby and Horsea most, Gyarados sometimes; the middle favours the rare ones
+  const share = (zone, dex) => { let n = 0; for (let i = 0; i < 6000; i++) if (Fishing.bite(zone, Math.random, new Set(), 0, route12).hidden.dex === dex) n++; return n / 6000; };
+  assert.ok(share(2, 116) + share(2, 98) > 0.75);
+  assert.ok(share(3, 130) > share(2, 130));
+  assert.equal(Fishing.tierOfChance(84), 0);
+  assert.equal(Fishing.tierOfChance(1), 3);
 });
 
 test('the deep middle of the pond makes rare bites likelier', () => {

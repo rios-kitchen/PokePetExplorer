@@ -266,6 +266,7 @@ function snapshot() {
     grass: grassInfo(),
     fishing: fishingInfo(),
     fishingNow: fishingNow(),
+    fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
     weatherNow: d.weatherNow,
     dailyInfo: { signRewards: Daily.SIGN_REWARDS, signItem: Daily.SIGN_ITEM, allDoneBonus: Daily.ALL_DONE_BONUS },
@@ -604,6 +605,14 @@ async function runSecret(text) {
   if (cmd === 'fishing') {
     // testing: fishing without daily / hourly limits or a tired pond, until used again or the app restarts;
     // with "center" every cast also lands in the deep middle (the hardest ring)
+    if (args[0] === 'spot') {
+      // testing: another fishing spot – one whose name contains the words after "spot" (e.g. route-12), or any
+      const all = require('./src/main/encounters.json').fishing;
+      const q = args.slice(1).join('-');
+      fishSpot = (q && all.find((f) => f.n.includes(q))) || all[Math.floor(Math.random() * all.length)];
+      changed();
+      return { ok: true };
+    }
     if (args[0] === 'center') { testFlags.freeFishing = true; testFlags.fishCenter = !testFlags.fishCenter; changed(); return { ok: true }; }
     testFlags.freeFishing = !testFlags.freeFishing;
     if (!testFlags.freeFishing) testFlags.fishCenter = false;
@@ -1124,8 +1133,13 @@ function checkEncounter() {
 let fishWin = null;
 const bites = new Map();   // token -> hidden catch (the window only learns the species once it's landed)
 
+let fishSpot = null;   // this trip's fishing spot (a real place from the games, see fishing.js)
+
 function openFishing() {
   if (!fishWin || fishWin.isDestroyed()) {
+    // each trip to the pond is a spot suited to the partner's level
+    const lead = partyIds()[0] || S().pokemon;
+    fishSpot = Fishing.pickSpot(lead ? levelOf(petOf(store.data, lead).xp) : 5);
     fishWin = new BrowserWindow({
       width: 500, height: 520, resizable: false, show: false, title: T('fish.title'), icon: appIcon(256),
       backgroundColor: '#1d1c1a', autoHideMenuBar: true,
@@ -1154,7 +1168,7 @@ function fishBite(zone) {
   const lim = fishingInfo();
   const why = Limits.blocked(lim);
   if (why) return { ok: false, error: why, nextAt: lim.nextAt };
-  const b = Fishing.bite(Number(zone) || 0, Math.random, new Set(Object.keys(store.data.fishdex).map(Number)), lim.recent);
+  const b = Fishing.bite(Number(zone) || 0, Math.random, new Set(Object.keys(store.data.fishdex).map(Number)), lim.recent, fishSpot);
   if (!lim.free) Limits.use(store.data, 'fishing', today());
   changed();
   const token = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;

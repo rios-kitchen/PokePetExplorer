@@ -11,7 +11,7 @@
 | 等级 | Lv5 → 3，Lv16 → 5，Lv36 → 10 |
 | 养成 | 孵化 → 5，进化一次 → 5，进化两次 → 10，治好 5 次病 → 5，任一能力达 50 → 8，拥有闪光 → 3 |
 | 外出 | 1 次 → 2，20 次 → 8，去过全部 9 个地区 → 15 |
-| 钓鱼 | 第一条 → 2，钓鱼图鉴 10 种 → 8，全部 24 种 → 20 |
+| 钓鱼 | 第一条 → 2，钓鱼图鉴 10 种 → 8，全部 58 种 → 20 |
 | 对战 | 第一次捕捉 → 3，抓到 10 种 → 10，赢 20 场 → 8 |
 
 ## English
@@ -25,7 +25,7 @@
 | Levels | Lv5 → 3, Lv16 → 5, Lv36 → 10 |
 | Raising | hatch → 5, evolve once → 5, twice → 10, cure 5 times → 5, any stat at 50 → 8, own a shiny → 3 |
 | Outings | 1 → 2, 20 → 8, all 9 regions → 15 |
-| Fishing | first fish → 2, 10 species → 8, all 24 → 20 |
+| Fishing | first fish → 2, 10 species → 8, all 58 → 20 |
 | Battles | first catch → 3, 10 species caught → 10, 20 wins → 8 |
 
 ---

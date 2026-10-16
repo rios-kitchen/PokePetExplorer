@@ -1,7 +1,9 @@
 // Builds src/main/encounters.json: the main games' wild encounter tables from PokeAPI – which Pokémon live where,
-// how often (%) and at which levels – for walking in grass and caves. One game per region (the newest one PokeAPI has
-// full tables for). Each place is sorted into a kind (route, forest, cave, volcano, ice, ruins) so outings can use
-// places that fit them. Run once (npm run encounters); the result is committed, so the app works offline.
+// how often (%) and at which levels – for walking in grass and caves, and for fishing with the Old, Good and Super
+// Rod. One game per region (the newest one PokeAPI has full tables for). Each walking place is sorted into a kind
+// (route, forest, cave, volcano, ice, ruins) so outings can use places that fit them; fishing spots keep their place
+// name, and every Pokémon that can be fished gets its names and height (for the fishing Pokédex and catch sizes).
+// Run once (npm run encounters); the result is committed, so the app works offline.
 const fs = require('fs');
 const path = require('path');
 
@@ -18,6 +20,7 @@ const GAMES = {
   galar: [['sword', 'shield']],
   paldea: [['scarlet', 'violet']]
 };
+const RODS = { 'old-rod': 'old', 'good-rod': 'good', 'super-rod': 'super' };
 const METHODS = new Set(['walk', 'overworld', 'dark-grass', 'grass-spots', 'cave-spots', 'tall-grass', 'rough-terrain', 'yellow-flowers', 'purple-flowers', 'red-flowers']);
 // what kind of place it is, from its name (checked in this order)
 const KINDS = [
@@ -50,46 +53,76 @@ async function pool(items, n, fn) {
 const idOf = (url) => Number(url.match(/\/(\d+)\/?$/)[1]);
 const kindOf = (name) => (KINDS.find(([, re]) => re.test(name)) || [null])[0];
 
+/** One game's encounters at a place for some methods: [[dex, chance %, min level, max level], …] by chance. */
+function tableOf(ad, pair, methods) {
+  const mons = new Map();
+  for (const pe of ad.pokemon_encounters) {
+    const dex = idOf(pe.pokemon.url);
+    if (dex > 1025) continue;   // regional forms etc. – the base species is enough
+    for (const vd of pe.version_details) {
+      if (!pair.includes(vd.version.name)) continue;
+      const det = vd.encounter_details.filter((d) => methods(d.method.name));
+      if (!det.length) continue;
+      const chance = Math.min(100, det.reduce((s, d) => s + (d.chance || 0), 0));
+      const lo = Math.min(...det.map((d) => d.min_level)), hi = Math.max(...det.map((d) => d.max_level));
+      const prev = mons.get(dex);
+      // both versions of a pair: keep the higher chance and the wider level range
+      mons.set(dex, prev ? [dex, Math.max(prev[1], chance), Math.min(prev[2], lo), Math.max(prev[3], hi)] : [dex, chance, lo, hi]);
+    }
+  }
+  return [...mons.values()].filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]);
+}
+
 (async () => {
   const areas = [];
+  const fishing = [];
   for (const [region, games] of Object.entries(GAMES)) {
     const reg = await get(`region/${region}`);
     const locs = await pool(reg.locations, 8, (l) => get(l.url));
     const areaRefs = locs.filter(Boolean).flatMap((l) => l.areas.map((a) => ({ loc: l.name, url: a.url, name: a.name })));
     const data = await pool(areaRefs, 8, (a) => get(a.url));
-    let kept = 0;
+    const locName = Object.fromEntries(locs.filter(Boolean).map((l) => [l.name, (l.names.find((n) => n.language.name === 'en') || {}).name || l.name]));
+    let kept = 0, spots = 0;
     data.forEach((ad, i) => {
       if (!ad) return;
       const name = areaRefs[i].name;
       // the newest game that has walking encounters here
       for (const pair of games) {
-        const mons = new Map();
-        for (const pe of ad.pokemon_encounters) {
-          const dex = idOf(pe.pokemon.url);
-          if (dex > 1025) continue;   // regional forms etc. – the base species is enough
-          for (const vd of pe.version_details) {
-            if (!pair.includes(vd.version.name)) continue;
-            const det = vd.encounter_details.filter((d) => METHODS.has(d.method.name));
-            if (!det.length) continue;
-            const chance = Math.min(100, det.reduce((s, d) => s + (d.chance || 0), 0));
-            const lo = Math.min(...det.map((d) => d.min_level)), hi = Math.max(...det.map((d) => d.max_level));
-            const prev = mons.get(dex);
-            // both versions of a pair: keep the higher chance and the wider level range
-            mons.set(dex, prev ? [dex, Math.max(prev[1], chance), Math.min(prev[2], lo), Math.max(prev[3], hi)] : [dex, chance, lo, hi]);
-          }
-        }
-        if (!mons.size) continue;
-        const e = [...mons.values()].filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]);
+        const e = tableOf(ad, pair, (m) => METHODS.has(m));
         if (!e.length) continue;
         const lv = [Math.min(...e.map((x) => x[2])), Math.max(...e.map((x) => x[3]))];
         areas.push({ n: name, r: region, v: pair.join('/'), k: kindOf(name) || 'route', lv, e });
         kept++;
         break;
       }
+      // … and the newest game that has fishing here: one table per rod
+      for (const pair of games) {
+        const rods = {};
+        for (const [method, rod] of Object.entries(RODS)) {
+          const t = tableOf(ad, pair, (m) => m === method);
+          if (t.length) rods[rod] = t;
+        }
+        if (!Object.keys(rods).length) continue;
+        const all = Object.values(rods).flat();
+        fishing.push({ n: name, r: region, v: pair.join('/'), place: locName[areaRefs[i].loc] || areaRefs[i].loc,
+          lv: [Math.min(...all.map((x) => x[2])), Math.max(...all.map((x) => x[3]))], rods });
+        spots++;
+        break;
+      }
     });
-    console.log(region, `${kept} places with encounters`);
+    console.log(region, `${kept} places with encounters, ${spots} fishing spots`);
   }
-  const out = { generated: new Date().toISOString().slice(0, 10), source: 'PokeAPI location-area encounters', areas };
+  // every Pokémon that can be fished: names and height (decimetres)
+  const fishDex = [...new Set(fishing.flatMap((f) => Object.values(f.rods).flat().map((x) => x[0])))].sort((a, b) => a - b);
+  const fish = (await pool(fishDex, 8, async (dex) => {
+    const [sp, pk] = await Promise.all([get(`pokemon-species/${dex}`), get(`pokemon/${dex}`)]);
+    if (!sp || !pk) return null;
+    const nm = (l) => (sp.names.find((n) => n.language.name === l) || {}).name;
+    return { dex, names: { en: nm('en') || sp.name, zh: nm('zh-hans') || nm('zh-hant') || nm('en') || sp.name }, height: pk.height,
+      legendary: sp.is_legendary || sp.is_mythical };
+  })).filter((f) => f && !f.legendary).map(({ legendary, ...f }) => f);
+  console.log('fishing spots', fishing.length, 'fish species', fish.length);
+  const out = { generated: new Date().toISOString().slice(0, 10), source: 'PokeAPI location-area encounters', areas, fishing, fish };
   fs.writeFileSync(path.join(__dirname, '..', 'src', 'main', 'encounters.json'), JSON.stringify(out));
   const kinds = {};
   for (const a of areas) kinds[a.k] = (kinds[a.k] || 0) + 1;
