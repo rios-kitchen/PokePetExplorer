@@ -1,6 +1,6 @@
 # 宝可宠探索 · PokePet Explorer — 功能与玩法说明 / Feature Guide
 
-> 版本 / Version **1.2.0**
+> 版本 / Version **1.2.1**
 >
 > 这份文档讲清楚软件里每项功能**怎么打开、怎么玩、有什么规则和每日限制**。玩家看它上手，开发者看它了解当前版本的功能和数值（数值都写在代码里的常量中，下面会注明出处）。
 > 安装、隐私、版权和项目结构请看 [README](README.md)。
@@ -32,7 +32,7 @@
 | 右键宝可梦 / 托盘图标 | 主菜单：番茄钟、照顾、外出、钓鱼、草丛、日记、切换宝可梦、大小、语言、设置等。 |
 | 点头顶的计时胶囊 | 打开番茄钟页面。 |
 
-**控制面板**分成几个分页：**💼 工作**（番茄钟 + 待办）｜**📅 今日**（签到、每日任务）、**🍓 照顾**（背包、商店）、**🧭 外出**、**📖 图鉴**（成就、纪念品、合影、宝可梦图鉴、钓鱼图鉴）、**🐾 宝可梦**（队伍）、**📔 日记**｜**⚙️ 设置**。
+**控制面板**分成几个分页：**💼 工作**（番茄钟 + 待办）｜**📅 今日**（签到、每日任务）、**🍓 照顾**（背包、商店）、**🧭 外出**、**📖 图鉴**（合影、宝可梦图鉴、钓鱼图鉴、成就、纪念品；每一部分都可以点标题收起或展开，会记住你的选择）、**🐾 宝可梦**（队伍）、**📔 日记**｜**⚙️ 设置**。
 
 ## 2. 工作：番茄钟和待办
 
@@ -134,9 +134,10 @@
 
 右键 →「🎣 钓鱼…」，或 📖 图鉴 →「去钓鱼」。
 
-1. **甩竿**：按住鼠标（或空格）蓄力，松开甩出。甩竿的颜色决定难度：**绿色**（近、简单）、**黄色**（普通）、**红色**（远、难，但能钓到更稀有的）。
+1. **甩竿**：按住鼠标（或空格）蓄力，松开甩出。蓄力条越往上涨得越快，在最远处只停留一瞬间，想甩到最远要掐准时机。甩竿的颜色决定难度：**绿色**（近、简单）、**黄色**（普通）、**红色**（远、难，但能钓到更稀有的）。
 2. **等待**：浮漂往下沉时**尽快点击**。反应时间：普通 1.1 秒，非常稀有的只有 0.65 秒；红区更短，绿区更长。
-3. **收线**：按住收线。鱼用力挣扎时要松一点（张力到红色线会断）；但线太松鱼会很快游走。
+3. **收线**：按住收线。鱼线有**惯性**：按住时张力会越涨越快，松手后还会再往上冲一点才降下来，要提前松手。鱼用力挣扎时要松一点，张力到 100% 线就断；但线太松鱼会很快游走。
+   甩得越远越难控制：张力条的**红色危险区**更长（绿区从 75% 开始、黄区 66%、红区 58%），惯性更大，松线时捕获进度条掉得也更快（黄区 1.35 倍、红区 1.7 倍）。
 
 | 稀有度 | 例子 | 树果 | 经验 | 想跟你走的几率 |
 |---|---|---|---|---|
@@ -277,7 +278,7 @@
 - **对键盘鼠标做出反应**（可关）：你打字时它坐下陪你打字，连续打字 15 分钟没开番茄钟会建议你开一个；鼠标移动时它会看向光标；鼠标停在它身上会害羞，快速晃鼠标它会晕；离开 3 分钟它会睡觉。
 - **全屏时躲开**：前台是全屏应用（视频、游戏、演示）时自动隐藏（设置里可关，默认开）。
 - **AI 聊天**（默认关闭）：设置 → AI 聊天，选服务商、填自己的 API key 和模型，然后右键「💬 聊天」。宝可梦按自己的性格和当前状态回答。对话不保存。
-- **检查更新**：启动时检查 GitHub 上的新版本（可关）；设置 → 更新 可以下载安装包到「下载」文件夹并打开。
+- **检查更新**：启动时和每天 3 次自动检查 GitHub 上的新版本（设置里可关）。有新版本时会**弹窗提醒**，选「下载并安装」会把安装包下载到「下载」文件夹并打开；也可以在 设置 → 更新 里操作。
 
 ## 12. 每日限制和计时一览
 
@@ -318,7 +319,7 @@
 | Click the timer pill | Open the Pomodoro view. |
 
 The **panel** has these tabs: **💼 Work** (Pomodoro + to-dos) | **📅 Today** (sign-in, daily tasks), **🍓 Care** (bag, shop),
-**🧭 Outing**, **📖 Dex** (achievements, souvenirs, photos, Pokédex, fishing Pokédex), **🐾 Pokémon** (team), **📔 Diary** | **⚙️ Settings**.
+**🧭 Outing**, **📖 Dex** (photos, Pokédex, fishing Pokédex, achievements, souvenirs – click a heading to fold or unfold it; it remembers), **🐾 Pokémon** (team), **📔 Diary** | **⚙️ Settings**.
 
 ## 2. Work: Pomodoro and to-dos
 
@@ -432,12 +433,16 @@ where it was) and the **timer keeps running while the app is closed**. Only one 
 
 Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 
-1. **Cast**: hold the mouse (or Space) to charge, release to cast. The colour sets the difficulty: **green** (close,
-   easy), **yellow** (normal), **red** (far, hard, rarer fish).
+1. **Cast**: hold the mouse (or Space) to charge, release to cast. The meter speeds up as it rises and only touches
+   the top for a moment, so a full cast takes good timing. The colour sets the difficulty: **green** (close, easy),
+   **yellow** (normal), **red** (far, hard, rarer fish).
 2. **Wait**: when the bobber dips, **click quickly**. Reaction time is 1.1 s for common fish, only 0.65 s for very rare
    ones; shorter in the red zone, longer in the green one.
-3. **Reel in**: hold to reel. Ease off when the fish pulls hard (the line snaps in the red), but don't let the line go
-   slack or it swims away fast.
+3. **Reel in**: hold to reel. The line has **momentum**: holding speeds the tension up, and after you let go it keeps
+   rising a little before it drops, so let go early. Ease off when the fish pulls hard – at 100% the line snaps – but
+   don't let the line go slack or it swims away fast.
+   The farther the cast, the harder it is: the **red danger part** of the tension bar is longer (from 75% in the green
+   zone, 66% yellow, 58% red), the line slides more, and a slack line loses the catch bar faster (×1.35 yellow, ×1.7 red).
 
 | Rarity | Examples | Berries | XP | Wants to join |
 |---|---|---|---|---|
@@ -613,8 +618,9 @@ the usual faces.
 - **Hiding over fullscreen apps** (videos, games, slides) – on by default, can be turned off.
 - **AI chat** (off by default): Settings → AI chat, pick a provider, enter your own API key and a model, then right-click
   "💬 Chat…". Your Pokémon answers in character from its current state. Conversations aren't saved.
-- **Updates**: checks GitHub for a new release at start (can be turned off); Settings → Updates downloads the installer
-  to your Downloads folder and opens it.
+- **Updates**: checks GitHub for a new release at start and three times a day (can be turned off in Settings). A new
+  version **pops up a reminder**; "Download and install" saves the installer to your Downloads folder and opens it.
+  Settings → Updates does the same.
 
 ## 12. Daily limits and timers at a glance
 
@@ -640,7 +646,7 @@ the usual faces.
 
 # 开发者附录 / Developer appendix
 
-**当前版本 / Current version:** 1.2.0 · Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等级会按新曲线保留 / old saves keep their levels on the new curve）
+**当前版本 / Current version:** 1.2.1 · Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等级会按新曲线保留 / old saves keep their levels on the new curve）
 
 ## 数值在哪里改 / Where the numbers live
 
@@ -651,6 +657,8 @@ the usual faces.
 | 闪光 / Shinies | `src/main/shiny.js` | `RATE` (1/4096), `PITY_DAYS` (90); `data.shiny.since` |
 | 外出 / Outings | `src/main/expedition.js` | `EXPEDITIONS`, `LOOT`, `companionChance()` |
 | 外出遭遇 / Outing encounters | `main.js` `checkExpedition` / `offerOutingEncounter` / `checkEncounter` | 0.3 chance; `Wild.ENCOUNTER_WAIT_MIN` (30); saved in `data.wild.encounter` |
+| 钓鱼手感 / Fishing feel | `src/fishing/fishing.js` | `REEL` (inertia, danger zone, slack drop by zone), charge speed `0.5 + 2.5 × power` |
+| 自动更新 / Updates | `main.js` | `UPDATE_EVERY_MS` (8 h), `checkForUpdate`, `promptUpdate` |
 | 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `JUNK`, `FATIGUE`, `TIERS`, `ZONES`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |
 | 小游戏次数 / Mini-game limits | `src/main/limits.js` | `LIMITS` (grass 16/day 3/hour, fishing 20/day 6/hour) – 新的小游戏也加在这里 / add new mini-games here |

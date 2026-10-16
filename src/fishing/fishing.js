@@ -99,6 +99,16 @@
   const zoneOf = (p) => (p < 0.4 ? 0 : p < 0.75 ? 1 : 2);
   const ZONE_KEYS = ['easy', 'normal', 'hard'];
   const ZONE_COLORS = ['#6cbf5a', '#f5c93a', '#e2463b'];
+  // Reeling has weight: holding speeds the line's tension up, letting go slows it down, and it keeps sliding a
+  // little (inertia). The farther the cast, the less it's damped, the earlier the danger zone starts and the
+  // faster a slack line loses the fish.
+  const REEL = {
+    hold: [40, 50],               // tension acceleration while holding: base + per unit of the fish's pull
+    release: 140,                 // deceleration when letting go
+    damp: [3.0, 2.2, 1.6],        // by zone: less damping = more sliding
+    danger: [75, 66, 58],         // by zone: where the red part of the tension bar starts
+    slack: [1, 1.35, 1.7]         // by zone: how fast the catch bar drops while not reeling
+  };
 
   function say(key, vars, ms = 2200) { game.message = t(key, vars); game.messageUntil = Date.now() + ms; }
 
@@ -173,7 +183,9 @@
 
   function hook() {
     game.phase = 'reel';
-    game.tension = 30; game.progress = 20; game.holding = true;
+    game.zone = zoneOf(game.depth);
+    $('#tension').parentElement.style.setProperty('--danger', `${REEL.danger[game.zone]}%`);
+    game.tension = 30; game.vel = 0; game.progress = 20; game.holding = true;
     game.pull = 1; game.nextPull = 0;
   }
 
@@ -257,7 +269,8 @@
     const ms = Date.now();
 
     if (game.phase === 'charging') {
-      game.power += game.powerDir * dt * 1.1;
+      // the meter speeds up as it rises, so it only lingers at the top for a moment
+      game.power += game.powerDir * dt * (0.5 + 2.5 * game.power);
       if (game.power >= 1) { game.power = 1; game.powerDir = -1; }
       if (game.power <= 0) { game.power = 0; game.powerDir = 1; }
     }
@@ -281,15 +294,18 @@
       const b = game.bite;
       // the fish tugs in bursts; a strong tug barely lets you gain line, so ease off when it pulls
       if (ms > game.nextPull) { game.pull = randRange(0.4, 1.7) * b.pull; game.nextPull = ms + randRange(400, 1200); }
+      const z = game.zone || 0;
+      const acc = game.holding ? REEL.hold[0] + REEL.hold[1] * game.pull : -REEL.release;
+      game.vel += acc * dt;
+      game.vel *= 1 - REEL.damp[z] * dt;
+      game.tension += game.vel * dt;
+      if (game.tension < 0) { game.tension = 0; game.vel = Math.max(0, game.vel); }
       if (game.holding) {
-        game.tension += dt * (18 + 28 * game.pull);
-        game.progress += dt * (28 - 8 * game.pull);
+        game.progress += dt * Math.max(8, 28 - 8 * game.pull);
       } else {
-        // letting go relaxes the line quickly; let it go slack and the fish swims off fast
-        game.tension -= dt * 60;
-        game.progress -= dt * (game.tension < 25 ? 9 + 5 * b.pull : 2 + 2 * b.pull);
+        // let it go slack and the fish swims off fast – faster the farther out it is
+        game.progress -= dt * REEL.slack[z] * (game.tension < 25 ? 9 + 5 * b.pull : 2 + 2 * b.pull);
       }
-      game.tension = Math.max(0, game.tension);
       if (game.tension >= 100) lose('fish.msg.snapped');
       else if (game.progress <= 0) lose('fish.msg.escaped');
       else if (game.progress >= 100) win();
@@ -298,7 +314,7 @@
     draw(ms);
     $('#reel').classList.toggle('hidden', game.phase !== 'reel');
     $('#tension').style.width = `${Math.min(100, game.tension)}%`;
-    $('#tension').parentElement.classList.toggle('danger', game.tension > 75);
+    $('#tension').parentElement.classList.toggle('danger', game.tension > REEL.danger[game.zone || 0]);
     $('#progress').style.width = `${Math.max(0, Math.min(100, game.progress))}%`;
     if (state) setHint();
     requestAnimationFrame(step);

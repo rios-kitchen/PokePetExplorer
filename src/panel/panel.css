@@ -47,7 +47,7 @@ button, input, select { font: inherit; color: inherit; }
 }
 #heroSprite {
   object-fit: contain;
-  padding: 4px;
+  padding: 0;
   width: 64px; height: 64px;
   image-rendering: pixelated;
   background: var(--card);
@@ -312,7 +312,9 @@ img.smooth, #heroSprite.smooth { image-rendering: auto; }
 .sound-buttons .ghost { padding: 6px 8px; font-size: 12.5px; color: var(--ink); }
 
 /* ---- emotion portraits */
-#heroSprite img.portrait { width: 58px; height: 58px; border-radius: 50%; image-rendering: pixelated; }
+/* the portrait fills the round frame edge to edge (slightly enlarged so its own border pixels don't show) */
+#heroSprite img.portrait { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 50%;
+  transform: scale(1.08); image-rendering: pixelated; }
 .care-status { align-items: center; }
 .care-face { width: 48px; height: 48px; flex: none; border-radius: 10px; overflow: hidden; background: var(--ring-bg); }
 .care-face img { width: 48px; height: 48px; image-rendering: pixelated; display: block; }
@@ -481,3 +483,11 @@ body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display:
 .dex-head { margin-bottom: 2px; }
 .pokedex .fish.seen .fish-face img { filter: grayscale(1) brightness(0.55); }
 .pokedex .fish.seen b { opacity: 0.75; }
+/* foldable parts of the Dex tab */
+.fold { border-bottom: 1px solid var(--line, rgba(127,127,127,0.2)); padding-bottom: 6px; }
+.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 10px 0 4px; user-select: none; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: '▸'; display: inline-block; font-size: 12px; opacity: 0.6; transition: transform 120ms; }
+.fold[open] > summary::before { transform: rotate(90deg); }
+.fold > summary h3, .fold > summary #favHead { margin: 0; }
+.fold .fish-head { justify-content: flex-end; margin: 4px 0 8px; }

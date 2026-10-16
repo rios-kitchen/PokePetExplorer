@@ -10,7 +10,9 @@ const COMMANDS = {
   '62307224e3c28e177fa62f4a8ab6988226ed10b68b0c32513d88903e8d3223b2': 'return',
   '5dcfa8298f5a409f61b33c879f80276ec63724d4e6b6a3f9d1a423a44480ae7d': 'battle',
   '5f91878bc4dbc355306fbf80bc6cb4a3282b4c17c049f0e5528722c7cc30b5a9': 'win',
-  '89daadd83375c3bc31be5d85d578c2f9b9285bf945b0eb79901242c21791aa43': 'catch'
+  '89daadd83375c3bc31be5d85d578c2f9b9285bf945b0eb79901242c21791aa43': 'catch',
+  'ad66dc8cce6b0b3c93b820c32f70bd8e584c4db896ca0f10a1810e1b623e4f47': 'fishing',
+  '7865ea6c656f619cc6821f555213260a0c8cd4cd57879179900ffa9ab28aecbe': 'update'
 };
 
 /** "word arg arg" → { cmd, args } (cmd null when the word isn't one). */

@@ -1,6 +1,6 @@
 // PokePet Explorer – main process: windows, tray, Pomodoro timer, to-dos, raising and persistence.
 const {
-  app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, screen, Notification, powerMonitor
+  app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, screen, Notification, powerMonitor, dialog, shell
 } = require('electron');
 const fs = require('fs');
 const path = require('path');
@@ -22,7 +22,7 @@ const Data = require('./src/main/pokedata');
 const Shiny = require('./src/main/shiny');
 const Limits = require('./src/main/limits');
 const Pokedex = require('./src/main/pokedex');
-const { Updater } = require('./src/main/updater');
+const { Updater, REPO: UpdaterRepo } = require('./src/main/updater');
 const AI = require('./src/main/ai');
 
 let updater = null;   // created when the app is ready
@@ -44,6 +44,42 @@ let tray = null;
 let quitting = false;
 let lastReminder = Date.now();
 let lastPatXp = 0;
+const UPDATE_EVERY_MS = 8 * 3600e3;   // three checks a day (plus one at every start)
+let updateDialogOpen = false;
+
+/** Ask GitHub for a new release; when there is one, offer it in a dialog. */
+async function checkForUpdate() {
+  const st = await updater.check();
+  store.data.updateCheckedAt = Date.now();
+  changed();
+  if (st.status === 'available') promptUpdate(st);
+}
+
+async function promptUpdate(st) {
+  if (updateDialogOpen) return;
+  updateDialogOpen = true;
+  try {
+    if (IS_MAC) app.focus({ steal: true });
+    const notes = String(st.notes || '').replace(/\*\*/g, '').split('\n').filter((l) => l.trim()).slice(0, 6).join('\n');
+    const { response } = await dialog.showMessageBox({
+      type: 'info',
+      title: T('update.dialogTitle'),
+      message: T('update.dialogMessage', { v: st.version, now: app.getVersion() }),
+      detail: notes,
+      buttons: [T(st.canDownload ? 'update.dialogDownload' : 'update.dialogOpen'), T('update.dialogLater')],
+      defaultId: 0,
+      cancelId: 1,
+      icon: appIcon(256)
+    });
+    if (response === 0) {
+      openPanel('settings');
+      if (st.canDownload) updater.download(); else shell.openExternal(st.url);
+    }
+  } finally {
+    updateDialogOpen = false;
+  }
+}
+const testFlags = { freeFishing: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -221,7 +257,7 @@ function snapshot() {
     pokedexCount: Pokedex.counts(d),
     pokedex: Pokedex.list(d),
     grass: grassInfo(),
-    fishing: Limits.info(d, 'fishing', today()),
+    fishing: fishingInfo(),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
     weatherNow: d.weatherNow,
     dailyInfo: { signRewards: Daily.SIGN_REWARDS, signItem: Daily.SIGN_ITEM, allDoneBonus: Daily.ALL_DONE_BONUS },
@@ -544,6 +580,19 @@ async function runSecret(text) {
     if (!store.data.expedition) return { ok: false };
     store.data.expedition.endsAt = Date.now();
     checkExpedition();
+    return { ok: true };
+  }
+  if (cmd === 'update') {
+    // testing: the "new version" popup, for a pretend next version (opens the releases page)
+    const [a, b, c] = app.getVersion().split('.').map(Number);
+    setTimeout(() => promptUpdate({ version: `${a}.${b}.${c + 1}`, notes: T('update.testNotes'), canDownload: false,
+      url: `https://github.com/${UpdaterRepo}/releases` }), 300);
+    return { ok: true };
+  }
+  if (cmd === 'fishing') {
+    // testing: fishing without daily / hourly limits or a tired pond, until used again or the app restarts
+    testFlags.freeFishing = !testFlags.freeFishing;
+    changed();
     return { ok: true };
   }
   if (cmd === 'battle') {
@@ -1060,13 +1109,19 @@ function openFishing() {
   if (IS_MAC) app.focus({ steal: true });
 }
 
+/** Fishing limits as the windows see them (unlimited while testing). */
+function fishingInfo() {
+  if (testFlags.freeFishing) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'fishing', today());
+}
+
 function fishBite(depth) {
   // daily and hourly limits; the more bites this hour, the longer they take and the more of them are junk
-  const lim = Limits.info(store.data, 'fishing', today());
+  const lim = fishingInfo();
   const why = Limits.blocked(lim);
   if (why) return { ok: false, error: why, nextAt: lim.nextAt };
   const b = Fishing.bite(Number(depth) || 0, Math.random, new Set(Object.keys(store.data.fishdex).map(Number)), lim.recent);
-  Limits.use(store.data, 'fishing', today());
+  if (!lim.free) Limits.use(store.data, 'fishing', today());
   changed();
   const token = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   bites.clear();   // one line in the water at a time
@@ -2450,16 +2505,17 @@ async function selfTest(dir) {
           return document.querySelector('#result').classList.contains('hidden') ? 'lost' : 'caught';
         }
         const tension = parseFloat(document.querySelector('#tension').style.width) || 0;
-        if (tension > 62) window.__fire('mouseup'); else if (tension < 30) window.__fire('mousedown');
+        if (tension > 48) window.__fire('mouseup'); else if (tension < 28) window.__fire('mousedown');
       }
       return 'timeout';
     };
     0`;
+  fishWin.show(); fishWin.focus();   // a hidden window's animation is throttled
   await js(DRIVER);
   let outcome = '';
   for (let attempt = 0; attempt < 3 && outcome !== 'caught'; attempt++) {
     await js("document.querySelector('#resOk').click(); window.__fire('mousedown'); 0");
-    await wait(650);
+    await wait(300);   // a short cast: the green (easy) zone
     if (attempt === 0) await shot(fishWin, '24-fish-charging');
     await js("window.__fire('mouseup'); 0");
     await wait(1500);
@@ -2483,6 +2539,15 @@ async function selfTest(dir) {
     const land = fishLand(b.token);
     console.log('[test] 6th bite this hour: delay', b.delay, 'junk?', !!land.junk, JSON.stringify(land.names), 'junk chance', Fishing.junkChance(5));
     console.log('[test] 7th bite:', JSON.stringify(fishBite(0.5)), JSON.stringify(lim()));
+    let words = null;
+    try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* not here */ }
+    if (words && words.fishing) {
+      await runSecret(words.fishing);
+      const free = fishBite(0.5);
+      console.log('[test] fishing code: bite', free.ok, 'delay', free.delay, 'used', lim().recent);
+      await runSecret(words.fishing);
+      console.log('[test] fishing code off:', fishBite(0.5).ok === false);
+    }
     changed();
   });
   await wait(1000);
@@ -2491,7 +2556,7 @@ async function selfTest(dir) {
   await shot(fishWin, '27b-fish-rest');
   send(panelWin, 'panel:tab', 'dex');
   await wait(1500);
-  await panelWin.webContents.executeJavaScript("document.querySelector('#fishHead').scrollIntoView()");
+  await panelWin.webContents.executeJavaScript("document.querySelector('[data-fold=fishdex]').open = true; document.querySelector('#fishHead').scrollIntoView(); 0");
   await wait(1500);
   await shot(panelWin, '28-panel-fishdex');
 
@@ -2588,6 +2653,19 @@ async function selfTest(dir) {
   send(panelWin, 'panel:tab', 'pokemon');
   await wait(2000);
   await shot(panelWin, '39-panel-party');
+  // the update reminder (dialog stubbed out: it can't be clicked here)
+  await step('update-popup', async () => {
+    const real = dialog.showMessageBox;
+    let shown = null;
+    dialog.showMessageBox = async (o) => { shown = o; return { response: 1 }; };
+    let words = null;
+    try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* not here */ }
+    if (words && words.update) await runSecret(words.update);
+    else await promptUpdate({ version: '9.9.9', notes: 'test', canDownload: false, url: 'https://github.com' });
+    await wait(800);
+    dialog.showMessageBox = real;
+    console.log('[test] update popup:', shown && shown.message, '|', shown && shown.buttons.join(' / '));
+  });
   // the Pokédex keeps a Pokémon that left the team
   await step('pokedex-keeps', async () => {
     const leaving = store.data.custom.find((c) => c.id !== S().pokemon && c.dex);
@@ -2597,7 +2675,7 @@ async function selfTest(dir) {
   });
   openPanel('dex');
   await wait(3000);
-  await panelWin.webContents.executeJavaScript("document.querySelector('#pokedexHead').scrollIntoView(); 0");
+  await panelWin.webContents.executeJavaScript("document.querySelector('[data-fold=pokedex]').open = true; document.querySelector('#pokedexHead').scrollIntoView(); 0");
   await wait(500);
   await shot(panelWin, '41c-panel-pokedex');
   // grass: at most 3 an hour
@@ -2679,16 +2757,15 @@ if (!app.requestSingleInstanceLock()) {
     setInterval(tick, 1000);
     setInterval(slowTick, 60000);
     setInterval(pollInput, 60);
-    // new release on GitHub? (checked once at startup; settings can turn it off)
-    let announced = null;
-    updater = new Updater((st) => {
-      broadcast();
-      if (st.status === 'available' && announced !== st.version) {
-        announced = st.version;
-        notify(T('notif.update'), T('notif.updateBody', { v: st.version }));
-      }
-    });
-    if (S().checkUpdates && !process.env.POKEPET_TEST) setTimeout(() => updater.check(), 8000);
+    // new release on GitHub? Checked at startup and three times a day (settings can turn it off); a new version
+    // pops up a dialog after each check that finds it
+    updater = new Updater(() => broadcast());
+    if (S().checkUpdates && !process.env.POKEPET_TEST) {
+      setTimeout(() => checkForUpdate(), 8000);
+      setInterval(() => {
+        if (S().checkUpdates && Date.now() - (store.data.updateCheckedAt || 0) >= UPDATE_EVERY_MS) checkForUpdate();
+      }, 10 * 60e3);   // looked at every 10 minutes, so a sleeping computer catches up when it wakes
+    }
     if (process.env.POKEPET_TEST) selfTest(process.env.POKEPET_TEST).catch((e) => { console.error(e); app.exit(1); });
     screen.on('display-removed', () => {
       if (petWin && !validPos({ x: petWin.getBounds().x, y: petWin.getBounds().y }, petSize())) resetPetPos();

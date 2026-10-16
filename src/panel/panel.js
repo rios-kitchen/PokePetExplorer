@@ -94,6 +94,13 @@
   }
 
   /** A fresh element showing the Pokémon's current sprite. */
+  // foldable sections (Dex tab): remember which ones are open
+  for (const d of document.querySelectorAll('details.fold')) {
+    const key = `fold:${d.dataset.fold}`;
+    try { const v = localStorage.getItem(key); if (v !== null) d.open = v === '1'; } catch { /* storage unavailable */ }
+    d.addEventListener('toggle', () => { try { localStorage.setItem(key, d.open ? '1' : '0'); } catch { /* ignore */ } });
+  }
+
   function spriteNode(id, size) {
     const cv = el('canvas', { width: String(size), height: String(size) });
     const holder = el('div', { class: 'sprite-box', style: `width:${size}px;height:${size}px` }, cv);
