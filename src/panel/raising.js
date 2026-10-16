@@ -27,6 +27,8 @@ window.PanelRaising = function PanelRaising(env) {
     const key = JSON.stringify([L(), state.berries, state.inventory]);
     if (key === shopKey) return;
     shopKey = key;
+    $('#shopHead').textContent = t('shop.balance', { n: state.berries });
+    $('#careEarn').textContent = t('care.earn', { p: state.reward.pomodoro, t: state.reward.todo, d: state.reward.daily });
     const buyable = Object.entries(state.items).filter(([, item]) => item.cost > 0);
     $('#shopItems').replaceChildren(...buyable.map(([id, item]) => {
       const have = state.inventory[id] || 0;
@@ -34,7 +36,7 @@ window.PanelRaising = function PanelRaising(env) {
         class: 'ghost', disabled: state.berries < item.cost * n ? true : null,
         onclick: async () => {
           const res = await api.invoke('shop:buy', id, n);
-          if (!res.ok) flash('#careMsg', t(`care.refused.${res.reason}`));
+          if (!res.ok) flash('#shopMsg', t(`care.refused.${res.reason}`));
         }
       }, `+${n}`);
       return el('div', { class: 'shop-item' },
@@ -308,6 +310,10 @@ window.PanelRaising = function PanelRaising(env) {
 
   // battles: the grass (with today's / this hour's encounters left) and a wild Pokémon waiting from an outing
   function renderBattleBar(state) {
+    const f = state.fishing;
+    const fm = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));
+    $('#fishLeft').textContent = f.left > 0 || f.dayLeft <= 0 ? (f.dayLeft > 0 ? t('fish.left', { n: f.dayLeft, max: f.max, h: f.hourLeft, hmax: f.hourMax }) : t('fish.tired'))
+      : t('fish.rest', { m: fm(f.nextAt) });
     const g = state.grass;
     const e = state.encounter;
     const mins = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));
@@ -323,8 +329,8 @@ window.PanelRaising = function PanelRaising(env) {
 
   return {
     render(state, tab) {
-      if (tab === 'dex' || tab === 'pokemon') renderBattleBar(state);
-      if (tab === 'care') renderShop(state);
+      if (tab === 'expedition') renderBattleBar(state);
+      if (tab === 'shop') renderShop(state);
       if (tab === 'today') renderToday(state);
       if (tab === 'expedition') renderExpedition(state);
       if (tab === 'dex') renderDex(state);
@@ -332,7 +338,7 @@ window.PanelRaising = function PanelRaising(env) {
     /** called every second while the panel is open (expedition countdown) */
     tick(state, tab) {
       if (tab === 'expedition' && state && state.expedition) renderExpedition(state);
-      if ((tab === 'dex' || tab === 'pokemon') && state && state.encounter) renderBattleBar(state);
+      if (tab === 'expedition' && state) renderBattleBar(state);
     }
   };
 };

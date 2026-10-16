@@ -32,7 +32,11 @@
 | 右键宝可梦 / 托盘图标 | 主菜单：番茄钟、照顾、外出、钓鱼、草丛、日记、切换宝可梦、大小、语言、设置等。 |
 | 点头顶的计时胶囊 | 打开番茄钟页面。 |
 
-**控制面板**分成几个分页：**💼 工作**（番茄钟 + 待办）｜**📅 今日**（签到、每日任务）、**🍓 照顾**（背包、商店）、**🧭 外出**、**📖 图鉴**（合影、宝可梦图鉴、钓鱼图鉴、成就、纪念品；每一部分都可以点标题收起或展开，会记住你的选择）、**🐾 宝可梦**（队伍）、**📔 日记**｜**⚙️ 设置**。
+**控制面板**的分页按用途分组：
+- **💼 工作**：番茄钟和待办。
+- **📅 今日**、**📔 日记**：每天的签到、任务和日记，放在一起。
+- **🐾 宝可梦**（队伍）、**🍓 照顾**（喂食、洗澡、看病、用背包里的东西）、**🛒 商店**（买东西放进背包）、**🧭 外出**（去草丛对战、去钓鱼、外出探险）、**📖 图鉴**（只看收集成果：合影、宝可梦图鉴、钓鱼图鉴、成就、纪念品；每一部分都可以点标题收起或展开，会记住你的选择）。
+- **⚙️ 设置**。
 
 ## 2. 工作：番茄钟和待办
 
@@ -93,7 +97,7 @@
 | 活力碎片 | 8 | 救醒晕倒的宝可梦 |
 | 精灵球 / 超级球 / 高级球 | 10 / 20 / 40 | 只能在对战中用来捕捉 |
 
-背包里有的物品会**先用背包的**，没有才花树果。可以在 🍓 照顾页、右键菜单「照顾」或宝可梦的气泡按钮里使用。
+背包里有的物品会**先用背包的**，没有才花树果。可以在 🍓 照顾页、右键菜单「照顾」或宝可梦的气泡按钮里使用；在 🛒 商店页购买。
 
 ### 树果 🍓 从哪来
 
@@ -132,7 +136,7 @@
 
 ## 6. 钓鱼 🎣
 
-右键 →「🎣 钓鱼…」，或 📖 图鉴 →「去钓鱼」。
+右键 →「🎣 钓鱼…」，或 🧭 外出页 →「去钓鱼」（旁边会显示今天和这一小时还能钓几次）。
 
 1. **甩竿**：按住鼠标（或空格）蓄力，松开甩出。蓄力条越往上涨得越快，在最远处只停留一瞬间，想甩到最远要掐准时机。甩竿的颜色决定难度：**绿色**（近、简单）、**黄色**（普通）、**红色**（远、难，但能钓到更稀有的）。
 2. **等待**：浮漂往下沉时**尽快点击**。反应时间：普通 1.1 秒，非常稀有的只有 0.65 秒；红区更短，绿区更长。
@@ -157,8 +161,8 @@
 
 ### 怎么开始
 
-- **去草丛**：右键 →「🌿 去草丛探索…」，或在面板的 📖 图鉴页、🐾 宝可梦页点「🌿 去草丛」，再点「走进草丛」。**每天最多 16 次，并且任意 1 小时内最多 3 次**（每天零点重置；1 小时的次数满了会提示还要等几分钟）。
-- **外出遇到**：外出回来时跟回来的野生宝可梦（见第 5 节）。可以在宝可梦的气泡里点「去对战！」，或在对战窗口、面板的 📖 图鉴页 / 🐾 宝可梦页点「⚔ 和…对战」。**不占草丛次数**，只等 **30 分钟**，过时它就离开。
+- **去草丛**：右键 →「🌿 去草丛探索…」，或在面板的 🧭 外出页点「🌿 去草丛」，再点「走进草丛」。**每天最多 16 次，并且任意 1 小时内最多 3 次**（每天零点重置；1 小时的次数满了会提示还要等几分钟）。
+- **外出遇到**：外出回来时跟回来的野生宝可梦（见第 5 节）。可以在宝可梦的气泡里点「去对战！」，或在对战窗口、面板的 🧭 外出页点「⚔ 和…对战」。**不占草丛次数**，只等 **30 分钟**，过时它就离开。
 - 桌面上**不会**随机冒出野生宝可梦。
 
 ### 出战队伍
@@ -318,8 +322,13 @@
 | Right-click / tray icon | Main menu: timer, care, outings, fishing, grass, diary, switch Pokémon, size, language, settings… |
 | Click the timer pill | Open the Pomodoro view. |
 
-The **panel** has these tabs: **💼 Work** (Pomodoro + to-dos) | **📅 Today** (sign-in, daily tasks), **🍓 Care** (bag, shop),
-**🧭 Outing**, **📖 Dex** (photos, Pokédex, fishing Pokédex, achievements, souvenirs – click a heading to fold or unfold it; it remembers), **🐾 Pokémon** (team), **📔 Diary** | **⚙️ Settings**.
+The **panel**'s tabs are grouped by what they're for:
+- **💼 Work**: Pomodoro timer and to-dos.
+- **📅 Today** and **📔 Diary**: the daily sign-in, tasks and diary, side by side.
+- **🐾 Pokémon** (team), **🍓 Care** (feed, bathe, treat, use what's in the bag), **🛒 Shop** (buy into the bag),
+  **🧭 Outing** (the grass, fishing, expeditions), **📖 Dex** (only what you've collected: photos, Pokédex, fishing
+  Pokédex, achievements, souvenirs – click a heading to fold or unfold it; it remembers).
+- **⚙️ Settings**.
 
 ## 2. Work: Pomodoro and to-dos
 
@@ -381,7 +390,7 @@ Every Pokémon has its own **hunger, cleanliness, health and mood** (0–100).
 | Revive | 8 | Wakes a fainted Pokémon |
 | Poké Ball / Great Ball / Ultra Ball | 10 / 20 / 40 | Battle only, for catching |
 
-Items in the bag are **used first**; berries are only spent when you have none. Use items from the 🍓 Care tab, the
+Items in the bag are **used first**; berries are only spent when you have none. Buy them in the 🛒 Shop tab; use them from the 🍓 Care tab, the
 right-click "Care" menu or the buttons in the pet's speech bubble.
 
 ### Where berries come from
@@ -431,7 +440,7 @@ where it was) and the **timer keeps running while the app is closed**. Only one 
 
 ## 6. Fishing 🎣
 
-Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
+Right-click → "🎣 Fishing…", or 🧭 Outing → "Go fishing" (it shows how many bites are left today and this hour).
 
 1. **Cast**: hold the mouse (or Space) to charge, release to cast. The meter speeds up as it rises and only touches
    the top for a moment, so a full cast takes good timing. The colour sets the difficulty: **green** (close, easy),
@@ -466,11 +475,10 @@ Right-click → "🎣 Fishing…", or 📖 Dex → "Go fishing".
 
 ### Starting a battle
 
-- **The grass**: right-click → "🌿 Explore the grass…", or "🌿 Explore the grass" in the panel's 📖 Dex or 🐾 Pokémon
-  tab, then "Into the grass". **Up to 16 encounters a day and at most 3 within any hour** (resets at midnight; when the
+- **The grass**: right-click → "🌿 Explore the grass…", or "🌿 Explore the grass" in the panel's 🧭 Outing tab, then "Into the grass". **Up to 16 encounters a day and at most 3 within any hour** (resets at midnight; when the
   hour's three are used, it tells you how many minutes to wait).
 - **From an outing**: the wild Pokémon that came back from an outing (section 5). Press "Battle!" in your Pokémon's
-  bubble, or "⚔ Battle …" in the battle window or the panel's 📖 Dex / 🐾 Pokémon tab. It **doesn't use a grass
+  bubble, or "⚔ Battle …" in the battle window or the panel's 🧭 Outing tab. It **doesn't use a grass
   encounter** and only waits **30 minutes** before it leaves.
 - Wild Pokémon **never** pop up on the desktop by themselves.
 

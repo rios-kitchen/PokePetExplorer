@@ -491,3 +491,6 @@ body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display:
 .fold[open] > summary::before { transform: rotate(90deg); }
 .fold > summary h3, .fold > summary #favHead { margin: 0; }
 .fold .fish-head { justify-content: flex-end; margin: 4px 0 8px; }
+.fish-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
+.fish-bar button { padding: 4px 12px; font-size: 12.5px; }
+.fish-bar .hint { flex: 1 1 200px; margin: 0; }

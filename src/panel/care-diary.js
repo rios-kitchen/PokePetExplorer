@@ -109,7 +109,6 @@ window.PanelExt = function PanelExt(env) {
     el('span', { class: 'ci-desc' }, t(`itemdesc.${itemId}`)),
     el('span', { class: 'ci-cost' }, state.inventory[itemId] > 0 ? `×${state.inventory[itemId]}`
       : item.cost ? `${item.cost} 🍓` : t('care.free')))));
-    $('#careEarn').textContent = t('care.earn', { p: state.reward.pomodoro, t: state.reward.todo, d: state.reward.daily });
   }
 
   // ================================================================ DIARY

@@ -24,12 +24,16 @@
   <nav class="tabs" role="tablist">
     <button data-tab="work"><i>💼</i><span data-i18n="tab.work"></span></button>
     <span class="tab-sep" aria-hidden="true"></span>
+    <!-- every day: tasks and the diary side by side -->
     <button data-tab="today"><i>📅</i><span data-i18n="tab.today"></span></button>
+    <button data-tab="diary"><i>📔</i><span data-i18n="tab.diary"></span></button>
+    <span class="tab-sep" aria-hidden="true"></span>
+    <!-- raising: the team, its care, the shop, going out, and what you've collected -->
+    <button data-tab="pokemon"><i>🐾</i><span data-i18n="tab.pokemon"></span></button>
     <button data-tab="care"><i>🍓</i><span data-i18n="tab.care"></span></button>
+    <button data-tab="shop"><i>🛒</i><span data-i18n="tab.shop"></span></button>
     <button data-tab="expedition"><i>🧭</i><span data-i18n="tab.expedition"></span></button>
     <button data-tab="dex"><i>📖</i><span data-i18n="tab.dex"></span></button>
-    <button data-tab="pokemon"><i>🐾</i><span data-i18n="tab.pokemon"></span></button>
-    <button data-tab="diary"><i>📔</i><span data-i18n="tab.diary"></span></button>
     <span class="tab-sep" aria-hidden="true"></span>
     <button data-tab="settings"><i>⚙️</i><span data-i18n="tab.settings"></span></button>
   </nav>
@@ -109,9 +113,14 @@
       <h3 data-i18n="care.shop"></h3>
       <div id="careItems" class="care-items"></div>
       <p id="careMsg" class="hint"></p>
-      <h3 data-i18n="shop.title"></h3>
+    </section>
+
+    <!-- SHOP: buy into the bag -->
+    <section id="tab-shop" class="tab">
+      <h3 id="shopHead"></h3>
       <p class="hint" data-i18n="shop.hint"></p>
       <div id="shopItems" class="shop-items"></div>
+      <p id="shopMsg" class="hint"></p>
       <p id="careEarn" class="hint"></p>
     </section>
 
@@ -128,6 +137,11 @@
 
     <!-- EXPEDITION -->
     <section id="tab-expedition" class="tab">
+      <!-- going out to play: the tall grass (battles) and the pond -->
+      <h3 data-i18n="out.play"></h3>
+      <div class="battle-bar"></div>
+      <div class="fish-bar"><button id="goFish" class="secondary" data-i18n="dex.goFish"></button><span id="fishLeft" class="hint"></span></div>
+      <h3 data-i18n="out.expeditions"></h3>
       <div id="expStats" class="exp-stats"></div>
       <div id="expActive"></div>
       <div id="expList"></div>
@@ -145,12 +159,10 @@
       <details class="fold" data-fold="pokedex">
         <summary><h3 id="pokedexHead" class="dex-head"></h3></summary>
         <p id="pokedexLine" class="hint"></p>
-        <div class="battle-bar"></div>
         <div id="pokedexList" class="fishdex pokedex"></div>
       </details>
       <details class="fold" data-fold="fishdex">
         <summary><h3 id="fishHead"></h3></summary>
-        <div class="fish-head"><button id="goFish" class="secondary" data-i18n="dex.goFish"></button></div>
         <div id="fishList" class="fishdex"></div>
       </details>
       <details class="fold" data-fold="achievements">
@@ -191,7 +203,6 @@
     <!-- POKEMON -->
     <section id="tab-pokemon" class="tab">
       <h3 data-i18n="poke.team"></h3>
-      <div class="battle-bar"></div>
       <div id="pokeGrid" class="poke-grid"></div>
       <p id="pokeStatus" class="hint"></p>
     </section>

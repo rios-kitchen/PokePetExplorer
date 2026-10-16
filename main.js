@@ -2398,9 +2398,9 @@ async function selfTest(dir) {
   await wait(1200);
   await shot(panelWin, '14-panel-work');
   await step('shop', async () => { store.data.berries = 40; shopBuy('antidote', 2); shopBuy('revive', 1); });
-  send(panelWin, 'panel:tab', 'care');
+  send(panelWin, 'panel:tab', 'shop');
   await wait(1200);
-  await shot(panelWin, '15-panel-care-shop');
+  await shot(panelWin, '15-panel-shop');
   await step('expedition-panel', async () => {
     Object.assign(careOfActive(), { hunger: 90, clean: 90 });
     startExpedition('coolClass');
@@ -2705,12 +2705,9 @@ async function selfTest(dir) {
   });
   await wait(5500);
   await shot(petWin, '40-encounter-ask');
-  openPanel('dex');
+  openPanel('expedition');
   await wait(2500);
-  await shot(panelWin, '41-panel-battle-bar');
-  openPanel('pokemon');
-  await wait(2000);
-  await shot(panelWin, '41b-panel-pokemon-bar');
+  await shot(panelWin, '41-panel-outing-play');
   await step('encounter-leaves', async () => {
     store.data.wild.encounter.until = Date.now() - 1;
     checkEncounter();

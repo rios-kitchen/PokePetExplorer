@@ -142,6 +142,7 @@
     $$('[data-i18n-title]').forEach((e) => { e.title = t(e.dataset.i18nTitle); });
   }
 
+  let prevTab = null;
   function showTab(name) {
     if (name === 'diary-last') {
       name = 'diary';
@@ -152,6 +153,8 @@
     tab = name;
     $$('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     $$('.tab').forEach((s) => s.classList.toggle('active', s.id === `tab-${name}`));
+    if (name !== prevTab) { const m = document.querySelector('main'); if (m) m.scrollTop = 0; window.scrollTo(0, 0); }
+    prevTab = name;
     if (state && typeof ext !== 'undefined') { ext.render(state, name); raising.render(state, name); }
     if (wanted === 'todos') {
       setTimeout(() => { $('#todoHead').scrollIntoView({ block: 'start' }); $('#todoText').focus(); }, 50);
