@@ -1,0 +1,85 @@
+# Builds the installers on a Mac and a Windows machine when a version tag (v1.2.3) is pushed, smoke-tests the Windows
+# installer (silent install, start the app), uploads both to the GitHub release for the tag and publishes it.
+# Release notes: create the release as a draft with its notes before pushing the tag (gh release create vX --draft
+# --notes-file …); if there's none, a draft with a short note is created and published.
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build (e.g. v1.4.1)
+        required: true
+permissions:
+  contents: write
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # unsigned, like the local builds
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: install/*.dmg
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist:win
+      - name: Smoke test – install silently and start the app
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem install\*.exe | Select-Object -First 1
+          Start-Process -FilePath $setup.FullName -ArgumentList '/S' -Wait
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'PokePet Explorer.exe' | Select-Object -First 1
+          if (-not $exe) { throw 'not installed' }
+          Write-Host "installed: $($exe.FullName)"
+          $env:POKEPET_DATA_DIR = "$env:RUNNER_TEMP\pokepet-data"
+          $p = Start-Process -FilePath $exe.FullName -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) { throw "the app quit right away (exit code $($p.ExitCode))" }
+          Write-Host 'the app is running'
+          Stop-Process -Id $p.Id -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: install/*.exe
+  publish:
+    needs: [mac, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Upload to the release and publish it
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --title "PokePet Explorer ${TAG#v}" --notes "PokePet Explorer ${TAG#v}"
+          fi
+          gh release upload "$TAG" dist/mac/*.dmg dist/windows/*.exe --clobber
+          gh release edit "$TAG" --draft=false --latest

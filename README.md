@@ -1,5 +1,7 @@
 # 宝可宠探索 · PokePet Explorer 🥚🧭
 
+[![Tests](https://github.com/rios-kitchen/PokePetExplorer/actions/workflows/ci.yml/badge.svg)](https://github.com/rios-kitchen/PokePetExplorer/actions/workflows/ci.yml) [![Latest release](https://img.shields.io/github/v/release/rios-kitchen/PokePetExplorer)](https://github.com/rios-kitchen/PokePetExplorer/releases/latest)
+
 A pixel Pokémon desktop pet for **macOS and Windows** with **QQ-Pet style raising**, plus the
 **Pomodoro timer** and **to-do list** from PokePet. English / 中文. Everything is stored locally.
 
@@ -35,16 +37,17 @@ The builds are unsigned: on macOS right-click the app → *Open* the first time;
 ## Features
 
 What the app can do, how to use it and all the rules (care, growth and evolution, outings, fishing, battles and
-catching, daily limits) are in the **[feature guide / 功能与玩法说明](GUIDE.md)** (中文 / English), also as the
-**[Wiki](https://github.com/rios-kitchen/PokePetExplorer/wiki)**, one page per topic.
-功能、玩法和规则（照顾、成长进化、外出、钓鱼、对战与捕捉、每日限制）都写在 **[功能与玩法说明](GUIDE.md)** 里，
-也可以在 **[Wiki](https://github.com/rios-kitchen/PokePetExplorer/wiki)** 里按主题分页查看。
+catching, daily limits), plus an FAQ, are in the **[Wiki](https://github.com/rios-kitchen/PokePetExplorer/wiki)**
+(中文 / English, one page per topic). What changed in each version: [CHANGELOG](CHANGELOG.md).
+功能、玩法和规则（照顾、成长进化、外出、钓鱼、对战与捕捉、每日限制）和常见问题都在 **[Wiki](https://github.com/rios-kitchen/PokePetExplorer/wiki)** 里，
+按主题分页，中英双语。每个版本改了什么见 [CHANGELOG](CHANGELOG.md)。
 
 ## Feedback / 问题反馈
 
 Found a bug or have an idea? **[Open an issue](https://github.com/rios-kitchen/PokePetExplorer/issues/new/choose)** –
 there are forms for bug reports and suggestions. In the app: Settings → About → "Report a problem or suggest something".
-遇到问题或有建议？**[提交 Issue](https://github.com/rios-kitchen/PokePetExplorer/issues/new/choose)**，有「问题反馈」和「功能建议」两种表单。
+Questions, ideas and screenshots are welcome in **[Discussions](https://github.com/rios-kitchen/PokePetExplorer/discussions)**.
+遇到问题或有建议？**[提交 Issue](https://github.com/rios-kitchen/PokePetExplorer/issues/new/choose)**，有「问题反馈」和「功能建议」两种表单；想提问、聊玩法或分享截图，欢迎来 **[Discussions](https://github.com/rios-kitchen/PokePetExplorer/discussions)**。
 软件里：设置 → 关于与致谢 →「反馈问题或提建议」。
 
 ## Privacy
@@ -103,7 +106,9 @@ src/panel/              control panel (Work / Care / Outing / Dex / Pokémon / D
 src/shared/sprites.js   effect glyphs and Poké Balls drawn in code
 src/shared/i18n.js      all UI text and pet dialogue (en / zh)
 src/shared/sound.js     8-bit sound effects (WebAudio)
-tools/                  icon generator, bundle-starters.js (the starters' PMD sprites for the installers)
+tools/                  icon generator, bundle-starters.js (the starters' PMD sprites), build-encounters.js
+docs/wiki/              the wiki pages – edit here, a push to main publishes them (.github/workflows/wiki.yml)
+.github/                issue forms and GitHub Actions (tests, wiki sync, building the releases)
 ```
 
 

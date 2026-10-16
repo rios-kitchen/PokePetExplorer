@@ -3,3 +3,6 @@ contact_links:
   - name: 使用说明 / Help & guide (Wiki)
     url: https://github.com/rios-kitchen/PokePetExplorer/wiki
     about: 玩法、规则和常见问题 / How to play, the rules and FAQ
+  - name: 提问与交流 / Questions & ideas (Discussions)
+    url: https://github.com/rios-kitchen/PokePetExplorer/discussions
+    about: 不确定是不是 bug、想聊聊玩法或分享截图 / Not sure it's a bug, want to chat or share screenshots

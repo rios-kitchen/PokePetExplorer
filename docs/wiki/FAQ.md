@@ -2,11 +2,11 @@
 
 ### 为什么不能再派宝可梦外出了？ / Why can't I send my Pokémon out again?
 
-外出**没有每日次数限制**，但要同时满足：同一时间只能有一只在外面；不是蛋、没生病、没晕倒；**饥饿和清洁都 ≥ 30**；等级和能力够。外出回来会更饿更脏，先在 🍓 照顾页喂一下、洗个澡（免费）就能接着派。去不了的目的地，按钮上会写原因。详见 [第 5 节](05-Outings)。
+外出**没有每日次数限制**，但要同时满足：同一时间只能有一只在外面；不是蛋、没生病、没晕倒；**饥饿和清洁都 ≥ 30**；等级和能力够。外出回来会更饿更脏，先在 🍓 照顾页喂一下、洗个澡（免费）就能接着派。去不了的目的地，按钮上会写原因。详见 [[第 5 节](05-Outings)](05-Outings)。
 
 There's **no daily limit** on outings, but: only one at a time; not an egg, sick or fainted; **hunger and cleanliness ≥ 30**;
 the level and stats required. It comes back hungrier and dirtier – feed it and give it a (free) bath in the 🍓 Care tab.
-A destination you can't go to says why on its button. See [section 5](05-Outings).
+A destination you can't go to says why on its button. See [[section 5](05-Outings)](05-Outings).
 
 ### 为什么不能去草丛 / 钓鱼了？ / Why can't I explore the grass / fish any more?
 
@@ -38,11 +38,11 @@ each Pokémon knocked out in the battle has a 60% chance to still be fainted at 
 
 ### 怎么遇到和收服传说宝可梦？ / How do I meet and catch a legendary?
 
-领头宝可梦 **Lv30** 以后，每次遭遇有 1/400 几率遇到传说、1/2000 遇到幻之宝可梦，等级比领头高 8 级。大多数捕获率只有 3：先打到残血，用睡眠或冰冻，再扔高级球，多试几次。收服之前都还会再遇到。详见 [第 7 节](07-Battles-and-catching)。
+领头宝可梦 **Lv30** 以后，每次遭遇有 1/400 几率遇到传说、1/2000 遇到幻之宝可梦，等级比领头高 8 级。大多数捕获率只有 3：先打到残血，用睡眠或冰冻，再扔高级球，多试几次。收服之前都还会再遇到。详见 [[第 7 节](07-Battles-and-catching)](07-Battles-and-catching)。
 
 From lead **Lv30**, 1 in 400 encounters is a legendary and 1 in 2000 a mythical, 8 levels above your lead. Most have a catch
 rate of 3: weaken it, put it to sleep or freeze it, then throw Ultra Balls – and keep trying. It turns up again until it's
-caught. See [section 7](07-Battles-and-catching).
+caught. See [[section 7](07-Battles-and-catching)](07-Battles-and-catching).
 
 ### 多久能遇到闪光？ / How long until a shiny?
 
@@ -75,3 +75,7 @@ anyway" in SmartScreen.
 ### 还有问题？ / Still stuck?
 
 [提交 Issue / Open an issue](https://github.com/rios-kitchen/PokePetExplorer/issues/new/choose)
+
+
+---
+*[宝可宠探索 · PokePet Explorer](https://github.com/rios-kitchen/PokePetExplorer) · [下载 / Download](https://github.com/rios-kitchen/PokePetExplorer/releases/latest) · [反馈问题 / Report a problem](https://github.com/rios-kitchen/PokePetExplorer/issues/new/choose)*
