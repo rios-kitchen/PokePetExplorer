@@ -11,6 +11,10 @@ on:
       tag:
         description: Tag to build (e.g. v1.4.1)
         required: true
+      publish:
+        description: Upload to the release and publish it (off = only build and test)
+        type: boolean
+        default: false
 permissions:
   contents: write
 env:
@@ -68,6 +72,7 @@ jobs:
           path: install/*.exe
   publish:
     needs: [mac, windows]
+    if: github.event_name == 'push' || github.event.inputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
