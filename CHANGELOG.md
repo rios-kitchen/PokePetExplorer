@@ -5,8 +5,11 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+## 1.4.1 · 2026-10-16
+
 - 软件里（设置 → 关于与致谢）可以打开 Wiki 和反馈问题 / Settings → About links to the wiki and to reporting a problem
-- 说明文档搬到 Wiki；问题反馈和功能建议有表单 / The guide moved to the wiki; issue forms for bugs and suggestions
+- 说明文档搬到 Wiki；问题反馈和功能建议有表单；新增 Discussions / The guide moved to the wiki; issue forms for bugs and suggestions; Discussions are open
+- 安装包改由 GitHub 在 Mac 和 Windows 机器上自动打包，Windows 版每次都会自动安装测试 / Installers are now built on GitHub's Mac and Windows machines, and the Windows one is install-tested every time
 
 ## 1.4.0 · 2026-10-16
 
