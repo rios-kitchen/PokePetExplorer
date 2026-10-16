@@ -11,9 +11,9 @@
     "start": "node tools/bundle-starters.js && electron .",
     "test": "node --test \"test/*.test.js\"",
     "icon": "node tools/make-icon.js",
-    "dist:mac": "node tools/make-icon.js && npm run bundle && electron-builder --mac && node tools/clean-install.js",
-    "dist:win": "node tools/make-icon.js && npm run bundle && electron-builder --win && node tools/clean-install.js",
-    "dist": "node tools/make-icon.js && npm run bundle && electron-builder --mac --win && node tools/clean-install.js",
+    "dist:mac": "node tools/make-icon.js && npm run bundle && electron-builder --mac --publish never && node tools/clean-install.js",
+    "dist:win": "node tools/make-icon.js && npm run bundle && electron-builder --win --publish never && node tools/clean-install.js",
+    "dist": "node tools/make-icon.js && npm run bundle && electron-builder --mac --win --publish never && node tools/clean-install.js",
     "bundle": "node tools/bundle-starters.js --required",
     "encounters": "node tools/build-encounters.js"
   },
