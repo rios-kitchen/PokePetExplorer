@@ -86,7 +86,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -265,6 +265,7 @@ function snapshot() {
     pokedex: Pokedex.list(d),
     grass: grassInfo(),
     fishing: fishingInfo(),
+    fishingNow: fishingNow(),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
     weatherNow: d.weatherNow,
     dailyInfo: { signRewards: Daily.SIGN_REWARDS, signItem: Daily.SIGN_ITEM, allDoneBonus: Daily.ALL_DONE_BONUS },
@@ -601,8 +602,11 @@ async function runSecret(text) {
     return { ok: true };
   }
   if (cmd === 'fishing') {
-    // testing: fishing without daily / hourly limits or a tired pond, until used again or the app restarts
+    // testing: fishing without daily / hourly limits or a tired pond, until used again or the app restarts;
+    // with "center" every cast also lands in the deep middle (the hardest ring)
+    if (args[0] === 'center') { testFlags.freeFishing = true; testFlags.fishCenter = !testFlags.fishCenter; changed(); return { ok: true }; }
     testFlags.freeFishing = !testFlags.freeFishing;
+    if (!testFlags.freeFishing) testFlags.fishCenter = false;
     changed();
     return { ok: true };
   }
@@ -1130,8 +1134,8 @@ function openFishing() {
     if (!IS_MAC) fishWin.setMenu(null);
     if (process.env.POKEPET_TEST) fishWin.webContents.on('console-message', (e) => console.log('[fish]', e.message));
     fishWin.loadFile(path.join(__dirname, 'src', 'fishing', 'fishing.html'));
-    fishWin.once('ready-to-show', () => { fishWin.show(); fishWin.focus(); });
-    fishWin.on('closed', () => { fishWin = null; bites.clear(); });
+    fishWin.once('ready-to-show', () => { fishWin.show(); fishWin.focus(); changed(); });
+    fishWin.on('closed', () => { fishWin = null; bites.clear(); changed(); });
   } else {
     fishWin.show();
     fishWin.focus();
@@ -1141,16 +1145,16 @@ function openFishing() {
 
 /** Fishing limits as the windows see them (unlimited while testing). */
 function fishingInfo() {
-  if (testFlags.freeFishing) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  if (testFlags.freeFishing) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true, center: testFlags.fishCenter };
   return Limits.info(store.data, 'fishing', today());
 }
 
-function fishBite(depth) {
+function fishBite(zone) {
   // daily and hourly limits; the more bites this hour, the longer they take and the more of them are junk
   const lim = fishingInfo();
   const why = Limits.blocked(lim);
   if (why) return { ok: false, error: why, nextAt: lim.nextAt };
-  const b = Fishing.bite(Number(depth) || 0, Math.random, new Set(Object.keys(store.data.fishdex).map(Number)), lim.recent);
+  const b = Fishing.bite(Number(zone) || 0, Math.random, new Set(Object.keys(store.data.fishdex).map(Number)), lim.recent);
   if (!lim.free) Limits.use(store.data, 'fishing', today());
   changed();
   const token = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -1667,9 +1671,12 @@ function cleanPoop(id) {
   changed();
 }
 
+/** The fishing window is open: the partner is at the pond, not on the desktop. */
+const fishingNow = () => !!(fishWin && !fishWin.isDestroyed() && fishWin.isVisible());
+
 function poopTick(asleep) {
   const d = store.data;
-  if (!hasPet() || activeAway()) return;
+  if (!hasPet() || activeAway() || fishingNow()) return;
   const care = careOfActive();
   // now and then without a meal, too (about every 3 hours while active)
   if (!d.poopDueAt && !asleep && care.hunger > 50 && Math.random() < 1 / 180) {
@@ -1696,7 +1703,7 @@ function slowTick() {
 
     // complain about the most urgent need, at most every 20 minutes per need
     const need = Care.urgentNeed(care);
-    if (need && !asleep && timer.phase !== 'focus' && Date.now() - (lastNeedAlert[need] || 0) > 20 * 60000) {
+    if (need && !asleep && timer.phase !== 'focus' && !fishingNow() && Date.now() - (lastNeedAlert[need] || 0) > 20 * 60000) {
       lastNeedAlert[need] = Date.now();
       petEvent('need', { need, item: Care.remedyFor(care, need), diagnose: need === 'sick' && !!care.status && !care.status.known });
     }
@@ -2167,7 +2174,7 @@ function registerIpc() {
       return { kind: 'pmd', anims };
     } catch { return null; }
   });
-  ipcMain.handle('fish:bite', (_e, depth) => fishBite(depth));
+  ipcMain.handle('fish:bite', (_e, zone) => fishBite(zone));
   ipcMain.handle('fish:land', (_e, token) => fishLand(String(token || '')));
   ipcMain.on('fish:lost', (_e, token) => bites.delete(String(token || '')));
   ipcMain.on('fish:open', () => openFishing());
@@ -2556,7 +2563,7 @@ async function selfTest(dir) {
   let outcome = '';
   for (let attempt = 0; attempt < 3 && outcome !== 'caught'; attempt++) {
     await js("document.querySelector('#resOk').click(); window.__fire('mousedown'); 0");
-    await wait(300);   // a short cast: the green (easy) zone
+    await wait(120);   // a short cast: the shallow (easy) water
     if (attempt === 0) await shot(fishWin, '24-fish-charging');
     await js("window.__fire('mouseup'); 0");
     await wait(1500);

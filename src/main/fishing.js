@@ -42,18 +42,22 @@ const junkChance = (recent) => Math.min(FATIGUE.junkMax, Math.max(0, recent - FA
 /** Extra wait before the next bite, in ms. */
 const biteDelay = (recent) => Math.max(0, recent) * FATIGUE.delayMs;
 
-// The cast's colour sets the difficulty: green (short, easy), yellow, red (long, hard – and rarer bites).
+// The pond's rings set the difficulty (the window works out where a cast landed): shallow water (green, easy),
+// then yellow, red, and the deep middle (purple) – the harder, the stronger the pull, the less time to react,
+// and the rarer the bites.
 const ZONES = [
-  { name: 'easy',   pull: 0.85, bite: 1.25 },
-  { name: 'normal', pull: 1.05, bite: 1.0 },
-  { name: 'hard',   pull: 1.2,  bite: 0.8 }
+  { name: 'easy',   pull: 1.05, bite: 1.0 },
+  { name: 'normal', pull: 1.2,  bite: 0.8 },
+  { name: 'hard',   pull: 1.35, bite: 0.7 },
+  { name: 'master', pull: 1.5,  bite: 0.6 }
 ];
-const zoneOf = (power) => (power < 0.4 ? 0 : power < 0.75 ? 1 : 2);
+const zoneOf = (zone) => Math.max(0, Math.min(ZONES.length - 1, Math.round(Number(zone) || 0)));
+// tier weights (common, uncommon, rare, very rare) by zone
+const TIER_WEIGHTS = [[62, 29, 8, 1], [47, 36, 14, 3], [36, 40, 19, 5], [22, 40, 26, 12]];
 
-/** Tier weights for a cast that landed at `depth` 0 (close to the pier) … 1 (far out). */
-function tierWeights(depth) {
-  const d = Math.max(0, Math.min(1, depth));
-  return [62 - 30 * d, 29 + 14 * d, 8 + 12 * d, 1 + 4 * d];
+/** Tier weights for a cast that landed in `zone` (0 shallow … 3 the deep middle). */
+function tierWeights(zone) {
+  return TIER_WEIGHTS[zoneOf(zone)];
 }
 
 function pickWeighted(weights, rnd) {
@@ -66,8 +70,9 @@ function pickWeighted(weights, rnd) {
  * Something bites. `caught`: dex numbers already in the fishing Pokédex (they turn up more often). Returns what the window needs to play it out – the species stays secret until it's landed:
  * { tier, bite (ms to react), pull (how hard it fights), hidden: { dex, size, shiny } }
  */
-function bite(depth, rnd = Math.random, caught = new Set(), recent = 0) {
-  const zone = ZONES[zoneOf(depth)];
+function bite(zoneIndex, rnd = Math.random, caught = new Set(), recent = 0) {
+  const depth = zoneOf(zoneIndex);
+  const zone = ZONES[depth];
   if (junkChance(recent) > 0 && rnd() < junkChance(recent)) {
     const junk = JUNK[Math.floor(rnd() * JUNK.length)];
     return { tier: 0, zone: zoneOf(depth), junk: true, bite: 1200, pull: 0.6, hidden: { junk: junk.id } };

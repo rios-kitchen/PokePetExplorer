@@ -17,6 +17,16 @@
   const t = (k, v) => I18N.t(L(), k, v);
 
   // ---------------------------------------------------------------- the scene (drawn once)
+  // The pond is three rings around its deepest point: the nearer the middle a cast lands, the harder the fish fight
+  // and the rarer they are. Zones: 0 shallow water (outside the rings) … 3 the deep middle.
+  const POND = { x: 100, y: 70, r: 70 };
+  const RINGS = [0.45, 0.65, 0.82];   // depth where rings 1, 2 and 3 begin
+  const depthAt = (x, y) => Math.max(0, 1 - Math.hypot(x - POND.x, (y - POND.y) * 1.6) / POND.r);
+  const zoneAtDepth = (d) => (d > RINGS[2] ? 3 : d > RINGS[1] ? 2 : d > RINGS[0] ? 1 : 0);
+  /** Where a cast of power p (0…1) lands: straight out from the pier, over the deep middle and beyond. */
+  const landing = (p) => ({ x: 50 + p * 100, y: 84 - p * 26 });
+  const zoneOfPower = (p) => { const l = landing(p); return zoneAtDepth(depthAt(l.x, l.y)); };
+
   const bg = document.createElement('canvas');
   bg.width = VW; bg.height = VH;
   function paintScene() {
@@ -34,8 +44,8 @@
     for (let y = 34; y < VH; y++) {  // the pond, darker where it's deep
       const k = (y - 34) / (VH - 34);
       for (let x = 0; x < VW; x++) {
-        const deep = Math.max(0, 1 - Math.hypot(x - 100, (y - 70) * 1.6) / 70);
-        const c = deep > 0.55 ? '#2f6ea8' : deep > 0.25 ? '#3a82bc' : k < 0.1 ? '#6fb0d8' : '#4a98cc';
+        const deep = depthAt(x, y);
+        const c = deep > RINGS[2] ? '#21507f' : deep > RINGS[1] ? '#2f6ea8' : deep > RINGS[0] ? '#3a82bc' : k < 0.1 ? '#6fb0d8' : '#4a98cc';
         px(x, y, c);
       }
     }
@@ -95,19 +105,19 @@
   };
 
   const randRange = (a, b) => a + Math.random() * (b - a);
-  // the cast's power is its depth (0 near the pier … 1 far out); its colour zone is the difficulty
-  const zoneOf = (p) => (p < 0.4 ? 0 : p < 0.75 ? 1 : 2);
-  const ZONE_KEYS = ['easy', 'normal', 'hard'];
-  const ZONE_COLORS = ['#6cbf5a', '#f5c93a', '#e2463b'];
+  // the ring a cast lands in is its difficulty (see POND above): green, yellow, red, and purple in the deep middle
+  const ZONE_KEYS = ['easy', 'normal', 'hard', 'master'];
+  const ZONE_COLORS = ['#6cbf5a', '#f5c93a', '#e2463b', '#9b59d0'];
   // Reeling has weight: holding speeds the line's tension up, letting go slows it down, and it keeps sliding a
   // little (inertia). The farther the cast, the less it's damped, the earlier the danger zone starts and the
   // faster a slack line loses the fish.
   const REEL = {
     hold: [40, 50],               // tension acceleration while holding: base + per unit of the fish's pull
     release: 140,                 // deceleration when letting go
-    damp: [3.0, 2.2, 1.6],        // by zone: less damping = more sliding
-    danger: [75, 66, 58],         // by zone: where the red part of the tension bar starts
-    slack: [1, 1.35, 1.7]         // by zone: how fast the catch bar drops while not reeling
+    gainFloor: 10,                // the catch bar always moves a little while reeling
+    damp: [2.2, 1.6, 1.4, 1.2],   // by zone: less damping = more sliding
+    danger: [66, 58, 52, 46],     // by zone: where the red part of the tension bar starts (the middle: 54 % red)
+    slack: [1.35, 1.5, 1.6, 1.7]  // by zone: how fast the catch bar drops while not reeling
   };
 
   function say(key, vars, ms = 2200) { game.message = t(key, vars); game.messageUntil = Date.now() + ms; }
@@ -150,11 +160,12 @@
   window.addEventListener('blur', release);
 
   function cast() {
-    game.depth = game.power;
-    const land = 62 + game.power * 88;
-    say(`fish.zone.${ZONE_KEYS[zoneOf(game.power)]}`, null, 2600);
+    // (testing: every cast to the deep middle)
+    const l = state && state.fishing && state.fishing.center ? { x: POND.x, y: POND.y } : landing(game.power);
     game.from = { ...TIP };
-    game.to = { x: Math.round(land), y: Math.round(52 + game.power * 34 + randRange(-4, 4)) };
+    game.to = { x: Math.round(l.x + randRange(-2, 2)), y: Math.round(l.y + randRange(-2, 2)) };
+    game.zone = zoneAtDepth(depthAt(game.to.x, game.to.y));
+    say(`fish.zone.${ZONE_KEYS[game.zone]}`, null, 2600);
     game.flyStart = Date.now();
     game.phase = 'flying';
     Sound.play('blip');
@@ -167,7 +178,7 @@
   }
 
   async function startBite() {
-    const res = await api.invoke('fish:bite', game.depth).catch(() => null);
+    const res = await api.invoke('fish:bite', game.zone).catch(() => null);
     if (!res || game.phase !== 'waiting') return;
     if (!res.ok) { game.phase = 'idle'; restNow({ left: 0, dayLeft: res.error === 'rest' ? 1 : 0, nextAt: res.nextAt }); return; }
     // the pond is getting tired: the fish take longer to bite
@@ -183,7 +194,6 @@
 
   function hook() {
     game.phase = 'reel';
-    game.zone = zoneOf(game.depth);
     $('#tension').parentElement.style.setProperty('--danger', `${REEL.danger[game.zone]}%`);
     game.tension = 30; game.vel = 0; game.progress = 20; game.holding = true;
     game.pull = 1; game.nextPull = 0;
@@ -301,7 +311,7 @@
       game.tension += game.vel * dt;
       if (game.tension < 0) { game.tension = 0; game.vel = Math.max(0, game.vel); }
       if (game.holding) {
-        game.progress += dt * Math.max(8, 28 - 8 * game.pull);
+        game.progress += dt * Math.max(REEL.gainFloor, 28 - 8 * game.pull);
       } else {
         // let it go slack and the fish swims off fast – faster the farther out it is
         game.progress -= dt * REEL.slack[z] * (game.tension < 25 ? 9 + 5 * b.pull : 2 + 2 * b.pull);
@@ -379,10 +389,12 @@
       const X = 148, B = 76, H = 36;
       g.fillStyle = '#2a2420'; g.fillRect(X - 1, B - H - 1, 8, H + 2);
       const zone = (a, b, c) => { g.fillStyle = c; g.fillRect(X, B - Math.round(H * b), 6, Math.round(H * (b - a))); };
-      g.globalAlpha = 0.35; zone(0, 0.4, ZONE_COLORS[0]); zone(0.4, 0.75, ZONE_COLORS[1]); zone(0.75, 1, ZONE_COLORS[2]); g.globalAlpha = 1;
+      // each height of the meter in the colour of the ring it would land in (the middle of the meter is the deep middle)
+      g.globalAlpha = 0.35;
+      for (let i = 0; i < H; i++) { g.fillStyle = ZONE_COLORS[zoneOfPower((i + 0.5) / H)]; g.fillRect(X, B - i - 1, 6, 1); }
+      g.globalAlpha = 1;
       const h = Math.round(H * game.power);
-      g.fillStyle = ZONE_COLORS[zoneOf(game.power)];
-      g.fillRect(X, B - h, 6, h);
+      for (let i = 0; i < h; i++) { g.fillStyle = ZONE_COLORS[zoneOfPower((i + 0.5) / H)]; g.fillRect(X, B - i - 1, 6, 1); }
       g.fillStyle = '#ffffff'; g.fillRect(X - 1, B - h, 8, 1);
     }
   }

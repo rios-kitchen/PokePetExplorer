@@ -12,9 +12,9 @@ Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等�
 | 闪光 / Shinies | `src/main/shiny.js` | `RATE` (1/4096), `PITY_DAYS` (90); `data.shiny.since` |
 | 外出 / Outings | `src/main/expedition.js` | `EXPEDITIONS`, `LOOT`, `companionChance()` |
 | 外出遭遇 / Outing encounters | `main.js` `checkExpedition` / `offerOutingEncounter` / `checkEncounter` | 0.3 chance; `Wild.ENCOUNTER_WAIT_MIN` (30); saved in `data.wild.encounter` |
-| 钓鱼手感 / Fishing feel | `src/fishing/fishing.js` | `REEL` (inertia, danger zone, slack drop by zone), charge speed `0.5 + 2.5 × power` |
+| 钓鱼手感 / Fishing feel | `src/fishing/fishing.js` | `POND` / `RINGS` (where each ring starts), `landing` (cast path), `REEL` (inertia, danger zone, slack drop per ring), charge speed `0.5 + 2.5 × power` |
 | 自动更新 / Updates | `main.js`, `src/main/updater.js` | `UPDATE_EVERY_MS` (8 h), `checkForUpdate`, `promptUpdate`; `install` (helper scripts `MAC_SCRIPT` / `WIN_SCRIPT`), `update-pending.json` → `stageOf` |
-| 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `JUNK`, `FATIGUE`, `TIERS`, `ZONES`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
+| 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `JUNK`, `FATIGUE`, `TIERS`, `ZONES` (4 rings), `TIER_WEIGHTS`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
 | 招式数据 / Move data | `src/main/pokedata.js` | `GAMES` (newest game first), `usable`, `movesAt` |
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |
 | 小游戏次数 / Mini-game limits | `src/main/limits.js` | `LIMITS` (grass 16/day 3/hour, fishing 20/day 6/hour) – 新的小游戏也加在这里 / add new mini-games here |

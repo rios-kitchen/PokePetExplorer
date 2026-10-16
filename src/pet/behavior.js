@@ -94,6 +94,8 @@
       return;
     }
     if (pet.held || pet.lift !== 0 || pet.eating || pet.pooping || now < pet.bathUntil) return;
+    // fishing with you at the pond: it sits still on the desktop – no wandering, napping or complaining
+    if (P.state.fishingNow) { pet.mode = 'idle'; return; }
     const ph = P.phase();
     if (P.isFainted()) { pet.mode = 'idle'; return; }
 
@@ -159,8 +161,9 @@
   function walkStep() {
     if (P.bubbleBusy() || P.isAway() || P.isEgg() || pet.peek || pet.flying) return;   // stand still while asking something
     const walkOn = P.state.settings.walk;
-    if (pet.mode !== 'walk' || pet.held || !walkOn || P.phase() === 'focus' || P.isFainted()) {
-      if (pet.mode === 'walk' && (P.phase() === 'focus' || !walkOn || P.isFainted())) pet.mode = 'idle';
+    const still = P.phase() === 'focus' || !walkOn || P.isFainted() || P.state.fishingNow;
+    if (pet.mode !== 'walk' || pet.held || still) {
+      if (pet.mode === 'walk' && still) pet.mode = 'idle';
       return;
     }
     pet.walkAcc += pet.dir * Math.max(0.8, P.fx() * (P.isSick() ? 0.15 : 0.35));

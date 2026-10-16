@@ -5,6 +5,14 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+## 1.4.2 · 2026-10-16
+
+- **钓鱼按水池的圈分难度**：三圈同心圆，越靠中心越难、越稀有；新增最难的「正中央」，蓄力条中段才是最难的位置
+  **Fishing difficulty by the pond's rings**: three rings, harder and rarer towards the middle; a new hardest level in the deep middle, reached by the middle of the meter
+- **钓鱼更难**：原来的最高难度现在是普通；正中央的张力条一半以上是红色危险区
+  **Harder fishing**: the old hardest level is now normal; in the middle more than half of the tension bar is red
+- 钓鱼时桌面上的宝可梦安静待着，不走动、不拉便便、不喊饿 / While you fish, the Pokémon on the desktop stays put – no walking, pooping or calling for food
+
 ## 1.4.1 · 2026-10-16
 
 - 软件里（设置 → 关于与致谢）可以打开 Wiki 和反馈问题 / Settings → About links to the wiki and to reporting a problem

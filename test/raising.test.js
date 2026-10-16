@@ -327,15 +327,18 @@ test('companions: the happier the pet, the likelier a wild friend follows it hom
   assert.equal(Exp.finish(d, 0, { force: true, rnd: seq(0) }).companion, false, 'never from training');
 });
 
-test('fishing: rarer catches are likelier to want to join; cast colour sets the difficulty', () => {
+test('fishing: rarer catches are likelier to want to join; the pond\'s ring sets the difficulty', () => {
   const d = fresh();
   assert.equal(Fishing.land(d, { dex: 129, size: 90 }, 1, seq(0)).wantsToJoin, true);
   assert.equal(Fishing.land(d, { dex: 129, size: 90 }, 1, seq(0.99)).wantsToJoin, false);
   assert.ok(Fishing.JOIN_CHANCE[3] > Fishing.JOIN_CHANCE[0]);
-  assert.deepEqual([0.1, 0.5, 0.9].map(Fishing.zoneOf), [0, 1, 2]);
-  const easy = Fishing.bite(0.1, seq(0)), hard = Fishing.bite(0.9, seq(0));
-  assert.ok(easy.bite > hard.bite);
-  assert.ok(hard.pull / Fishing.TIERS[hard.tier].pull > easy.pull / Fishing.TIERS[easy.tier].pull);
+  assert.deepEqual([0, 1, 2, 3, 7, -1].map(Fishing.zoneOf), [0, 1, 2, 3, 3, 0]);
+  const zones = [0, 1, 2, 3].map((z) => Fishing.bite(z, seq(0)));
+  for (let z = 1; z < 4; z++) {
+    // the deeper the ring, the less time to react and the harder the pull
+    assert.ok(zones[z].bite < zones[z - 1].bite);
+    assert.ok(zones[z].pull / Fishing.TIERS[zones[z].tier].pull > zones[z - 1].pull / Fishing.TIERS[zones[z - 1].tier].pull);
+  }
 });
 
 test('old saves keep the built-in Pokémon they raised', () => {
@@ -403,11 +406,13 @@ test('fishing table: 24 species in four tiers, names in both languages', () => {
   assert.equal(Fishing.FISH.find((f) => f.dex === 131).names.zh, '拉普拉斯');
 });
 
-test('casting farther out makes rare bites likelier', () => {
-  const near = Fishing.tierWeights(0), far = Fishing.tierWeights(1);
+test('the deep middle of the pond makes rare bites likelier', () => {
   const share = (w, i) => w[i] / w.reduce((s, x) => s + x, 0);
-  assert.ok(share(far, 3) > share(near, 3) * 3);
-  assert.ok(share(far, 0) < share(near, 0));
+  for (let z = 1; z < 4; z++) {
+    assert.ok(share(Fishing.tierWeights(z), 3) > share(Fishing.tierWeights(z - 1), 3));
+    assert.ok(share(Fishing.tierWeights(z), 0) < share(Fishing.tierWeights(z - 1), 0));
+  }
+  assert.ok(share(Fishing.tierWeights(3), 3) > share(Fishing.tierWeights(0), 3) * 10);
 });
 
 test('a bite hides the species; landing records it and pays out', () => {
