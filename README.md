@@ -60,7 +60,7 @@ Questions, ideas and screenshots are welcome in **[Discussions](https://github.c
 - **AI chat is off unless you turn it on.** Then the chat and your Pokémon's state (name, level, mood,
   needs) go to the provider you chose – nothing else. Your API key is stored with the system keychain
   (Electron `safeStorage`) and never shown to the app's windows. The conversation isn't saved.
-- The keyboard helper only knows *when* a key was pressed, never which one. The fullscreen check (macOS and Windows) reads only the position and size of the window in front, never its title or contents. The clipboard, the screen
+- The keyboard helper only knows *when* a key was pressed, never which one. The fullscreen check (macOS and Windows) reads only the position and size of the windows in front (on macOS also whether the current Space is a fullscreen one), never their titles or contents. The clipboard, the screen
   and the contents of other apps' windows are never read. Everything stays in one local JSON file.
 - The QQ Pet projects used as design references (see [Reference projects](#reference-projects--参考项目))
   were only read, not used: none of their code or assets is included. Things some desktop-pet clients

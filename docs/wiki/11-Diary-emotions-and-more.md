@@ -6,7 +6,7 @@
 - **形象**：所有宝可梦都用 PMD SpriteCollab 的形象。新伙伴的形象第一次要联网下载，下载好之前先显示它的精灵球。
 - **表情和动作**：形象来自 PMD SpriteCollab，每只有约 35 个动作（待机、8 方向走路、睡觉、吃东西、受伤、倒下、蹦跳、攻击…），动作跟着它在做的事变化；气泡里显示 PMD 头像，表情随心情和状态变化（开心、担心、难过、疼、晕…）。
 - **对键盘鼠标做出反应**（可关）：你打字时它坐下陪你打字，连续打字 15 分钟没开番茄钟会建议你开一个；鼠标移动时它会看向光标；鼠标停在它身上会害羞，快速晃鼠标它会晕；离开 3 分钟它会睡觉。
-- **全屏时躲开**：前台是全屏应用（视频、游戏、演示，包括 Safari 等浏览器的全屏视频）时自动隐藏，退出全屏后再出来（设置里可关，默认开）。
+- **全屏时躲开**：前台是全屏应用（视频、游戏、演示，包括 Safari、Chrome 等浏览器里全屏播放的网页视频）时自动隐藏，退出全屏后再出来（设置里可关，默认开）。
 - **AI 聊天**（默认关闭）：设置 → AI 聊天，选服务商、填自己的 API key 和模型，然后右键「💬 聊天」。宝可梦按自己的性格和当前状态回答。对话不保存。
 - **检查更新**：启动时和每天 3 次自动检查 GitHub 上的新版本（设置里可关）。有新版本时会**弹窗提醒**；也可以在 设置 → 更新 里操作。
 - **自动安装**：选「下载并自动安装」后，软件会自己完成全部步骤：下载安装包到「下载」文件夹 → 退出 → 安装新版本 → 打开新版本。
@@ -25,7 +25,7 @@
 - **Reacting to keyboard & mouse** (can be turned off): it types along while you type and suggests a Pomodoro after
   15 min of typing without one; it looks at the cursor; it gets shy when you hover over it and dizzy when you shake the
   mouse; it naps when you've been away 3 min.
-- **Hiding over fullscreen apps** (videos, games, slides – including fullscreen video in Safari and other browsers),
+- **Hiding over fullscreen apps** (videos, games, slides – including fullscreen web video in Safari, Chrome and other browsers),
   coming back when you leave fullscreen – on by default, can be turned off.
 - **AI chat** (off by default): Settings → AI chat, pick a provider, enter your own API key and a model, then right-click
   "💬 Chat…". Your Pokémon answers in character from its current state. Conversations aren't saved.
