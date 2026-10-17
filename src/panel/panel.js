@@ -432,7 +432,7 @@
     const f = state.pets[id] && typeof state.pets[id].friendship === 'number' ? state.pets[id].friendship : 70;
     const full = Math.floor(f / 51);
     return el('div', { class: 'friend', title: `${t('poke.friendship')} ${Math.floor(f)}/255` },
-      `${t('poke.friendship')} `, el('span', { class: 'hearts' }, '♥'.repeat(full) + '♡'.repeat(5 - full)));
+      el('span', { class: 'lbl' }, t('poke.friendship')), el('span', { class: 'hearts' }, '♥'.repeat(full) + '♡'.repeat(5 - full)));
   }
 
   /** What it evolves into and how: a level, a stone, the Linking Cord, friendship (up to 3; Eevee has more). */
