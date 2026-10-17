@@ -23,7 +23,54 @@ const ITEMS = {
   revive:   { kind: 'revive', cost: 8, health: 50, mood: 5 },
   pokeball:  { kind: 'ball', cost: 10 },    // battle only (catching)
   greatball: { kind: 'ball', cost: 20 },
-  ultraball: { kind: 'ball', cost: 40 }
+  ultraball: { kind: 'ball', cost: 40 },
+  // held items (battle.HELD): given to a Pokémon to hold in battles, in the Pokémon tab
+  leftovers: { kind: 'held', cost: 30 },
+  sitrus: { kind: 'held', cost: 6 },
+  lum: { kind: 'held', cost: 8 },
+  cheri: { kind: 'held', cost: 3 },
+  chesto: { kind: 'held', cost: 3 },
+  pecha: { kind: 'held', cost: 3 },
+  rawst: { kind: 'held', cost: 3 },
+  aspear: { kind: 'held', cost: 3 },
+  focussash: { kind: 'held', cost: 25 },
+  quickclaw: { kind: 'held', cost: 15 },
+  scopelens: { kind: 'held', cost: 15 },
+  brightpowder: { kind: 'held', cost: 15 },
+  lifeorb: { kind: 'held', cost: 35 },
+  expertbelt: { kind: 'held', cost: 25 },
+  choiceband: { kind: 'held', cost: 35 },
+  choicespecs: { kind: 'held', cost: 35 },
+  choicescarf: { kind: 'held', cost: 35 },
+  muscleband: { kind: 'held', cost: 15 },
+  wiseglasses: { kind: 'held', cost: 15 },
+  shellbell: { kind: 'held', cost: 20 },
+  blacksludge: { kind: 'held', cost: 20 },
+  damprock: { kind: 'held', cost: 10 },
+  heatrock: { kind: 'held', cost: 10 },
+  smoothrock: { kind: 'held', cost: 10 },
+  icyrock: { kind: 'held', cost: 10 },
+  terrainextender: { kind: 'held', cost: 10 },
+  bindingband: { kind: 'held', cost: 10 },
+  gripclaw: { kind: 'held', cost: 10 },
+  silkscarf: { kind: 'held', cost: 15 },
+  charcoal: { kind: 'held', cost: 15 },
+  mysticwater: { kind: 'held', cost: 15 },
+  miracleseed: { kind: 'held', cost: 15 },
+  magnet: { kind: 'held', cost: 15 },
+  nevermeltice: { kind: 'held', cost: 15 },
+  blackbelt: { kind: 'held', cost: 15 },
+  poisonbarb: { kind: 'held', cost: 15 },
+  softsand: { kind: 'held', cost: 15 },
+  sharpbeak: { kind: 'held', cost: 15 },
+  twistedspoon: { kind: 'held', cost: 15 },
+  silverpowder: { kind: 'held', cost: 15 },
+  hardstone: { kind: 'held', cost: 15 },
+  spelltag: { kind: 'held', cost: 15 },
+  dragonfang: { kind: 'held', cost: 15 },
+  blackglasses: { kind: 'held', cost: 15 },
+  metalcoat: { kind: 'held', cost: 15 },
+  fairyfeather: { kind: 'held', cost: 15 }
 };
 
 const REWARD = { pomodoro: 3, todo: 1, daily: 2 };
@@ -149,6 +196,7 @@ function useItem(data, id, itemId) {
   const item = ITEMS[itemId];
   if (!item) return { ok: false, reason: 'unknown' };
   if (item.kind === 'ball') return { ok: false, reason: 'battleOnly' };
+  if (item.kind === 'held') return { ok: false, reason: 'holdOnly' };
   const care = careOf(data, id);
   if (care.fainted && item.kind !== 'revive') return { ok: false, reason: 'fainted' };
   if (item.kind === 'revive' && !care.fainted) return { ok: false, reason: 'notFainted' };

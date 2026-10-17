@@ -140,7 +140,7 @@ async function pickSpecies({ place, region, partnerLevel, drawn, dir, seen = [],
 /** A battler for one of the trainer's Pokémon. */
 async function battlerFor({ key, dex, names, level, attrs, shiny, dir }) {
   const [pk, moves] = await Promise.all([Data.pokemon(dex, dir), Data.movesAt(dex, level, dir)]);
-  return { key, dex, names, level, types: pk.types, base: pk.base, moves, attrs, shiny };
+  return { key, dex, names, level, types: pk.types, base: pk.base, moves, attrs, shiny, abilities: pk.abilities || [], heldItems: pk.heldItems || [] };
 }
 
 module.exports = { HABITATS, REGION_DEX, ENCOUNTER_WAIT_MIN, SHINY_RATE, REPEAT_SEEN, SPECIAL, LEGENDARY, MYTHICAL, LEGENDS,

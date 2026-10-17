@@ -13,6 +13,8 @@ canvas { display: block; image-rendering: pixelated; }
   background: var(--card); image-rendering: pixelated; }
 .hpbox.wild .face { left: calc(100% + 6px); }
 .hpbox.me .face { right: calc(100% + 6px); }
+.field { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); background: rgba(29,28,26,0.72); color: var(--ink);
+  font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 99px; white-space: nowrap; pointer-events: none; }
 .hpbox .row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
 .hpbox .row.small { font-size: 11px; color: #5a564e; margin-top: 2px; }
 .hpbox .name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

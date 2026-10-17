@@ -86,6 +86,8 @@ function freshPet(stage = 'hatched') {
     evolution: null,     // pending: { options: [{ dex, names }], snoozeUntil }
     finalForm: false,    // no further evolution exists
     hatchedAt: null,     // when it came out of its egg / joined the team
+    ability: null,       // { slot, dex, id, names } – its ability (from its species' regular ones; changes on evolving)
+    held: null,          // the held item id (battle.HELD), given in the Pokémon tab
     evolveAt: null,      // the level its next evolution needs (looked up from PokeAPI), null = not known yet
     evolvedAt: null      // when it last evolved
     // care: added by care.js (careOf)

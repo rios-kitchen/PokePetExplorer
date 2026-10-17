@@ -359,11 +359,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found.map((f) => f.cmd), ['berries', 'hatch', 'shiny']);
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast']) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx']) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -730,10 +730,13 @@ test('the games\' move sets: newest level-up moves, status moves included, alway
   const Data = require('../src/main/pokedata');
   const ok = (o) => Data.usable({ category: 'damage', power: 40, cls: 'physical', ailment: 'none', stats: [], healing: 0, ...o });
   assert.equal(ok({}), true);
-  assert.equal(ok({ category: 'ohko', power: 0 }), false);
+  assert.equal(ok({ category: 'ohko', power: 0, id: 'fissure' }), true, 'one-hit KO moves are in now');
+  assert.equal(ok({ category: 'whole-field-effect', cls: 'status', power: 0, id: 'rain-dance' }), true, 'weather');
+  assert.equal(ok({ category: 'unique', cls: 'status', power: 0, id: 'substitute' }), true, 'Substitute');
+  assert.equal(ok({ category: 'whole-field-effect', cls: 'status', power: 0, id: 'trick-room' }), false, 'other field effects still not');
   assert.equal(ok({ category: 'net-good-stats', cls: 'status', power: 0, stats: [{ stat: 'atk', change: -1 }] }), true);
   assert.equal(ok({ category: 'unique', cls: 'status', power: 0 }), false);
-  assert.equal(ok({ category: 'ailment', cls: 'status', power: 0, ailment: 'trap' }), false);
+  assert.equal(ok({ category: 'ailment', cls: 'status', power: 0, ailment: 'trap' }), true, 'trapping');
 });
 
 test('after an update: nothing pending, a manual install, then the release page', () => {

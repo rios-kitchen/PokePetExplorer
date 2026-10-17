@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { fetchAllowed } = require('./sources');
+const { SPECIAL_MOVES, OHKO } = require('./battle');
 
 const API = 'https://pokeapi.co/api/v2';
 const FILE = 'pokedata.json';
@@ -12,7 +13,7 @@ function load(dir) {
   if (!cache || dirOf !== dir) {
     dirOf = dir;
     try { cache = JSON.parse(fs.readFileSync(path.join(dir, FILE), 'utf8')); } catch { cache = null; }
-    cache = { pokemon: {}, species: {}, moves: {}, ...(cache || {}) };
+    cache = { pokemon: {}, species: {}, moves: {}, abilities: {}, ...(cache || {}) };
   }
   return cache;
 }
@@ -36,9 +37,12 @@ const enName = (names, fallback) => (names.find((n) => n.language.name === 'en')
 const GAMES = ['scarlet-violet', 'sword-shield', 'brilliant-diamond-shining-pearl', 'legends-arceus', 'ultra-sun-ultra-moon',
   'sun-moon', 'omega-ruby-alpha-sapphire', 'x-y', 'black-2-white-2', 'black-white', 'heartgold-soulsilver', 'platinum',
   'diamond-pearl', 'emerald', 'firered-leafgreen', 'ruby-sapphire', 'crystal', 'gold-silver', 'yellow', 'red-blue'];
-const POKEMON_V = 2;   // bump when the stored learnset changes (cached entries are fetched again)
+const POKEMON_V = 3;   // bump when the stored learnset changes (cached entries are fetched again)
 
-/** { types, base: { hp, atk, def, spa, spd, spe }, learnset: [[moveName, level]] } */
+/**
+ * { types, base: { hp, atk, def, spa, spd, spe }, learnset: [[moveName, level]], abilities: [{ id, hidden }],
+ *   heldItems: [[itemName, rarity %]] (what wild ones carry in the games) }
+ */
 async function pokemon(dex, dir) {
   const c = load(dir);
   if (c.pokemon[dex] && c.pokemon[dex].v === POKEMON_V) return c.pokemon[dex];
@@ -57,7 +61,9 @@ async function pokemon(dex, dir) {
     v: POKEMON_V,
     types: j.types.sort((a, b) => a.slot - b.slot).map((t) => t.type.name),
     base: { hp: s.hp, atk: s.attack, def: s.defense, spa: s['special-attack'], spd: s['special-defense'], spe: s.speed },
-    learnset
+    learnset,
+    abilities: (j.abilities || []).sort((a, b) => a.slot - b.slot).map((a) => ({ id: a.ability.name, hidden: !!a.is_hidden })),
+    heldItems: (j.held_items || []).map((h) => [h.item.name, Math.max(0, ...h.version_details.map((v) => v.rarity || 0))])
   };
   save();
   return c.pokemon[dex];
@@ -77,6 +83,18 @@ async function species(dex, dir) {
   save();
   return c.species[dex];
 }
+
+/** An ability's names: { en, zh }. */
+async function ability(name, dir) {
+  const c = load(dir);
+  if (c.abilities[name]) return c.abilities[name];
+  const j = await getJson(`${API}/ability/${name}`);
+  c.abilities[name] = { en: enName(j.names, name), zh: zhName(j.names) || enName(j.names, name) };
+  save();
+  return c.abilities[name];
+}
+/** An ability's names from the cache only (null when not fetched yet). */
+const abilityCached = (name, dir) => (name && load(dir).abilities[name]) || null;
 
 const MOVE_V = 2;   // bump when more move fields are needed (cached moves are fetched again)
 const STAT = { attack: 'atk', defense: 'def', 'special-attack': 'spa', 'special-defense': 'spd', speed: 'spe', accuracy: 'acc', evasion: 'eva' };
@@ -105,16 +123,18 @@ async function move(name, dir) {
   return c.moves[name];
 }
 
-// what the battle engine can do (battle.js); moves of other kinds (one-hit KOs, weather, traps, …) aren't picked
+// what the battle engine can do (battle.js); moves of other kinds (field effects, switching, …) aren't picked.
+// Weather, terrain, one-hit KO moves, Mean Look and Substitute are known by name (battle.SPECIAL_MOVES).
 // (PokeAPI writes them with a hyphen: damage-ailment, damage-raise …)
 const CATEGORIES = new Set(['damage', 'ailment', 'net-good-stats', 'heal', 'damage-ailment', 'damage-lower', 'damage-raise',
   'damage-heal', 'swagger', 'damage+ailment', 'damage+lower', 'damage+raise', 'damage+heal']);
 const AILMENTS = new Set(['burn', 'poison', 'paralysis', 'freeze', 'sleep', 'confusion']);
 /** Can the battle engine use this move (and does it do something there)? */
 function usable(m) {
-  if (!CATEGORIES.has(m.category) || m.power > 150) return false;   // no one-hit wonders
+  if (SPECIAL_MOVES.has(m.id) || OHKO.has(m.id) || m.category === 'ohko') return true;
+  if (!CATEGORIES.has(m.category) || m.power > 150) return false;
   if (m.cls !== 'status') return m.power > 0;
-  return AILMENTS.has(m.ailment) || m.stats.length > 0 || m.healing > 0;
+  return AILMENTS.has(m.ailment) || m.ailment === 'trap' || m.stats.length > 0 || m.healing > 0;
 }
 
 const STRUGGLE = { id: 'tackle', names: { en: 'Tackle', zh: '撞击' }, type: 'normal', power: 40, acc: 100, cls: 'physical',
@@ -146,4 +166,4 @@ async function movesAt(dex, level, dir) {
   return out.length ? out.reverse() : [STRUGGLE];
 }
 
-module.exports = { pokemon, species, move, movesAt, usable, STRUGGLE };
+module.exports = { pokemon, species, move, ability, abilityCached, movesAt, usable, STRUGGLE };

@@ -383,7 +383,8 @@
   function renderPokemon() {
     const all = state.custom.map((c) => ({ id: c.id, builtin: false }));
     const key = JSON.stringify([L(), state.settings.pokemon, all.map((p) => p.id),
-      Object.fromEntries(Object.entries(state.pets).map(([k, v]) => [k, [v.xp, v.stage, v.attrs, v.species]])), state.skins, state.expedition, state.party]);
+      Object.fromEntries(Object.entries(state.pets).map(([k, v]) => [k, [v.xp, v.stage, v.attrs, v.species, v.ability, v.held]])), state.skins, state.expedition, state.party,
+      Object.entries(state.inventory).filter(([id]) => (state.items[id] || {}).kind === 'held')]);
     if (key === pokeKey) return;
     pokeKey = key;
     const grid = $('#pokeGrid');
@@ -409,10 +410,37 @@
           class: `party-btn${state.party.includes(p.id) ? ' on' : ''}`,
           onclick: (e) => { e.stopPropagation(); api.send('party:toggle', p.id); }
         }, state.party.includes(p.id) ? t('poke.partyOn') : t('poke.partyOff')),
+        isEgg(p.id) ? null : abilityLine(p.id),
+        isEgg(p.id) ? null : heldPicker(p.id),
 
         creditLines(state.skins[p.id]?.credits));
       grid.append(card);
     }
+  }
+
+  /** Its ability (battles), once known. */
+  function abilityLine(id) {
+    const ab = state.pets[id] && state.pets[id].ability;
+    if (!ab || !ab.names) return null;
+    return el('div', { class: 'ability' }, t('poke.ability', { name: ab.names[L()] || ab.names.en }));
+  }
+
+  /** What it holds in battles: nothing, or a held item from the bag (the old one goes back to the bag). */
+  function heldPicker(id) {
+    const held = (state.pets[id] && state.pets[id].held) || '';
+    const ids = Object.keys(state.items).filter((k) => state.items[k].kind === 'held' && (k === held || state.inventory[k] > 0));
+    const sel = el('select', {
+      class: 'held', title: held ? t(`itemdesc.${held}`) : t('poke.held'),
+      onclick: (e) => e.stopPropagation(),
+      onchange: async (e) => {
+        const res = await api.invoke('pokemon:hold', id, e.target.value || null);
+        if (!res.ok) { e.target.value = held; if (res.reason === 'battle') e.target.title = t('care.refused.battle'); }
+      }
+    }, el('option', { value: '' }, `${t('poke.held')}: ${t('poke.heldNone')}`),
+    ...ids.map((k) => el('option', { value: k }, `${t('poke.held')}: ${t(`item.${k}`)}${k !== held && state.inventory[k] > 1 ? ` ×${state.inventory[k]}` : ''}`)));
+    sel.value = held;
+    if (!ids.length) sel.disabled = true;
+    return sel;
   }
 
   /** Contest stats (😎 cool, 🎀 cute, 📚 smart, 💪 tough), and 🧭 when away. */

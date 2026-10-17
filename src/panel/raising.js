@@ -30,7 +30,7 @@ window.PanelRaising = function PanelRaising(env) {
     $('#shopHead').textContent = t('shop.balance', { n: state.berries });
     $('#careEarn').textContent = t('care.earn', { p: state.reward.pomodoro, t: state.reward.todo, d: state.reward.daily });
     const buyable = Object.entries(state.items).filter(([, item]) => item.cost > 0);
-    $('#shopItems').replaceChildren(...buyable.map(([id, item]) => {
+    const row = ([id, item]) => {
       const have = state.inventory[id] || 0;
       const buy = (n) => el('button', {
         class: 'ghost', disabled: state.berries < item.cost * n ? true : null,
@@ -39,12 +39,16 @@ window.PanelRaising = function PanelRaising(env) {
           if (!res.ok) flash('#shopMsg', t(`care.refused.${res.reason}`));
         }
       }, `+${n}`);
-      return el('div', { class: 'shop-item' },
-        el('span', { class: 'si-name' }, t(`item.${id}`)),
+      const desc = item.kind === 'held' ? t(`itemdesc.${id}`) : '';
+      return el('div', { class: 'shop-item', title: desc || null },
+        el('span', { class: 'si-name' }, t(`item.${id}`), desc ? el('span', { class: 'si-desc' }, desc) : null),
         el('span', { class: 'si-have' }, have ? t('shop.have', { n: have }) : ''),
         el('span', { class: 'si-cost' }, `${item.cost} 🍓`),
-        el('span', { class: 'si-buy' }, buy(1), buy(5)));
-    }));
+        el('span', { class: 'si-buy' }, buy(1), ...(item.kind === 'held' ? [] : [buy(5)])));
+    };
+    $('#shopItems').replaceChildren(...buyable.filter(([, item]) => item.kind !== 'held').map(row));
+    // held items: a section of their own (given to a Pokémon in the Pokémon tab)
+    $('#shopHeld').replaceChildren(...buyable.filter(([, item]) => item.kind === 'held').map(row));
   }
 
   // ================================================================ TODAY (sign-in, daily tasks)
