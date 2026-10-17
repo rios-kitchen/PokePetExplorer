@@ -40,7 +40,7 @@ each Pokémon knocked out in the battle has a 60% chance to still be fainted at 
 
 领头宝可梦 **Lv30** 以后，每次遭遇有 1/400 几率遇到传说、1/2000 遇到幻之宝可梦，究极异兽和悖谬宝可梦各 1/800，等级比领头高 8 级。大多数捕获率只有 3：先打到残血，用睡眠或冰冻，再扔高级球，多试几次。收服之前都还会再遇到。详见 [[第 7 节](07-Battles-and-catching)](07-Battles-and-catching)。
 
-From lead **Lv30**, 1 in 400 encounters is a legendary 1 in 2000 a mythical and 1 in 800 each an Ultra Beast or a Paradox Pokémon, 8 levels above your lead. Most have a catch
+From lead **Lv30**, 1 in 400 encounters is a legendary, 1 in 2000 a mythical and 1 in 800 each an Ultra Beast or a Paradox Pokémon, 8 levels above your lead. Most have a catch
 rate of 3: weaken it, put it to sleep or freeze it, then throw Ultra Balls – and keep trying. It turns up again until it's
 caught. See [[section 7](07-Battles-and-catching)](07-Battles-and-catching).
 
