@@ -1,0 +1,17 @@
+:root { --ink: #f0ede6; --muted: #a39f95; --card: #fbf8f0; --yellow: #ffd84a; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1c1a; color: var(--ink); user-select: none;
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+.stage { position: relative; width: 480px; height: 420px; margin: 12px auto 0; border: 3px solid #2a2420; border-radius: 6px; overflow: hidden; }
+canvas { display: block; image-rendering: pixelated; cursor: none; }
+.hud-top { position: absolute; top: 6px; left: 10px; right: 10px; display: flex; justify-content: space-between;
+  font-size: 15px; font-weight: 800; color: #fff; text-shadow: 0 1px 0 #2a2420, 1px 0 0 #2a2420, -1px 0 0 #2a2420, 0 -1px 0 #2a2420; pointer-events: none; }
+.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.4); }
+.overlay.hidden { display: none; }
+.card { background: var(--card); color: #23221f; border: 3px solid #2a2420; border-radius: 10px; padding: 14px 18px; min-width: 280px; max-width: 360px; text-align: center; }
+.card b { display: block; font-size: 18px; margin-bottom: 4px; }
+.card p { margin: 0 0 12px; white-space: pre-line; }
+.primary { background: var(--yellow); border: 2px solid #23221f; border-radius: 10px; padding: 6px 22px; font: inherit; font-weight: 700; color: #23221f; cursor: pointer; }
+.primary:disabled { opacity: 0.5; cursor: default; }
+.hint { margin: 8px 0 0; text-align: center; min-height: 18px; }
+.count { margin: 2px 0 0; text-align: center; color: var(--muted); font-size: 12px; }

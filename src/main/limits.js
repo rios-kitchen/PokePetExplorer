@@ -5,7 +5,8 @@
 const LIMITS = {
   grass:   { day: 16, hour: 3 },   // wild encounters in the tall grass
   fishing: { day: 20, hour: 6 },   // bites (something on the line, landed or not)
-  quiz:    { day: 12, hour: 4 }    // Who's That Pokémon? questions
+  quiz:    { day: 12, hour: 4 },   // Who's That Pokémon? questions
+  catch:   { day: 6, hour: 2 }     // Berry Catch rounds
 };
 const HOUR = 3600e3;
 

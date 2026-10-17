@@ -13,6 +13,7 @@
 - [11. 日记、表情和其他 · Diary, emotions and more](11-Diary-emotions-and-more)
 - [12. 每日限制和计时一览 · Daily limits and timers at a glance](12-Daily-limits-and-timers-at-a-glance)
 - [13. 猜猜我是谁 ❓ · Who's That Pokémon? ❓](13-Who-s-that-Pokemon)
+- [14. 接树果 🍓 · Berry Catch 🍓](14-Berry-Catch)
 - [常见问题 · FAQ](FAQ)
 - [开发者 · Developers](Developers)
 
