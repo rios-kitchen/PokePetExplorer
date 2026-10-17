@@ -1382,7 +1382,7 @@ function quizInfo() {
   return Limits.info(store.data, 'quiz', today());
 }
 
-/** A new question: a silhouette (the face as a data URL) and four names. Counts one play once it's ready. */
+/** A new question: a silhouette (its idle sprite sheet as a data URL) and four names. Counts one play once it's ready. */
 async function quizAsk() {
   const lim = quizInfo();
   const why = Limits.blocked(lim);
@@ -1391,14 +1391,17 @@ async function quizAsk() {
   const known = Object.keys(store.data.pokedex || {}).map(Number);
   for (let tries = 0; tries < 4; tries++) {
     const q = Quiz.question(list, { known, exclude: quizRecent });
-    let buf, species;
+    let sprite, species;
     try {
-      [buf, ...species] = await Promise.all([Sources.portrait(q.answer, 'Normal', spritesDir()), ...q.choices.map((d) => Sources.lookupSpecies(d))]);
+      const [meta, ...names] = await Promise.all([Sources.downloadSkin(q.answer, false, spritesDir()), ...q.choices.map((d) => Sources.lookupSpecies(d))]);
+      const anims = JSON.parse(fs.readFileSync(path.join(spritesDir(), meta.dir, 'anims.json'), 'utf8'));
+      const a = anims.Idle || anims.Walk || Object.values(anims)[0];
+      sprite = { url: `data:image/png;base64,${fs.readFileSync(path.join(spritesDir(), meta.dir, a.file)).toString('base64')}`, fw: a.fw, fh: a.fh, durs: a.durs };
+      species = names;
     } catch (e) {
-      if (e.code === 'not-found') continue;
+      if (e.code === 'not-found') continue;   // no sprite drawn for this one: ask another
       return { ok: false, error: 'net' };
     }
-    if (!buf) continue;   // no face drawn for this one: ask another
     if (!lim.free) Limits.use(store.data, 'quiz', today());
     quizRecent.push(q.answer);
     if (quizRecent.length > 30) quizRecent.shift();
@@ -1406,7 +1409,7 @@ async function quizAsk() {
     quizzes.clear();   // one question at a time
     quizzes.set(token, { answer: q.answer, names: Object.fromEntries(species.map((sp) => [sp.dex, sp.names])) });
     changed();
-    return { ok: true, token, face: `data:image/png;base64,${buf.toString('base64')}`,
+    return { ok: true, token, sprite,
       choices: species.map((sp) => ({ dex: sp.dex, names: sp.names })), info: quizInfo() };
   }
   return { ok: false, error: 'net' };

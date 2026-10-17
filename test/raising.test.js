@@ -837,9 +837,9 @@ test('the forecast talk: rain on its way, clearing up, or the temperature range'
 test('Who\'s That Pokémon?: questions, rewards, limits', () => {
   const Quiz = require('../src/main/quiz');
   const Limits = require('../src/main/limits');
-  // the pool: species with a PMD portrait, or all of them while that isn't known
+  // the pool: species with a PMD sprite, or all of them while that isn't known
   assert.equal(Quiz.pool(null).length, 1025);
-  const idx = { dex: Object.fromEntries(Array.from({ length: 300 }, (_, i) => [String(i + 1).padStart(4, '0'), { portrait: i % 2 ? 'x' : null }])) };
+  const idx = { dex: Object.fromEntries(Array.from({ length: 300 }, (_, i) => [String(i + 1).padStart(4, '0'), { sprite: i % 2 ? 'x' : null }])) };
   const list = Quiz.pool(idx);
   assert.equal(list.length, 150);
   assert.ok(list.every((d) => d % 2 === 0));

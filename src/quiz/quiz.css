@@ -1,6 +1,6 @@
 :root { --ink: #f0ede6; --muted: #a39f95; --card: #fbf8f0; --red: #e2463b; --green: #2e9b5f; --yellow: #ffd84a; --blue: #3b78c4; }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: #1d1c1a; color: var(--ink); user-select: none;
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1c1a; color: var(--ink); user-select: none;
   font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
 h1 { margin: 12px 0 8px; text-align: center; font-size: 18px; color: var(--yellow); letter-spacing: 1px; }
 .stage { position: relative; width: 200px; height: 200px; margin: 0 auto; border: 3px solid #2a2420; border-radius: 50%;
@@ -9,8 +9,7 @@ h1 { margin: 12px 0 8px; text-align: center; font-size: 18px; color: var(--yello
   background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.16) 0deg 10deg, rgba(255, 255, 255, 0) 10deg 20deg); }
 .stage.revealed .rays { animation: spin 6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.face { position: relative; width: 128px; height: 128px; image-rendering: pixelated; border-radius: 12px; transition: filter 0.5s; }
-.face.silhouette { filter: brightness(0); }
+.face { position: relative; width: 128px; height: 128px; image-rendering: pixelated; }
 .hidden { display: none !important; }
 .loading { position: relative; color: #fff; font-size: 40px; font-weight: 800; }
 .verdict { margin: 10px 16px 6px; text-align: center; min-height: 20px; font-size: 15px; font-weight: 700; }

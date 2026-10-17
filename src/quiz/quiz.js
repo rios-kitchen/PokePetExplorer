@@ -1,4 +1,4 @@
-/* PokePet Explorer – Who's That Pokémon? A face as a black silhouette and four names: pick one, the face is revealed.
+/* PokePet Explorer – Who's That Pokémon? A Pokémon's outline in black and four names: pick one, and it's revealed.
  * The main process picks the question and keeps the answer until a name is picked (quiz.js, main.js quizAsk). */
 (() => {
   const api = window.api;
@@ -9,6 +9,54 @@
   let state = null;
   let current = null;   // { token, choices }
   let asking = false;
+  // the Pokémon: its idle animation (facing you), black until the answer – drawn on a canvas so only its outline shows
+  const face = $('#face');
+  const g = face.getContext('2d');
+  let anim = null;   // { img, fw, fh, box, durs, frame, until, dark }
+
+  /** The part of the frames (row 0) that has pixels, so a small Pokémon fills the circle too. */
+  function boxOf(img, fw, fh, frames) {
+    const c = document.createElement('canvas');
+    c.width = fw * frames; c.height = fh;
+    const cg = c.getContext('2d');
+    cg.drawImage(img, 0, 0, fw * frames, fh, 0, 0, fw * frames, fh);
+    const px = cg.getImageData(0, 0, fw * frames, fh).data;
+    let x0 = fw, y0 = fh, x1 = -1, y1 = -1;
+    for (let y = 0; y < fh; y++) {
+      for (let x = 0; x < fw * frames; x++) {
+        if (px[(y * fw * frames + x) * 4 + 3] < 16) continue;
+        const fx = x % fw;
+        x0 = Math.min(x0, fx); x1 = Math.max(x1, fx); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+    }
+    return x1 < 0 ? { x: 0, y: 0, w: fw, h: fh } : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  }
+
+  function draw() {
+    if (!anim) return;
+    const { img, fw, box } = anim;
+    const scale = Math.max(1, Math.floor(Math.min(116 / box.w, 116 / box.h) * 2) / 2);
+    const w = box.w * scale, h = box.h * scale;
+    g.clearRect(0, 0, 128, 128);
+    g.imageSmoothingEnabled = false;
+    g.globalCompositeOperation = 'source-over';
+    g.drawImage(img, anim.frame * fw + box.x, box.y, box.w, box.h, Math.round((128 - w) / 2), Math.round((128 - h) / 2), w, h);   // row 0: facing down
+    if (anim.dark) {
+      g.globalCompositeOperation = 'source-in';
+      g.fillStyle = '#111';
+      g.fillRect(0, 0, 128, 128);
+      g.globalCompositeOperation = 'source-over';
+    }
+  }
+  function tick(now) {
+    if (anim && now >= anim.until) {
+      anim.frame = (anim.frame + 1) % anim.durs.length;
+      anim.until = now + anim.durs[anim.frame] * (1000 / 60);
+      draw();
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
   const L = () => (state ? state.settings.lang : 'en');
   const t = (k, v) => I18N.t(L(), k, v);
   const nm = (names) => names[L()] || names.en;
@@ -34,7 +82,8 @@
     $('#verdict').textContent = '';
     $('#verdict').className = 'verdict';
     $('#choices').replaceChildren();
-    $('#face').classList.add('hidden', 'silhouette');
+    anim = null;
+    face.classList.add('hidden');
     $('.stage').classList.remove('revealed');
     $('#loading').textContent = '?';
     $('#loading').classList.remove('hidden');
@@ -47,9 +96,16 @@
       return;
     }
     current = res;
-    const img = $('#face');
-    img.onload = () => { $('#loading').classList.add('hidden'); img.classList.remove('hidden'); };
-    img.src = res.face;
+    const img = new Image();
+    img.onload = () => {
+      const s = res.sprite;
+      const durs = s.durs && s.durs.length ? s.durs : [30];
+      anim = { img, fw: s.fw, fh: s.fh, box: boxOf(img, s.fw, s.fh, durs.length), durs, frame: 0, until: performance.now() + 500, dark: true };
+      draw();
+      $('#loading').classList.add('hidden');
+      face.classList.remove('hidden');
+    };
+    img.src = res.sprite.url;
     $('#verdict').textContent = t('quiz.who');
     $('#choices').replaceChildren(...res.choices.map((c) => {
       const b = document.createElement('button');
@@ -68,7 +124,7 @@
     for (const b of $('#choices').children) b.disabled = true;
     const res = await api.invoke('quiz:answer', q.token, dex);
     if (!res.ok) return;
-    $('#face').classList.remove('silhouette');
+    if (anim) { anim.dark = false; draw(); }
     $('.stage').classList.add('revealed');
     for (const b of $('#choices').children) {
       if (Number(b.dataset.dex) === res.answer.dex) b.classList.add('right');
