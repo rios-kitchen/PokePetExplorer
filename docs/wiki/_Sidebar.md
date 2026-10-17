@@ -12,6 +12,7 @@
 - [10. 新伙伴从哪来 · Where new Pokémon come from](10-Where-new-Pokemon-come-from)
 - [11. 日记、表情和其他 · Diary, emotions and more](11-Diary-emotions-and-more)
 - [12. 每日限制和计时一览 · Daily limits and timers at a glance](12-Daily-limits-and-timers-at-a-glance)
+- [13. 猜猜我是谁 ❓ · Who's That Pokémon? ❓](13-Who-s-that-Pokemon)
 - [常见问题 · FAQ](FAQ)
 - [开发者 · Developers](Developers)
 

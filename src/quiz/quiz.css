@@ -1,0 +1,28 @@
+:root { --ink: #f0ede6; --muted: #a39f95; --card: #fbf8f0; --red: #e2463b; --green: #2e9b5f; --yellow: #ffd84a; --blue: #3b78c4; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #1d1c1a; color: var(--ink); user-select: none;
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+h1 { margin: 12px 0 8px; text-align: center; font-size: 18px; color: var(--yellow); letter-spacing: 1px; }
+.stage { position: relative; width: 200px; height: 200px; margin: 0 auto; border: 3px solid #2a2420; border-radius: 50%;
+  overflow: hidden; background: #3b78c4; display: flex; align-items: center; justify-content: center; }
+.rays { position: absolute; inset: -50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.16) 0deg 10deg, rgba(255, 255, 255, 0) 10deg 20deg); }
+.stage.revealed .rays { animation: spin 6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.face { position: relative; width: 128px; height: 128px; image-rendering: pixelated; border-radius: 12px; transition: filter 0.5s; }
+.face.silhouette { filter: brightness(0); }
+.hidden { display: none !important; }
+.loading { position: relative; color: #fff; font-size: 40px; font-weight: 800; }
+.verdict { margin: 10px 16px 6px; text-align: center; min-height: 20px; font-size: 15px; font-weight: 700; }
+.verdict.right { color: #7be0a2; }
+.verdict.wrong { color: #ff8a80; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 330px; margin: 0 auto; }
+.choices button { background: var(--card); color: #23221f; border: 2px solid #23221f; border-radius: 10px; padding: 9px 6px;
+  font: inherit; font-weight: 700; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.choices button:hover:not(:disabled) { background: #fff3c2; }
+.choices button:disabled { cursor: default; opacity: 0.55; }
+.choices button.right { background: #9be2b5; opacity: 1; }
+.choices button.wrong { background: #f6a49c; opacity: 1; }
+.foot { width: 330px; margin: 10px auto 0; text-align: center; }
+.primary { background: var(--yellow); border: 2px solid #23221f; border-radius: 10px; padding: 6px 22px; font: inherit; font-weight: 700; color: #23221f; cursor: pointer; }
+.count { margin: 6px 0 0; color: var(--muted); font-size: 12px; white-space: pre-line; }

@@ -260,6 +260,7 @@ window.PanelRaising = function PanelRaising(env) {
     }));
   }
   $('#goFish').addEventListener('click', () => api.send('fish:open'));
+  $('#goQuiz').addEventListener('click', () => api.send('quiz:open'));
 
   // the Pokédex: every species met (grey face) or caught (with its portrait), kept even after one leaves the team
   const dexFaces = {};
@@ -320,6 +321,9 @@ window.PanelRaising = function PanelRaising(env) {
     const fm = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));
     $('#fishLeft').textContent = f.left > 0 || f.dayLeft <= 0 ? (f.dayLeft > 0 ? t('fish.left', { n: f.dayLeft, max: f.max, h: f.hourLeft, hmax: f.hourMax }) : t('fish.tired'))
       : t('fish.rest', { m: fm(f.nextAt) });
+    const q = state.quiz;
+    $('#quizLeft').textContent = q.left > 0 || q.dayLeft <= 0 ? (q.dayLeft > 0 ? t('quiz.left', { n: q.dayLeft, max: q.max, h: q.hourLeft, hmax: q.hourMax }) : t('quiz.tired'))
+      : t('quiz.rest', { m: fm(q.nextAt) });
     const g = state.grass;
     const e = state.encounter;
     const mins = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));

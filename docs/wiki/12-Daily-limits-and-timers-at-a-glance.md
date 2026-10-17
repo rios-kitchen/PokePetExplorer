@@ -10,9 +10,10 @@
 | 签到 | 每天 1 次，7 天一轮 |
 | 每日任务 | 每天 4 个 + 全部完成奖励 |
 | 钓鱼 | 每天 20 次上钩，任意 1 小时内 6 次；1 小时内第 3 次起越来越多垃圾 |
+| 猜猜我是谁 | 每天 12 题，任意 1 小时内 4 题 |
 | 节日礼物 | 每个节日 1 次 |
 | 摸摸给经验 | 每 15 秒最多 1 点，每天最多 20 点 |
-| 进化 | 原作等级，且加入满 7 天 / 上次进化后满 14 天 |
+| 进化 | 原作等级（或进化石、联系绳、亲密度 220），且加入满 7 天 / 上次进化后满 14 天 |
 | 闪光保底 | 上一只闪光加入后满 90 天 |
 | 关闭软件时的照顾结算 | 最多 12 小时 |
 | 异常状态加重 | 每 6 小时一阶 |
@@ -32,9 +33,10 @@
 | Sign-in | once a day, 7-day cycle |
 | Daily tasks | 4 a day + an all-done bonus |
 | Fishing | 20 bites a day, 6 within any hour; from the 3rd bite in an hour, more and more junk |
+| Who's That Pokémon? | 12 questions a day, 4 within any hour |
 | Holiday gifts | once per holiday |
 | XP from patting | at most 1 every 15 s, 20 a day |
-| Evolution | the games' level, plus 7 days on the team / 14 days since the last one |
+| Evolution | the games' level (or a stone, the Linking Cord, friendship 220), plus 7 days on the team / 14 days since the last one |
 | Shiny guarantee | 90 days after the last shiny joined |
 | Care while the app is closed | at most 12 hours counted |
 | Status condition getting worse | one stage every 6 hours |
