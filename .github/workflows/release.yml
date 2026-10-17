@@ -1,7 +1,7 @@
 # Builds the installers on a Mac and a Windows machine when a version tag (v1.2.3) is pushed, smoke-tests the Windows
 # installer (silent install, start the app), uploads both to the GitHub release for the tag and publishes it.
 # Release notes: create the release as a draft with its notes before pushing the tag (gh release create vX --draft
-# --notes-file …); if there's none, a draft with a short note is created and published.
+# --notes-file …); if there's none, the notes are made from the version's CHANGELOG.md section (tools/release-notes.js).
 name: Release
 on:
   push:
@@ -75,6 +75,10 @@ jobs:
     if: github.event_name == 'push' || github.event.inputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+          path: src
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -84,7 +88,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --draft --title "PokePet Explorer ${TAG#v}" --notes "PokePet Explorer ${TAG#v}"
+            node src/tools/release-notes.js "$TAG" > notes.md
+            gh release create "$TAG" --draft --title "PokePet Explorer ${TAG#v}" --notes-file notes.md
           fi
           gh release upload "$TAG" dist/mac/*.dmg dist/windows/*.exe --clobber
           gh release edit "$TAG" --draft=false --latest
