@@ -3145,19 +3145,34 @@ async function selfTest(dir) {
   });
   await wait(1500);
   await shot(petWin, '42-encounter-gone');
-  // evolution items: the wrong one has no effect, a Thunder Stone evolves Pikachu (as in the games)
+  // evolution items, on a fresh Eevee: the Linking Cord has no effect, a Water Stone evolves it (as in the games)
+  const eevee = 'dex-133';
   await step('evolve-stone', async () => {
-    const pet = petOf(store.data, 'pikachu');
-    await lookupEvolveLevel('pikachu');
-    console.log('[test] pikachu evolves:', JSON.stringify(pet.evoPaths), 'at', pet.evolveAt, 'friendship', Growth.friendshipOf(pet));
+    const sp = await Sources.lookupSpecies(133);
+    store.data.custom.push({ id: eevee, dex: sp.dex, names: sp.names });
+    store.data.skins[eevee] = await Sources.downloadSkin(sp.dex, false, spritesDir());
+    const pet = petOf(store.data, eevee);
+    pet.stage = 'hatched';
     pet.evolvedAt = Date.now() - 30 * 86400e3;
-    for (const id of ['firestone', 'thunderstone']) store.data.inventory[id] = (store.data.inventory[id] || 0) + 1;
-    console.log('[test] fire stone on pikachu:', JSON.stringify(await useEvoItem('firestone', 'pikachu')));
-    console.log('[test] thunder stone on pikachu:', JSON.stringify(await useEvoItem('thunderstone', 'pikachu')), (pet.species || {}).dex);
+    await lookupEvolveLevel(eevee);
+    console.log('[test] eevee evolves:', JSON.stringify((pet.evoPaths || []).map((o) => [o.names.en, o.way, o.level, o.item])), 'at', pet.evolveAt, 'friendship', Growth.friendshipOf(pet));
+    changed();
   });
   openPanel('pokemon');
   await wait(2500);
-  await shot(panelWin, '43-panel-evolved-stone');
+  await shot(panelWin, '43-panel-eevee-paths');
+  await step('evolve-stone-use', async () => {
+    for (const id of ['linkingcord', 'waterstone']) store.data.inventory[id] = (store.data.inventory[id] || 0) + 1;
+    console.log('[test] linking cord on eevee:', JSON.stringify(await useEvoItem('linkingcord', eevee)));
+    console.log('[test] water stone on eevee:', JSON.stringify(await useEvoItem('waterstone', eevee)), (petOf(store.data, eevee).species || {}).dex);
+  });
+  await wait(2500);
+  await shot(panelWin, '43b-panel-evolved-stone');
+  openPanel('shop');
+  await wait(1500);
+  await panelWin.webContents.executeJavaScript(`document.querySelector('#shopEvo') && document.querySelector('#shopEvo').scrollIntoView()`).catch(() => {});
+  await wait(800);
+  await shot(panelWin, '43c-panel-shop-evo');
   {
     let words = null;
     try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* not here */ }
