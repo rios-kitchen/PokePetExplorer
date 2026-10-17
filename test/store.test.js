@@ -86,3 +86,15 @@ test('Store saves and loads the new fields', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('release notes come from the version\'s CHANGELOG section', () => {
+  const { section, notes } = require('../tools/release-notes');
+  const log = '# Changelog\n\n## 未发布 · Unreleased\n\n## 1.2.0 · 2026-01-02\n\n- New thing\n  New thing\n\n## 1.1.0 · 2026-01-01\n\n- Old\n';
+  assert.equal(section(log, '1.2.0'), '- New thing\n  New thing');
+  assert.equal(section(log, '1.1.0'), '- Old');
+  assert.equal(section(log, '9.9.9'), null);
+  const n = notes(log, '1.2.0');
+  assert.ok(n.includes('- New thing') && !n.includes('- Old'));
+  assert.ok(n.includes('PokePetExplorer-1.2.0-macOS.dmg') && n.includes('PokePetExplorer-1.2.0-Windows-Setup.exe'));
+  assert.equal(notes(log, '9.9.9'), 'PokePet Explorer 9.9.9');
+});
