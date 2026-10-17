@@ -767,6 +767,18 @@ test('wild encounters follow the games\' tables; legendaries are rare special en
   const all = new Set([...W.LEGENDARY, ...W.MYTHICAL]);
   assert.equal(W.pickLegend({ level: 40, drawn, caught: all, rnd: () => 0 }), null);
   assert.equal(W.legendLevel(80), 70);
+  // Ultra Beasts and Paradox Pokémon: special encounters of their own, never from the tables
+  const ub = W.pickLegend({ level: 40, drawn, force: 'ultra', rnd: () => 0.3 });
+  assert.ok(ub && W.ULTRA_BEASTS.includes(ub.dex) && ub.special === 'ultra');
+  const px = W.pickLegend({ level: 40, drawn, force: 'paradox', rnd: () => 0.3 });
+  assert.ok(px && W.PARADOX.includes(px.dex) && px.special === 'paradox');
+  // a roll just past the legendary chance is an Ultra Beast, then a Paradox Pokémon, then nothing
+  const at = (x) => { const v = [x, 0]; let i = 0; return () => v[Math.min(i++, 1)]; };
+  assert.equal(W.pickLegend({ level: 40, drawn, rnd: at(W.MYTHICAL_CHANCE + W.LEGEND_CHANCE + 0.0001) }).special, 'ultra');
+  assert.equal(W.pickLegend({ level: 40, drawn, rnd: at(W.MYTHICAL_CHANCE + W.LEGEND_CHANCE + W.ULTRA_CHANCE + 0.0001) }).special, 'paradox');
+  assert.equal(W.pickLegend({ level: 40, drawn, rnd: at(0.01) }), null);
+  assert.equal(W.pickLegend({ level: 40, region: 'paldea', drawn, rnd: at(W.MYTHICAL_CHANCE + W.LEGEND_CHANCE + W.ULTRA_CHANCE + W.PARADOX_CHANCE + 0.0001) }).special, 'paradox', 'more often in Paldea');
+  assert.equal(W.pickLegend({ level: 40, drawn, caught: new Set([...W.ULTRA_BEASTS]), force: 'ultra' }), null);
 });
 
 test('the forecast talk: rain on its way, clearing up, or the temperature range', () => {

@@ -19,7 +19,7 @@ Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等�
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |
 | 小游戏次数 / Mini-game limits | `src/main/limits.js` | `LIMITS` (grass 16/day 3/hour, fishing 20/day 6/hour) – 新的小游戏也加在这里 / add new mini-games here |
 | 出现表 / Encounter tables | `src/main/encounters.json` (built by `npm run encounters` → `tools/build-encounters.js` from PokeAPI) | `GAMES` per region, place kinds |
-| 野生宝可梦 / Wild species | `src/main/wild.js` | `pickFromTables`, `pickLegend` (`LEGEND_CHANCE` 1/400, `MYTHICAL_CHANCE` 1/2000, `LEGEND_MIN_LEVEL` 30) |
+| 野生宝可梦 / Wild species | `src/main/wild.js` | `pickFromTables`, `pickLegend` (`LEGEND_CHANCE` 1/400, `MYTHICAL_CHANCE` 1/2000, `ULTRA_CHANCE` / `PARADOX_CHANCE` 1/800, `LEGEND_MIN_LEVEL` 30) |
 | 野生宝可梦（旧） / Wild species (fallback) | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `REPEAT_SEEN`, `SPECIAL`, `SHINY_RATE` |
 | 对战结算 / Battle results | `main.js` `finishBattle`, `LOSE_PENALTY` | win berries 1–3; lose: grass −30 health / −20 mood / −3 berries / 60% faint, outing −15 / −10 / 5% faint |
 | 摸摸经验 / Pat XP | `main.js` | `PAT_XP_PER_DAY` (20) |

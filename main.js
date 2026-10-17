@@ -629,8 +629,9 @@ async function runSecret(text) {
   }
   if (cmd === 'battle') {
     // a battle right away (no daily limit), optionally against a named Pokémon, or "legend" for a special encounter
+    // ("legend ultra" / "legend paradox" / "legend mythical" / "legend legendary" for one kind)
     if (battle && !battle.b.over) { openWild(false); return { ok: true }; }
-    const legend = args[0] === 'legend';
+    const legend = args[0] === 'legend' ? (['legendary', 'mythical', 'ultra', 'paradox'].includes(args[1]) ? args[1] : true) : false;
     const res = await startBattle('test', { query: args.length && !legend ? args.join('-') : null, legend });
     if (!res.ok) return { ok: false };
     if (wildWin && !wildWin.isDestroyed()) { send(wildWin, 'wild:refresh'); wildWin.show(); wildWin.focus(); } else openWild(false);
@@ -1114,7 +1115,7 @@ async function startBattle(source, opts = {}) {
     const wildAbility = Battle.pickAbility(w.abilities);
     const wildNames = wildAbility ? await Data.ability(wildAbility, dir).catch(() => null) : null;
     const wild = Battle.makeMon({ ...w, wild: true, ability: wildAbility, abilityNames: wildNames, item: Battle.pickWildItem(w.heldItems) });
-    wild.special = special;   // 'legendary' | 'mythical' | null
+    wild.special = special;   // 'legendary' | 'mythical' | 'ultra' | 'paradox' | null
     if (source === 'grass') Limits.use(store.data, 'grass', today());
     if (met) store.data.wild.encounter = null;
     if (!met) Pokedex.see(store.data, sp.dex, sp.names);   // an outing's Pokémon was seen when it was met

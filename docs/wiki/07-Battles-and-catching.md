@@ -23,11 +23,10 @@
 - 只会出现 PMD 画过的宝可梦。帕底亚地区 PokeAPI 还没有出现表，那里用旧的按属性挑选的方式。
 - 稀有的就是稀有：出现率 5% 甚至 1% 的宝可梦要多遇几次才碰得到；常见的总是那几只。
 
-**传说和幻之宝可梦（特殊遭遇）**：
-- 领头宝可梦到 **Lv30** 以后，每次遭遇有 **1/400** 的几率遇到传说宝可梦，**1/2000** 的几率遇到幻之宝可梦（旅行时优先遇到那个地区的）。
+**传说、幻之宝可梦、究极异兽和悖谬宝可梦（特殊遭遇）**：
+- 领头宝可梦到 **Lv30** 以后，每次遭遇有 **1/400** 的几率遇到传说宝可梦，**1/2000** 的几率遇到幻之宝可梦，究极异兽和悖谬宝可梦各 **1/800**（旅行时优先遇到那个地区的；去阿罗拉旅行时更容易遇到究极异兽，去帕底亚时更容易遇到悖谬宝可梦）。出现时有专门的开场白。
 - 等级比领头高 8 级（40～70 级），捕获率和原作一样，大多数只有 **3**：要先打到残血，再用高级球加睡眠或冰冻，也还要多试几次。
 - 每一只**收服之前都可能再遇到**，收服之后就不会再出现。逃跑或者打倒了，以后还有机会。
-- 究极异兽和悖谬宝可梦暂时不出现。
 - **1/4096** 闪光，另有保底（见[第 10 节](10-Where-new-Pokemon-come-from)）。
 
 ### 对战规则（简化版正作规则）
@@ -166,13 +165,13 @@ Galar Sword/Shield):
 - Only species PMD has drawn. Paldea has no tables in PokeAPI yet, so it uses the older type-based pick.
 - Rare is rare: a 5% or 1% Pokémon takes a lot of encounters; the usual faces keep turning up.
 
-**Legendary and mythical Pokémon (special encounters)**:
-- Once your lead is **Lv30**, each encounter has a **1 in 400** chance of a legendary and **1 in 2000** of a mythical
-  Pokémon (on a trip, preferably one from that region).
+**Legendary, mythical, Ultra Beast and Paradox Pokémon (special encounters)**:
+- Once your lead is **Lv30**, each encounter has a **1 in 400** chance of a legendary, **1 in 2000** of a mythical
+  Pokémon and **1 in 800** each of an Ultra Beast and a Paradox Pokémon (on a trip, preferably one from that region;
+  Ultra Beasts turn up more often on trips to Alola, Paradox Pokémon on trips to Paldea). Each kind has its own intro.
 - They're 8 levels above your lead (Lv40–70) with the games' catch rates – mostly **3**: weaken it, then Ultra Balls
   with sleep or freeze, and still expect a few tries.
 - Each can **turn up again until it's caught**, never after. Running away or knocking it out leaves another chance.
-- Ultra Beasts and Paradox Pokémon don't appear for now.
 - Shiny **1 in 4096**, with a guarantee ([section 10](10-Where-new-Pokemon-come-from)).
 
 ### Battle rules (simplified main-series rules)
