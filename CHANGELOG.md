@@ -5,6 +5,8 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+## 1.5.0 · 2026-10-18
+
 - **特性**：每只宝可梦都有和原作一样的特性（宝可梦页卡片上能看到），100 多种在对战里有效果——威吓、茂盛、漂浮、结实、静电、降雨……；野生宝可梦偶尔有隐藏特性
   **Abilities**: every Pokémon has its ability from the games (shown on its card); over 100 work in battle – Intimidate, Overgrow, Levitate, Sturdy, Static, Drizzle …; wild ones now and then have their hidden ability
 - **携带道具**：商店新增 46 种携带道具（吃剩的东西、文柚果、气势披带、生命宝珠、讲究系列、18 种属性强化道具……），在宝可梦页交给宝可梦携带；野生宝可梦也会带着原作里的道具，收服后一起带回来
