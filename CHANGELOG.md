@@ -5,6 +5,8 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+## 1.4.4 · 2026-10-17
+
 - **天气预报**：开了天气后，宝可梦每 3 小时聊一聊接下来 3 小时的天气（快下雨了、雨快停了、温度范围……）；正在外出、专注或钓鱼时，等结束后再说
   **Forecast**: with weather on, every 3 hours your Pokémon talks about the next 3 hours (rain on its way, clearing up, the temperature range …); if it's on an outing or you're focusing or fishing, it waits until that's over
 - 修复：macOS 上 Safari 等全屏播放视频时宝可梦没有隐藏（#5）
