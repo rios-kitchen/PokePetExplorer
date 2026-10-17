@@ -5,6 +5,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **究极异兽和悖谬宝可梦**：作为特殊遭遇出现（领头 Lv30 以后各 1/800，去阿罗拉旅行时更容易遇到究极异兽，去帕底亚时更容易遇到悖谬宝可梦），有专门的开场白，收服之前都还会再遇到
+  **Ultra Beasts and Paradox Pokémon**: they turn up as special encounters (1 in 800 each from lead Lv30; Ultra Beasts more often on trips to Alola, Paradox Pokémon on trips to Paldea), with their own intro, and keep turning up until caught
+
 ## 1.5.0 · 2026-10-18
 
 - **特性**：每只宝可梦都有和原作一样的特性（宝可梦页卡片上能看到），100 多种在对战里有效果——威吓、茂盛、漂浮、结实、静电、降雨……；野生宝可梦偶尔有隐藏特性

@@ -25,8 +25,10 @@ const REGION_DEX = {
 // how often the grass can be explored: see limits.js
 const ENCOUNTER_WAIT_MIN = 30;   // a wild Pokémon met on an outing waits this long for a battle
 // not "legendary" in PokeAPI's data, but just as special: Ultra Beasts and Paradox Pokémon
-const SPECIAL = new Set([793, 794, 795, 796, 797, 798, 799, 803, 804, 805, 806,
-  984, 985, 986, 987, 988, 989, 990, 991, 992, 993, 994, 995, 1005, 1006, 1009, 1010, 1020, 1021, 1022, 1023]);
+// (they never come from the tables or the type-based pick; they turn up as special encounters, see pickLegend)
+const ULTRA_BEASTS = [793, 794, 795, 796, 797, 798, 799, 803, 804, 805, 806];
+const PARADOX = [984, 985, 986, 987, 988, 989, 990, 991, 992, 993, 994, 995, 1005, 1006, 1009, 1010, 1020, 1021, 1022, 1023];
+const SPECIAL = new Set([...ULTRA_BEASTS, ...PARADOX]);
 const SHINY_RATE = 1 / 4096;   // as in the games (see shiny.js for the guarantee)
 
 // ---------------------------------------------------------------- the games' encounter tables
@@ -71,22 +73,38 @@ const MYTHICAL = [151, 251, 385, 386, 489, 490, 491, 492, 493, 494, 647, 648, 64
   893, 1025];
 const LEGENDS = new Set([...LEGENDARY, ...MYTHICAL]);
 // per encounter, once the lead is strong enough; each one keeps turning up (rarely) until it has been caught
-const LEGEND_CHANCE = 1 / 400, MYTHICAL_CHANCE = 1 / 2000, LEGEND_MIN_LEVEL = 30;
+const LEGEND_CHANCE = 1 / 400, MYTHICAL_CHANCE = 1 / 2000, ULTRA_CHANCE = 1 / 800, PARADOX_CHANCE = 1 / 800, LEGEND_MIN_LEVEL = 30;
+const POOLS = { legendary: LEGENDARY, mythical: MYTHICAL, ultra: ULTRA_BEASTS, paradox: PARADOX };
+// where each kind prefers to turn up on a trip: Ultra Beasts in Alola, Paradox Pokémon in Paldea
+const HOME_REGION = { ultra: 'alola', paradox: 'paldea' };
 /** The level a special one appears at: well above the lead, as in the games (40–70). */
 const legendLevel = (lead) => Math.max(40, Math.min(70, lead + 8));
 
 /**
- * A special encounter, or null: legendary 1 in 400, mythical 1 in 2000 (lead Lv30+), one PMD has drawn and you
- * haven't caught yet – from the travel region if there is one.
+ * A special encounter, or null: legendary 1 in 400, mythical 1 in 2000, Ultra Beast 1 in 800, Paradox Pokémon 1 in
+ * 800 (lead Lv30+), one PMD has drawn and you haven't caught yet – from the travel region if there is one (Ultra
+ * Beasts rather on trips to Alola, Paradox Pokémon to Paldea). force: true, or a kind ('ultra' …).
  */
 function pickLegend({ level, region, drawn, caught = new Set(), rnd = Math.random, force = false }) {
   if (!force && level < LEGEND_MIN_LEVEL) return null;
   const roll = rnd();
-  const kind = force ? (rnd() < 0.8 ? 'legendary' : 'mythical') : roll < MYTHICAL_CHANCE ? 'mythical' : roll < MYTHICAL_CHANCE + LEGEND_CHANCE ? 'legendary' : null;
+  let kind = null;
+  if (typeof force === 'string' && POOLS[force]) kind = force;
+  else if (force) kind = ['legendary', 'legendary', 'legendary', 'mythical', 'ultra', 'paradox'][Math.floor(rnd() * 6)];
+  else {
+    let edge = 0;
+    for (const [k, chance] of [['mythical', MYTHICAL_CHANCE], ['legendary', LEGEND_CHANCE], ['ultra', ULTRA_CHANCE], ['paradox', PARADOX_CHANCE]]) {
+      edge += chance;
+      if (roll < edge) { kind = k; break; }
+    }
+    // Ultra Beasts and Paradox Pokémon come a little more often on a trip to their own region
+    if (!kind && region && HOME_REGION.ultra === region && roll < edge + ULTRA_CHANCE) kind = 'ultra';
+    if (!kind && region && HOME_REGION.paradox === region && roll < edge + PARADOX_CHANCE) kind = 'paradox';
+  }
   if (!kind) return null;
   const ok = new Set(drawn);
   const range = region && REGION_DEX[region];
-  let pool = (kind === 'mythical' ? MYTHICAL : LEGENDARY).filter((d) => ok.has(d) && !caught.has(d));
+  let pool = POOLS[kind].filter((d) => ok.has(d) && !caught.has(d));
   if (range && pool.some((d) => d >= range[0] && d <= range[1])) pool = pool.filter((d) => d >= range[0] && d <= range[1]);
   if (!pool.length) return null;
   return { dex: pool[Math.floor(rnd() * pool.length)], level: legendLevel(level), special: kind };
@@ -143,6 +161,6 @@ async function battlerFor({ key, dex, names, level, attrs, shiny, dir }) {
   return { key, dex, names, level, types: pk.types, base: pk.base, moves, attrs, shiny, abilities: pk.abilities || [], heldItems: pk.heldItems || [] };
 }
 
-module.exports = { HABITATS, REGION_DEX, ENCOUNTER_WAIT_MIN, SHINY_RATE, REPEAT_SEEN, SPECIAL, LEGENDARY, MYTHICAL, LEGENDS,
-  LEGEND_CHANCE, MYTHICAL_CHANCE, LEGEND_MIN_LEVEL, TABLES, placesFor, pickFromTables, pickLegend, legendLevel,
+module.exports = { HABITATS, REGION_DEX, ENCOUNTER_WAIT_MIN, SHINY_RATE, REPEAT_SEEN, SPECIAL, ULTRA_BEASTS, PARADOX, LEGENDARY, MYTHICAL, LEGENDS,
+  LEGEND_CHANCE, MYTHICAL_CHANCE, ULTRA_CHANCE, PARADOX_CHANCE, LEGEND_MIN_LEVEL, TABLES, placesFor, pickFromTables, pickLegend, legendLevel,
   drawnDex, pickSpecies, battlerFor };
