@@ -70,7 +70,19 @@ const ITEMS = {
   dragonfang: { kind: 'held', cost: 15 },
   blackglasses: { kind: 'held', cost: 15 },
   metalcoat: { kind: 'held', cost: 15 },
-  fairyfeather: { kind: 'held', cost: 15 }
+  fairyfeather: { kind: 'held', cost: 15 },
+  // evolution items (growth.js EVO_ITEMS): used on a Pokémon that evolves with them (main.js useEvoItem)
+  firestone: { kind: 'evo', cost: 40, mood: 10 },
+  waterstone: { kind: 'evo', cost: 40, mood: 10 },
+  thunderstone: { kind: 'evo', cost: 40, mood: 10 },
+  leafstone: { kind: 'evo', cost: 40, mood: 10 },
+  moonstone: { kind: 'evo', cost: 40, mood: 10 },
+  sunstone: { kind: 'evo', cost: 40, mood: 10 },
+  shinystone: { kind: 'evo', cost: 40, mood: 10 },
+  duskstone: { kind: 'evo', cost: 40, mood: 10 },
+  dawnstone: { kind: 'evo', cost: 40, mood: 10 },
+  icestone: { kind: 'evo', cost: 40, mood: 10 },
+  linkingcord: { kind: 'evo', cost: 60, mood: 10 }   // trade evolutions
 };
 
 const REWARD = { pomodoro: 3, todo: 1, daily: 2 };
@@ -197,6 +209,7 @@ function useItem(data, id, itemId) {
   if (!item) return { ok: false, reason: 'unknown' };
   if (item.kind === 'ball') return { ok: false, reason: 'battleOnly' };
   if (item.kind === 'held') return { ok: false, reason: 'holdOnly' };
+  if (item.kind === 'evo') return { ok: false, reason: 'evoOnly' };   // see main.js useEvoItem
   const care = careOf(data, id);
   if (care.fainted && item.kind !== 'revive') return { ok: false, reason: 'fainted' };
   if (item.kind === 'revive' && !care.fainted) return { ok: false, reason: 'notFainted' };
@@ -272,5 +285,5 @@ function remedyFor(care, need) {
 
 module.exports = {
   ITEMS, REWARD, STATUSES, MAX_STAGE, STAGE_HOURS, DIAGNOSE_COST, CURE,
-  freshCare, careOf, inflict, worsen, decay, rollStatus, useItem, diagnose, urgentNeed, remedyFor
+  freshCare, careOf, inflict, worsen, decay, rollStatus, pay, useItem, diagnose, urgentNeed, remedyFor
 };

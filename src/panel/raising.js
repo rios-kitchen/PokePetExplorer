@@ -39,14 +39,16 @@ window.PanelRaising = function PanelRaising(env) {
           if (!res.ok) flash('#shopMsg', t(`care.refused.${res.reason}`));
         }
       }, `+${n}`);
-      const desc = item.kind === 'held' ? t(`itemdesc.${id}`) : '';
+      const desc = item.kind === 'held' || item.kind === 'evo' ? t(`itemdesc.${id}`) : '';
       return el('div', { class: 'shop-item', title: desc || null },
         el('span', { class: 'si-name' }, t(`item.${id}`), desc ? el('span', { class: 'si-desc' }, desc) : null),
         el('span', { class: 'si-have' }, have ? t('shop.have', { n: have }) : ''),
         el('span', { class: 'si-cost' }, `${item.cost} 🍓`),
-        el('span', { class: 'si-buy' }, buy(1), ...(item.kind === 'held' ? [] : [buy(5)])));
+        el('span', { class: 'si-buy' }, buy(1), ...(item.kind === 'held' || item.kind === 'evo' ? [] : [buy(5)])));
     };
-    $('#shopItems').replaceChildren(...buyable.filter(([, item]) => item.kind !== 'held').map(row));
+    $('#shopItems').replaceChildren(...buyable.filter(([, item]) => item.kind !== 'held' && item.kind !== 'evo').map(row));
+    // evolution stones and the Linking Cord: used in the Care tab
+    $('#shopEvo').replaceChildren(...buyable.filter(([, item]) => item.kind === 'evo').map(row));
     // held items: a section of their own (given to a Pokémon in the Pokémon tab)
     $('#shopHeld').replaceChildren(...buyable.filter(([, item]) => item.kind === 'held').map(row));
   }

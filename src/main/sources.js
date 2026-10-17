@@ -66,9 +66,28 @@ async function lookupSpecies(query) {
 }
 
 /**
- * What a species can evolve into: [{ dex, names, level }] (empty for a final form); level is the games' level-up
- * level, or null for stones, trades, friendship and the like. Uses PokeAPI's
- * evolution chain; branching species (Eevee …) have several options.
+ * How the games evolve it, from PokeAPI's evolution details: { how: 'level', level } | { how: 'item', item } (PokeAPI's
+ * item name) | { how: 'trade' } | { how: 'friendship', level } | { how: 'other' }. Several ways (different games):
+ * a level first, then an item, friendship, a trade.
+ */
+function wayOf(details) {
+  const ways = (details || []).map((d) => {
+    const trigger = d.trigger && d.trigger.name;
+    if (trigger === 'use-item' && d.item) return { how: 'item', item: d.item.name };
+    if (trigger === 'trade') return { how: 'trade' };
+    if (trigger === 'level-up' && (d.min_happiness || d.min_affection)) return { how: 'friendship', level: d.min_level || null };
+    if (trigger === 'level-up' && d.min_level) return { how: 'level', level: d.min_level };
+    return { how: 'other' };
+  });
+  const levels = ways.filter((w) => w.how === 'level').map((w) => w.level);
+  if (levels.length) return { how: 'level', level: Math.min(...levels) };
+  return ['item', 'friendship', 'trade'].map((h) => ways.find((w) => w.how === h)).find(Boolean) || { how: 'other' };
+}
+
+/**
+ * What a species can evolve into: [{ dex, names, level, how, item? }] (empty for a final form); level is the games'
+ * level-up level (null for stones, trades and the like), how and item as in wayOf. Uses PokeAPI's evolution chain;
+ * branching species (Eevee …) have several options.
  */
 async function evolutionOptions(dex) {
   const species = await getJson(`${API}/pokemon-species/${dex}`);
@@ -80,8 +99,8 @@ async function evolutionOptions(dex) {
   if (!node) return [];
   const out = [];
   for (const next of node.evolves_to.slice(0, 8)) {
-    const levels = (next.evolution_details || []).map((d) => d.min_level).filter(Boolean);
-    try { out.push({ ...(await lookupSpecies(idOf(next))), level: levels.length ? Math.min(...levels) : null }); } catch { /* skip */ }
+    const way = wayOf(next.evolution_details);
+    try { out.push({ ...(await lookupSpecies(idOf(next))), level: way.how === 'level' ? way.level : null, ...way }); } catch { /* skip */ }
   }
   return out;
 }
@@ -267,4 +286,4 @@ async function portrait(dex, emotion, dir, shiny = false) {
 /** The cached PMD artist index ({ dex: { "0025": {…} } }) – also tells which species have sprites. */
 function creditIndexCached(dir) { return loadCreditIndex(dir); }
 
-module.exports = { SOURCES, PMD_VERSION, ALLOWED_HOSTS, fetchAllowed, creditIndexCached, lookupSpecies, evolutionOptions, randomEggSpecies, downloadSkin, portrait, pmdCredits, cachedCredits };
+module.exports = { SOURCES, PMD_VERSION, ALLOWED_HOSTS, fetchAllowed, creditIndexCached, lookupSpecies, evolutionWay: wayOf, evolutionOptions, randomEggSpecies, downloadSkin, portrait, pmdCredits, cachedCredits };

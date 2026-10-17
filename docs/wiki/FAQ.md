@@ -17,9 +17,9 @@ When you hit one, it tells you how many minutes to wait. The more you fish withi
 
 ### 为什么还不能进化？ / Why doesn't it evolve yet?
 
-要同时满足：达到**原作的进化等级**（用道具、交换、亲密度进化的在 Lv30），并且加入队伍**满 7 天**（第二次进化要在上次进化后满 14 天）。到了会先问你，可以选「以后再说」。
+要同时满足：达到**原作的进化等级**（用进化石或联系绳进化的要在照顾页用道具，亲密度进化的要亲密度到 220），并且加入队伍**满 7 天**（第二次进化要在上次进化后满 14 天）。到了会先问你，可以选「以后再说」。
 
-It needs **the games' evolution level** (Lv30 for stones, trades and friendship) **and** at least **7 days** on your team
+It needs **the games' evolution level** (or a stone or Linking Cord used in the Care tab, or friendship 220) **and** at least **7 days** on your team
 (14 days after its previous evolution). It asks first; you can say "Later".
 
 ### 宝可梦一直显示成精灵球？ / My Pokémon is shown as a Poké Ball?

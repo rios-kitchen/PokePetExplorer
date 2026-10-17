@@ -412,6 +412,8 @@
         }, state.party.includes(p.id) ? t('poke.partyOn') : t('poke.partyOff')),
         isEgg(p.id) ? null : abilityLine(p.id),
         isEgg(p.id) ? null : heldPicker(p.id),
+        isEgg(p.id) ? null : friendLine(p.id),
+        isEgg(p.id) ? null : evolveLine(p.id),
 
         creditLines(state.skins[p.id]?.credits));
       grid.append(card);
@@ -423,6 +425,27 @@
     const ab = state.pets[id] && state.pets[id].ability;
     if (!ab || !ab.names) return null;
     return el('div', { class: 'ability' }, t('poke.ability', { name: ab.names[L()] || ab.names.en }));
+  }
+
+  /** Friendship as five hearts (255 = all full; friendship evolutions need 220). */
+  function friendLine(id) {
+    const f = state.pets[id] && typeof state.pets[id].friendship === 'number' ? state.pets[id].friendship : 70;
+    const full = Math.floor(f / 51);
+    return el('div', { class: 'friend', title: `${t('poke.friendship')} ${Math.floor(f)}/255` },
+      el('span', { class: 'lbl' }, t('poke.friendship')), el('span', { class: 'hearts' }, '♥'.repeat(full) + '♡'.repeat(5 - full)));
+  }
+
+  /** What it evolves into and how: a level, a stone, the Linking Cord, friendship (up to 3; Eevee has more). */
+  function evolveLine(id) {
+    const rec = state.pets[id];
+    const paths = rec && !rec.finalForm && rec.evoPaths;
+    if (!paths || !paths.length) return null;
+    const plain = (k) => t(`item.${k}`).replace(/^[^\p{L}\p{N}]+\s/u, '');
+    const how = (o) => o.way === 'level' ? `Lv${o.level}` : o.item ? plain(o.item)
+      : o.way === 'friendship' ? t('poke.evoFriend') : t('poke.evoOther', { n: 30 });
+    const list = paths.slice(0, 3).map((o) => `${o.names[L()] || o.names.en} (${how(o)})`).join(' / ') + (paths.length > 3 ? ' …' : '');
+    const all = paths.map((o) => `${o.names[L()] || o.names.en} (${how(o)})`).join('\n');
+    return el('div', { class: 'evolves', title: all }, t('poke.evolves', { list }));
   }
 
   /** What it holds in battles: nothing, or a held item from the bag (the old one goes back to the bag). */

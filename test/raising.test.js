@@ -186,6 +186,45 @@ test('eggs hatch at Lv5; evolution at the species\' level, not before a week (tw
   assert.equal(Growth.evolutionDue(pet), false);
 });
 
+test('evolution by stones, trades and friendship', () => {
+  const Sources = require('../src/main/sources');
+  const d = (trigger, extra = {}) => ({ trigger: { name: trigger }, ...extra });
+  // PokeAPI's evolution details → how
+  assert.deepEqual(Sources.evolutionWay([d('level-up', { min_level: 16 })]), { how: 'level', level: 16 });
+  assert.deepEqual(Sources.evolutionWay([d('use-item', { item: { name: 'thunder-stone' } })]), { how: 'item', item: 'thunder-stone' });
+  assert.deepEqual(Sources.evolutionWay([d('trade', { held_item: { name: 'metal-coat' } })]), { how: 'trade' });
+  assert.deepEqual(Sources.evolutionWay([d('level-up', { min_happiness: 160, time_of_day: 'day' })]), { how: 'friendship', level: null });
+  assert.deepEqual(Sources.evolutionWay([d('level-up', { location: { name: 'x' } }), d('use-item', { item: { name: 'leaf-stone' } })]),
+    { how: 'item', item: 'leaf-stone' }, 'Leafeon: the stone of the newer games');
+  assert.deepEqual(Sources.evolutionWay([d('level-up', { known_move: { name: 'x' } })]), { how: 'other' });
+  assert.deepEqual(Sources.evolutionWay([]), { how: 'other' });
+  // how → the level it needs, and the item that does it
+  assert.equal(Growth.optionLevel({ how: 'level', level: 16 }), 16);
+  assert.equal(Growth.optionLevel({ how: 'item', item: 'fire-stone' }), Growth.NOT_BY_LEVEL);
+  assert.equal(Growth.itemFor({ how: 'item', item: 'fire-stone' }), 'firestone');
+  assert.equal(Growth.itemFor({ how: 'trade' }), 'linkingcord');
+  assert.equal(Growth.optionLevel({ how: 'trade' }), Growth.NOT_BY_LEVEL);
+  assert.equal(Growth.optionLevel({ how: 'item', item: 'sweet-apple' }), Growth.EVOLVE_FALLBACK, 'items the shop doesn\'t sell: Lv30');
+  assert.equal(Growth.itemFor({ how: 'item', item: 'sweet-apple' }), null);
+  assert.equal(Growth.optionLevel({ how: 'friendship', level: null }, 100), Growth.NOT_BY_LEVEL);
+  assert.equal(Growth.optionLevel({ how: 'friendship', level: null }, 230), 1);
+  assert.equal(Growth.optionLevel({ level: 20 }), 20, 'saved by an older version');
+  for (const id of Object.values(Growth.EVO_ITEMS).concat(Growth.TRADE_ITEM)) assert.equal(Care.ITEMS[id].kind, 'evo', id);
+  // friendship: 70 to start, grows, 255 at most; crossing 220 says so once
+  const data = fresh();
+  const pet = petOf(data, 'x');
+  assert.equal(Growth.friendshipOf(pet), Growth.FRIEND_START);
+  assert.equal(Growth.befriend(pet, 100), false);
+  assert.equal(Growth.befriend(pet, 60), true);
+  assert.equal(Growth.befriend(pet, 60), false);
+  assert.equal(pet.friendship, Growth.FRIEND_MAX);
+  assert.equal(Growth.friendshipOf({}), Growth.FRIEND_START, 'pets from older versions');
+  // stones aren't used like food: main.js uses them on the Pokémon
+  data.berries = 100;
+  assert.equal(Care.useItem(data, 'x', 'firestone').reason, 'evoOnly');
+  assert.equal(data.berries, 100);
+});
+
 // ---------------------------------------------------------------- expeditions
 test('expedition requirements', () => {
   const d = fresh();
@@ -359,11 +398,12 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found.map((f) => f.cmd), ['berries', 'hatch', 'shiny']);
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx']) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  // newer words may not be in an older local file yet
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
