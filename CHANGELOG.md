@@ -5,6 +5,8 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+## 1.4.5 · 2026-10-17
+
 - 修复：macOS 上在浏览器里全屏播放网页视频时宝可梦没有隐藏（#8）
   Fixed: on macOS the Pokémon didn't hide over fullscreen web video in a browser (#8)
 
