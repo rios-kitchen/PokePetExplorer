@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -832,4 +832,38 @@ test('the forecast talk: rain on its way, clearing up, or the temperature range'
   assert.equal(r(h('clear', 20), [h('clear', 21), h('clear', 22), h('clear', 21)]).line, 'forecastSunny');
   assert.equal(r(h('cloudy', 20), [h('cloudy', 21), h('clear', 22), h('cloudy', 21)]).line, 'forecastCloudy');
   assert.equal(r(h('clear', 20), []), null);
+});
+
+test('Who\'s That Pokémon?: questions, rewards, limits', () => {
+  const Quiz = require('../src/main/quiz');
+  const Limits = require('../src/main/limits');
+  // the pool: species with a PMD portrait, or all of them while that isn't known
+  assert.equal(Quiz.pool(null).length, 1025);
+  const idx = { dex: Object.fromEntries(Array.from({ length: 300 }, (_, i) => [String(i + 1).padStart(4, '0'), { portrait: i % 2 ? 'x' : null }])) };
+  const list = Quiz.pool(idx);
+  assert.equal(list.length, 150);
+  assert.ok(list.every((d) => d % 2 === 0));
+  // four different choices, the answer among them
+  for (let i = 0; i < 200; i++) {
+    const q = Quiz.question(list, { known: [2, 4, 6, 8, 10, 12], exclude: [20] });
+    assert.equal(q.choices.length, Quiz.CHOICES);
+    assert.equal(new Set(q.choices).size, Quiz.CHOICES);
+    assert.ok(q.choices.includes(q.answer));
+    assert.notEqual(q.answer, 20);
+  }
+  // half the time one you've met (when you've met at least 5)
+  const met = [2, 4, 6, 8, 10];
+  const hits = Array.from({ length: 400 }, () => met.includes(Quiz.question(list, { known: met }).answer)).filter(Boolean).length;
+  assert.ok(hits > 150 && hits < 260, String(hits));
+  assert.equal(Quiz.question(list, { known: met, rnd: () => 0 }).answer, 2);
+  // berries: 2, and 3 for every 3rd right answer in a row
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map(Quiz.berriesFor), [2, 2, 3, 2, 2, 3]);
+  // limits: 12 a day, 4 an hour
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 4; i++) assert.equal(Limits.use(data, 'quiz', day, t0 + i), true);
+  assert.equal(Limits.use(data, 'quiz', day, t0 + 5), false);
+  assert.equal(Limits.blocked(Limits.info(data, 'quiz', day, t0 + 5)), 'rest');
+  assert.equal(Limits.info(data, 'quiz', day, t0 + 3600e3 + 10).hourLeft, 4);
+  assert.equal(Limits.LIMITS.quiz.day, 12);
 });

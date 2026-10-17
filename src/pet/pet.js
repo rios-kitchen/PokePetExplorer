@@ -339,6 +339,12 @@
         ]
       });
     },
+    'quiz-right'(e) {
+      if (P.isAway()) return;
+      P.hearts(1);
+      if (!P.playAnim(['Hop', 'Nod'])) P.jump(1);
+      if (!P.bubbleBusy()) P.showBubble(say('quizRight', { name: e.name }), { ms: 2500 });
+    },
     'fish-caught'(e) {
       if (P.isAway()) return;
       P.hearts(2);

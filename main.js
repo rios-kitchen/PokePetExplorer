@@ -14,6 +14,7 @@ const Achievements = require('./src/main/achievements');
 const Secrets = require('./src/main/secrets');
 const Album = require('./src/main/album');
 const Fishing = require('./src/main/fishing');
+const Quiz = require('./src/main/quiz');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -86,7 +87,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -265,6 +266,7 @@ function snapshot() {
     pokedex: Pokedex.list(d),
     grass: grassInfo(),
     fishing: fishingInfo(),
+    quiz: quizInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -653,6 +655,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'quiz') {
+    // testing: Who's That Pokémon? without daily / hourly limits, until used again or the app restarts
+    testFlags.freeQuiz = !testFlags.freeQuiz;
+    changed();
+    if (testFlags.freeQuiz) openQuiz();
     return { ok: true };
   }
   if (cmd === 'evolution') {
@@ -1341,6 +1350,86 @@ function fishLand(token) {
   const join = res.wantsToJoin ? offerJoin({ dex: res.dex, names: res.names, shiny: res.shiny, from: 'fishing' }) : null;
   changed();
   return { ok: true, ...res, join: join ? join.token : null };
+}
+
+// ---------- Who's That Pokémon? (猜猜我是谁) ----------
+let quizWin = null;
+const quizzes = new Map();   // token -> { answer, names } (the window only learns the answer after guessing)
+const quizRecent = [];       // the last answers, not asked again right away
+
+function openQuiz() {
+  if (!quizWin || quizWin.isDestroyed()) {
+    quizWin = new BrowserWindow({
+      width: 380, height: 500, resizable: false, show: false, title: T('quiz.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) quizWin.setMenu(null);
+    if (process.env.POKEPET_TEST) quizWin.webContents.on('console-message', (e) => console.log('[quiz]', e.message));
+    quizWin.loadFile(path.join(__dirname, 'src', 'quiz', 'quiz.html'));
+    quizWin.once('ready-to-show', () => { quizWin.show(); quizWin.focus(); });
+    quizWin.on('closed', () => { quizWin = null; quizzes.clear(); });
+  } else {
+    quizWin.show();
+    quizWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Quiz limits as the windows see them (unlimited while testing). */
+function quizInfo() {
+  if (testFlags.freeQuiz) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'quiz', today());
+}
+
+/** A new question: a silhouette (the face as a data URL) and four names. Counts one play once it's ready. */
+async function quizAsk() {
+  const lim = quizInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  const list = Quiz.pool(Sources.creditIndexCached(spritesDir()));
+  const known = Object.keys(store.data.pokedex || {}).map(Number);
+  for (let tries = 0; tries < 4; tries++) {
+    const q = Quiz.question(list, { known, exclude: quizRecent });
+    let buf, species;
+    try {
+      [buf, ...species] = await Promise.all([Sources.portrait(q.answer, 'Normal', spritesDir()), ...q.choices.map((d) => Sources.lookupSpecies(d))]);
+    } catch (e) {
+      if (e.code === 'not-found') continue;
+      return { ok: false, error: 'net' };
+    }
+    if (!buf) continue;   // no face drawn for this one: ask another
+    if (!lim.free) Limits.use(store.data, 'quiz', today());
+    quizRecent.push(q.answer);
+    if (quizRecent.length > 30) quizRecent.shift();
+    const token = `q${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    quizzes.clear();   // one question at a time
+    quizzes.set(token, { answer: q.answer, names: Object.fromEntries(species.map((sp) => [sp.dex, sp.names])) });
+    changed();
+    return { ok: true, token, face: `data:image/png;base64,${buf.toString('base64')}`,
+      choices: species.map((sp) => ({ dex: sp.dex, names: sp.names })), info: quizInfo() };
+  }
+  return { ok: false, error: 'net' };
+}
+
+/** The guess: right → berries (a bonus every 3rd in a row), and the partner learns a little and is happy. */
+function quizAnswer(token, dex) {
+  const q = quizzes.get(token);
+  quizzes.delete(token);
+  if (!q) return { ok: false };
+  const stats = store.data.stats;
+  const correct = Number(dex) === q.answer;
+  let reward = null;
+  if (correct) {
+    stats.quizStreak = (stats.quizStreak || 0) + 1;
+    stats.quizRight = (stats.quizRight || 0) + 1;
+    reward = { berries: Quiz.berriesFor(stats.quizStreak), streak: stats.quizStreak };
+    store.data.berries += reward.berries;
+    if (hasPet() && !activeAway() && activePet().stage !== 'egg') { addXp(Quiz.REWARD.xp); addMood(Quiz.REWARD.mood); }
+    petEvent('quiz-right', { name: q.names[q.answer][lang()] || q.names[q.answer].en });
+  } else stats.quizStreak = 0;
+  changed();
+  return { ok: true, correct, answer: { dex: q.answer, names: q.names[q.answer] }, reward, info: quizInfo() };
 }
 
 // ---------- desktop play: fling (丢丢乐) and peeking from the screen edge ----------
@@ -2072,6 +2161,7 @@ function buildMenu() {
     },
     expeditionMenu(),
     { label: T('menu.fishing'), click: () => openFishing() },
+    { label: T('menu.quiz'), click: () => openQuiz() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -2408,6 +2498,9 @@ function registerIpc() {
   ipcMain.handle('fish:land', (_e, token) => fishLand(String(token || '')));
   ipcMain.on('fish:lost', (_e, token) => bites.delete(String(token || '')));
   ipcMain.on('fish:open', () => openFishing());
+  ipcMain.handle('quiz:ask', () => quizAsk());
+  ipcMain.handle('quiz:answer', (_e, token, dex) => quizAnswer(String(token || ''), dex));
+  ipcMain.on('quiz:open', () => openQuiz());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -3077,6 +3170,28 @@ async function selfTest(dir) {
       await shot(petWin, '44-evolution-code');
     } else console.log('[test] evolution code: skipped (no word in test/secrets.local.json)');
   }
+  // Who's That Pokémon?: a question opens with the window; pick the right name, then a wrong one
+  await step('quiz', async () => openQuiz());
+  await wait(6000);
+  await shot(quizWin, '45-quiz-silhouette');
+  await step('quiz-answer', async () => {
+    const [q] = [...quizzes.values()];
+    console.log('[test] quiz question:', !!q, q && Object.keys(q.names).length, JSON.stringify(quizInfo()));
+    if (q) await quizWin.webContents.executeJavaScript(`document.querySelector('#choices button[data-dex="${q.answer}"]').click()`);
+  });
+  await wait(2000);
+  await shot(quizWin, '46-quiz-right');
+  console.log('[test] quiz after right answer:', store.data.berries, store.data.stats.quizStreak, store.data.stats.quizRight);
+  await step('quiz-wrong', async () => {
+    await quizWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    await wait(5000);
+    const [q] = [...quizzes.values()];
+    const wrong = q && Object.keys(q.names).map(Number).find((d) => d !== q.answer);
+    if (q) await quizWin.webContents.executeJavaScript(`document.querySelector('#choices button[data-dex="${wrong}"]').click()`);
+    await wait(1500);
+    console.log('[test] quiz after wrong answer: streak', store.data.stats.quizStreak, JSON.stringify(quizInfo()));
+  });
+  await shot(quizWin, '47-quiz-wrong');
   quitting = true;
   app.quit();
 }
