@@ -193,13 +193,19 @@
     if (view.wild.special) { Sound.play('fanfare'); await say(t(view.wild.special === 'mythical' ? 'b.appearMythical' : 'b.appearLegend'), 1600); }
     await say(t(view.wild.shiny ? 'b.appearShiny' : 'b.appear', { name: nm(view.wild) }), 1200);
     await say(t('b.go', { name: nm(view.party[view.active]) }), 700);
+    // the real weather, and abilities that act right away (Intimidate, Drizzle …)
+    busy = true;
+    for (const e of view.intro || []) await playEvent(e);
+    busy = false;
+    renderBoxes();
     mainMenu();
   }
 
   function renderBoxes() {
     const box = (el, m) => {
       el.classList.remove('hidden');
-      el.querySelector('.name').textContent = nm(m) + (m.shiny ? ' ✨' : '');
+      el.querySelector('.name').textContent = nm(m) + (m.shiny ? ' ✨' : '') + (m.sub ? ' 🧸' : '');
+      el.title = [m.ability ? t('poke.ability', { name: m.ability.names[L()] || m.ability.names.en }) : '', m.sub ? t('b.subLabel') : ''].filter(Boolean).join('\n');
       el.querySelector('.lv').textContent = `Lv${m.level}`;
       const pct = Math.max(0, Math.round((m.hp / m.maxHp) * 100));
       const bar = el.querySelector('.bar > div');
@@ -211,6 +217,10 @@
     };
     box($('#wildBox'), shown.wild);
     box($('#meBox'), shown.party[shown.active]);
+    // weather and terrain on the field
+    const field = [shown.weatherSet && t(`field.${shown.weatherSet}`), shown.terrain && t(`field.${shown.terrain}`)].filter(Boolean);
+    $('#field').textContent = field.join(' · ');
+    $('#field').classList.toggle('hidden', !field.length);
   }
 
   async function say(text, ms = 900) { $('#log').textContent = text; await sleep(ms); }
@@ -242,8 +252,11 @@
   function moveMenu() {
     const m = view.party[view.active];
     $('#menu').className = 'menu';
+    // a Choice item locks it into the first move it used
+    const locked = m.locked && m.moves.some((x) => x.id === m.locked) ? m.locked : null;
+    if (locked) $('#log').textContent = t('b.locked', { item: itemName(m.item) });
     $('#menu').replaceChildren(...m.moves.map((mv, i) => button(mv.names[L()] || mv.names.en, () => act({ type: 'move', index: i }),
-      { type: mv.type, sub: `${t(`type.${mv.type}`)} · ${mv.cls === 'status' ? t('b.statusMove') : mv.power}` })), button(t('b.back'), mainMenu, { back: true }));
+      { type: mv.type, sub: `${t(`type.${mv.type}`)} · ${mv.cls === 'status' ? t('b.statusMove') : mv.power || '—'}`, disabled: locked && mv.id !== locked })), button(t('b.back'), mainMenu, { back: true }));
   }
   function bagMenu() {
     const items = Object.entries(view.bag).filter(([, n]) => n > 0);
@@ -283,6 +296,9 @@
   }
 
   const sideMon = (side) => (side === 'me' ? shown.party[shown.active] : shown.wild);
+  /** An item's name without its emoji, for sentences. */
+  const itemName = (id) => t(`item.${id}`).replace(/^[^\p{L}\p{N}]+\s/u, '');
+  const abilityName = (m) => (m && m.ability ? m.ability.names[L()] || m.ability.names.en : '');
   const sideActor = (side) => (side === 'me' ? actors.me : actors.wild);
 
   // ---------------------------------------------------------------- faces (PMD portraits with emotions)
@@ -321,6 +337,48 @@
   async function playEvent(e) {
     const who = nm(sideMon(e.side));
     switch (e.t) {
+      // abilities and held items
+      case 'ability': {
+        const m = sideMon(e.side);
+        if (e.what === 'show') { setFace(e.side, 'Determined', 1000); await say(t('b.ab.show', { name: who, ability: abilityName(m) }), 900); break; }
+        if (e.what === 'flashFire') m.flashFire = true;
+        if (e.what === 'cure') { m.status = null; renderBoxes(); }
+        setFace(e.side, e.what === 'endure' ? 'Determined' : 'Happy', 1100);
+        await say(t(`b.ab.${e.what}`, { name: who, ability: abilityName(m) }), 1000);
+        break;
+      }
+      case 'abilityHurt': sideMon(e.side).hp = e.hp; renderBoxes(); play(sideActor(e.side), ['Hurt'], 400); setFace(e.side, 'Pain', 1000); await say(t('b.abilityHurt', { name: who }), 800); break;
+      case 'held':
+        if (e.what === 'cure') { sideMon(e.side).status = null; renderBoxes(); }
+        if (['berry', 'cure', 'sash'].includes(e.what)) sideMon(e.side).item = null;
+        setFace(e.side, e.what === 'sash' ? 'Determined' : 'Happy', 1100);
+        Sound.play('chime');
+        await say(t(`b.held.${e.what}`, { name: who, item: itemName(e.item) }), 900);
+        break;
+      case 'itemHurt': sideMon(e.side).hp = e.hp; renderBoxes(); play(sideActor(e.side), ['Hurt'], 400); await say(t('b.itemHurt', { name: who, item: itemName(e.item) }), 800); break;
+      // weather and terrain
+      case 'weather':
+        shown.weatherSet = e.weather; renderBoxes();
+        Sound.play('chime');
+        await say(t(e.real && t(`b.weatherReal.${e.weather}`) !== `b.weatherReal.${e.weather}` ? `b.weatherReal.${e.weather}` : `b.weather.${e.weather}`), 1100);
+        break;
+      case 'weatherEnd': shown.weatherSet = null; renderBoxes(); await say(t(`b.weatherEnd.${e.weather}`), 900); break;
+      case 'weatherHurt': sideMon(e.side).hp = e.hp; renderBoxes(); play(sideActor(e.side), ['Hurt'], 400); setFace(e.side, 'Pain', 1000); await say(t(`b.weatherHurt.${e.weather}`, { name: who }), 800); break;
+      case 'terrain': shown.terrain = e.terrain; renderBoxes(); Sound.play('chime'); await say(t(`b.terrain.${e.terrain}`), 1100); break;
+      case 'terrainEnd': shown.terrain = null; renderBoxes(); await say(t(`b.terrainEnd.${e.terrain}`), 900); break;
+      case 'terrainBlock': await say(t('b.terrainBlock', { name: who }), 900); break;
+      case 'terrainHeal': break;   // the heal event right after says it
+      // one-hit KOs, trapping, Substitute
+      case 'ohko': Sound.play('alarm'); await say(t('b.ohko'), 1000); break;
+      case 'bound': sideMon(e.side).bound = true; setFace(e.side, 'Worried', 1100); await say(t('b.bound', { name: who, move: e.names[L()] || e.names.en }), 900); break;
+      case 'boundHurt': sideMon(e.side).hp = e.hp; renderBoxes(); play(sideActor(e.side), ['Hurt'], 400); setFace(e.side, 'Pain', 1000); await say(t('b.boundHurt', { name: who, move: e.names[L()] || e.names.en }), 800); break;
+      case 'unbound': sideMon(e.side).bound = false; await say(t('b.unbound', { name: who, move: e.names[L()] || e.names.en }), 800); break;
+      case 'blocked': setFace(e.side, 'Worried', 1100); await say(t('b.blocked', { name: who }), 900); break;
+      case 'trapped': setFace('me', 'Worried', 1100); await say(t('b.trapped', { name: who }), 1100); break;
+      case 'sub': sideMon(e.side).hp = e.hp; sideMon(e.side).sub = true; renderBoxes(); play(sideActor(e.side), ['Charge', 'Pose', 'Hop'], 600); await say(t('b.sub', { name: who }), 900); break;
+      case 'subHit': await say(t('b.subHit', { name: who }), 800); break;
+      case 'subBreak': sideMon(e.side).sub = false; renderBoxes(); await say(t('b.subBreak', { name: who }), 800); break;
+      case 'subBlock': await say(t('b.subBlock', { name: who }), 800); break;
       case 'use': {   // a status move
         await say(t('b.used', { name: who, move: e.names[L()] || e.names.en }), 500);
         play(sideActor(e.side), ['Charge', 'Pose', 'Hop'], 600);
@@ -363,7 +421,7 @@
         else if (e.eff < 1) await say(t('b.notVery'), 800);
         break;
       }
-      case 'miss': setFace(e.side, 'Sigh', 1100); await say(t('b.used', { name: who, move: e.names[L()] || e.names.en }), 400); await say(t('b.miss'), 700); break;
+      case 'miss': setFace(e.side, 'Sigh', 1100); if (!e.quiet) await say(t('b.used', { name: who, move: e.names[L()] || e.names.en }), 400); await say(t('b.miss'), 700); break;
       case 'status': sideMon(e.side).status = e.status; renderBoxes(); setFace(e.side, e.status === 'freeze' ? 'Surprised' : e.status === 'confusion' ? 'Dizzy' : e.status === 'sleep' ? 'Sigh' : 'Pain', 1200); await say(t(`b.status.${e.status}`, { name: who }), 900); break;
       case 'statusHurt': sideMon(e.side).hp = e.hp; renderBoxes(); setFace(e.side, 'Pain', 1100); play(sideActor(e.side), ['Hurt'], 400); await say(t(`b.hurt.${e.status}`, { name: who }), 900); break;
       case 'frozen': await say(t('b.frozen', { name: who }), 800); break;

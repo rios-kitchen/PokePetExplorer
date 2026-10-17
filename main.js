@@ -396,6 +396,7 @@ async function hatchEgg(id) {
     delete pet.egg;
     store.data.stats.hatches = (store.data.stats.hatches || 0) + 1;
     changed();
+    setTimeout(() => ensureAbilities().catch(() => {}), 2000);
     if (S().pokemon === id) petEvent('hatched', { name: petName(id), shiny: !!sp.skin.shiny });
     notify(T('notif.hatched'), T('notif.hatchedBody', { name: petName(id) }));
     return { ok: true };
@@ -449,6 +450,7 @@ async function evolve(id, dex) {
     return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
   }
   pet.species = { dex: option.dex, names: option.names };
+  setTimeout(() => ensureAbilities().catch(() => {}), 2000);   // the evolved species' ability
   Pokedex.caught(store.data, option.dex, option.names, { shiny: !!(store.data.skins[id] && store.data.skins[id].shiny) });
   pet.evolutions = (pet.evolutions || 0) + 1;
   pet.evolution = null;
@@ -640,6 +642,27 @@ async function runSecret(text) {
     const b = battle.b;
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
+    send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'battlefx') {
+    // alone: one of every held item into the bag; in a battle, with a weather, terrain, ability or held item:
+    // put it on the field / give it to the Pokémon that's out
+    const arg = args.join('-');
+    if (!arg) {
+      for (const id of Object.keys(Battle.HELD)) store.data.inventory[id] = (store.data.inventory[id] || 0) + 1;
+      changed();
+      return { ok: true };
+    }
+    if (!battle || battle.b.over) return { ok: false };
+    const b = battle.b, m = b.party[b.active];
+    const weather = { rain: 'rain', sun: 'sun', sand: 'sand', hail: 'hail', snow: 'snow' }[arg];
+    const terrain = { electric: 'electric', grassy: 'grassy', misty: 'misty', psychic: 'psychic' }[arg];
+    if (weather) b.field.weather = { id: weather, turns: 5 };
+    else if (terrain) b.field.terrain = { id: terrain, turns: 5 };
+    else if (Battle.HELD[arg]) { m.item = arg; m.locked = null; }
+    else if (Battle.ABILITIES.has(arg)) { m.ability = arg; m.abilityNames = await Data.ability(arg, spritesDir()).catch(() => abilityLabel(arg)); }
+    else return { ok: false };
     send(wildWin, 'wild:refresh');
     return { ok: true };
   }
@@ -862,6 +885,7 @@ function addPokemon({ id, dex, names, shiny = false, from }) {
   if (shiny) Shiny.obtained(store.data);
   Pokedex.caught(store.data, dex, names, { shiny });
   ensurePmdSkins().catch(() => {});
+  setTimeout(() => ensureAbilities().catch(() => {}), 2000);
   return id;
 }
 
@@ -977,6 +1001,82 @@ async function pickWild({ place, region, leadLevel, legend = false }) {
   return { sp, level: Battle.wildLevel(leadLevel), special: null };
 }
 
+/** An ability's names when PokeAPI couldn't be asked: its id written out ("swift-swim" → "Swift Swim"). */
+function abilityLabel(id) {
+  const en = String(id).split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  return { en, zh: en };
+}
+
+/**
+ * A Pokémon's ability: picked once from its species' regular abilities and kept; after evolving it becomes the
+ * evolved species' ability in the same slot (as in the games). abilities: from PokeAPI (fetched if not given).
+ * Returns { id, names } or null.
+ */
+async function ensureAbility(id, dex, abilities) {
+  const rec = petOf(store.data, id);
+  if (!dex || rec.stage === 'egg') return null;
+  const cur = rec.ability;
+  if (cur && cur.id && (cur.dex === dex || cur.slot == null)) {
+    if (cur.names && cur.names.zh !== cur.names.en) return cur;
+    const names = await Data.ability(cur.id, spritesDir()).catch(() => null);   // a better name once online
+    if (names) cur.names = names;
+    return cur;
+  }
+  if (!abilities) abilities = (await Data.pokemon(dex, spritesDir())).abilities || [];
+  const regular = abilities.filter((a) => !a.hidden);
+  if (!regular.length) return null;
+  const slot = cur && cur.slot != null ? Math.min(cur.slot, regular.length - 1) : Math.floor(Math.random() * regular.length);
+  const abId = regular[slot].id;
+  const names = await Data.ability(abId, spritesDir()).catch(() => null);
+  rec.ability = { slot, dex, id: abId, names: names || abilityLabel(abId) };
+  return rec.ability;
+}
+
+/** Give every Pokémon on the team its ability (shown in the Pokémon tab), in the background. */
+let abilitiesBusy = false, abilitiesAgain = false;
+async function ensureAbilities() {
+  if (abilitiesBusy) { abilitiesAgain = true; return; }   // a Pokémon joined meanwhile: go round once more
+  abilitiesBusy = true;
+  let any = false;
+  try {
+    do {
+      abilitiesAgain = false;
+      for (const p of petList()) {
+        if (p.egg || !p.dex) continue;
+        const before = JSON.stringify(petOf(store.data, p.id).ability);
+        try { await ensureAbility(p.id, p.dex); } catch { /* offline: next time */ }
+        if (JSON.stringify(petOf(store.data, p.id).ability) !== before) any = true;
+      }
+    } while (abilitiesAgain);
+  } finally { abilitiesBusy = false; }
+  if (any) changed();
+}
+
+/**
+ * The real weather (when weather is on and was checked in the last 3 hours) carries into battles: rain and
+ * thunderstorms bring rain, snow brings snow.
+ */
+function realBattleWeather() {
+  const w = store.data.weatherNow;
+  if (!S().weather || !S().weather.enabled || !w || Date.now() - w.at > 3 * 3600e3) return null;
+  return { rain: 'rain', storm: 'rain', snow: 'snow' }[w.kind] || null;
+}
+
+/** Give a held item from the bag to a Pokémon (or take it back with itemId null); its old item goes back to the bag. */
+function holdItem(id, itemId) {
+  const d = store.data;
+  if (!d.custom.some((c) => c.id === id) || petOf(d, id).stage === 'egg') return { ok: false, reason: 'unknown' };
+  if (battle && !battle.b.over && battle.ctx.ids.includes(id)) return { ok: false, reason: 'battle' };
+  if (itemId && (!Battle.HELD[itemId] || !(d.inventory[itemId] > 0))) return { ok: false, reason: 'none' };
+  const rec = petOf(d, id);
+  if (rec.held === (itemId || null)) return { ok: true };
+  if (rec.held) d.inventory[rec.held] = (d.inventory[rec.held] || 0) + 1;
+  rec.held = itemId || null;
+  if (itemId) { d.inventory[itemId] -= 1; if (!d.inventory[itemId]) delete d.inventory[itemId]; }
+  changed();
+  return { ok: true };
+}
+
 async function startBattle(source, opts = {}) {
   if (battle && !battle.b.over) return { ok: true };
   const ids = partyIds().filter((id) => !Care.careOf(store.data, id).fainted);
@@ -1006,15 +1106,20 @@ async function startBattle(source, opts = {}) {
     for (const id of ids) {
       const p = petList().find((x) => x.id === id);
       const rec = petOf(store.data, id);
-      party.push(Battle.makeMon(await Wild.battlerFor({ key: id, dex: p.dex, names: p.names, level: levelOf(rec.xp), attrs: rec.attrs, shiny: !!(store.data.skins[id] || {}).shiny, dir })));
+      const mon = await Wild.battlerFor({ key: id, dex: p.dex, names: p.names, level: levelOf(rec.xp), attrs: rec.attrs, shiny: !!(store.data.skins[id] || {}).shiny, dir });
+      const ab = await ensureAbility(id, p.dex, mon.abilities);
+      party.push(Battle.makeMon({ ...mon, ability: ab && ab.id, abilityNames: ab && ab.names, item: rec.held }));
     }
     const w = await Wild.battlerFor({ key: 'wild', dex: sp.dex, names: sp.names, level, attrs: {}, shiny, dir });
-    const wild = Battle.makeMon({ ...w, wild: true });
+    const wildAbility = Battle.pickAbility(w.abilities);
+    const wildNames = wildAbility ? await Data.ability(wildAbility, dir).catch(() => null) : null;
+    const wild = Battle.makeMon({ ...w, wild: true, ability: wildAbility, abilityNames: wildNames, item: Battle.pickWildItem(w.heldItems) });
     wild.special = special;   // 'legendary' | 'mythical' | null
     if (source === 'grass') Limits.use(store.data, 'grass', today());
     if (met) store.data.wild.encounter = null;
     if (!met) Pokedex.see(store.data, sp.dex, sp.names);   // an outing's Pokémon was seen when it was met
-    battle = { b: Battle.create({ party, wild, bag: bagForBattle() }), ctx: { place, region, source, capture: sp.capture, ids } };
+    const b = Battle.create({ party, wild, bag: bagForBattle(), weather: realBattleWeather() });
+    battle = { b, intro: Battle.begin(b), ctx: { place, region, source, capture: sp.capture, ids } };
     changed();
     return { ok: true };
   } catch (e) {
@@ -1028,8 +1133,13 @@ function battleView() {
   const { b, ctx } = battle;
   const mon = (m) => ({ key: m.key, dex: m.dex, names: m.names, level: m.level, types: m.types, hp: m.hp, maxHp: m.maxHp,
     status: m.status && m.status.id, fainted: m.fainted, shiny: m.shiny, special: m.special || null,
+    ability: m.ability ? { id: m.ability, names: m.abilityNames || abilityLabel(m.ability) } : null, item: m.item,
+    sub: m.sub > 0, bound: !!m.bound, locked: m.locked,
     moves: m.moves.map((x) => ({ id: x.id, names: x.names, type: x.type, power: x.power, cls: x.cls })) });
+  const f = b.field || {};
   return { party: b.party.map(mon), wild: mon(b.wild), active: b.active, bag: b.bag, over: b.over, needSwitch: b.needSwitch,
+    weather: Battle.weatherOf(b), weatherSet: f.weather ? f.weather.id : null, terrain: f.terrain ? f.terrain.id : null,
+    trapped: !b.over && !b.needSwitch ? Battle.trappedBy(b) : null, intro: battle.intro || [],
     place: ctx.place, region: ctx.region, source: ctx.source, result: ctx.result || null };
 }
 
@@ -1048,6 +1158,8 @@ function finishBattle() {
     d.inventory[id] = Math.max(0, (d.inventory[id] || 0) - n);
     if (!d.inventory[id]) delete d.inventory[id];
   }
+  // berries and Focus Sashes eaten / used up in the battle are gone
+  b.party.forEach((m, i) => { if (m.heldAtStart && !m.item) petOf(d, ctx.ids[i]).held = null; });
   const result = { over: b.over, xp: 0, berries: 0, caughtId: null };
   const took = [...b.seen].map((i) => ctx.ids[i]);
   if (b.over === 'win' || b.over === 'caught') {
@@ -1066,6 +1178,9 @@ function finishBattle() {
     const w = b.wild;
     const id = addPokemon({ dex: w.dex, names: w.names, shiny: w.shiny, from: 'caught' });
     petOf(d, id).xp = Growth.xpFor(w.level);
+    // it keeps its ability and what it was holding
+    if (w.ability) petOf(d, id).ability = { slot: null, dex: w.dex, id: w.ability, names: w.abilityNames || abilityLabel(w.ability) };
+    petOf(d, id).held = w.item || null;
     d.stats.caught = (d.stats.caught || 0) + 1;
     result.caughtId = id;
     taskProgress('catch');
@@ -1880,7 +1995,7 @@ function buildMenu() {
     {
       label: `${T('menu.care')}  ·  🍓 ${store.data.berries}`,
       submenu: [
-        ...Object.entries(Care.ITEMS).map(([itemId, item]) => {
+        ...Object.entries(Care.ITEMS).filter(([, item]) => item.kind !== 'held').map(([itemId, item]) => {
           const have = store.data.inventory[itemId] || 0;
           return {
             label: `${T(`item.${itemId}`)}${have ? `  ×${have}` : item.cost ? `  (${item.cost} 🍓)` : ''}`,
@@ -2218,6 +2333,7 @@ function registerIpc() {
       pending: e ? { names: e.sp.names, until: e.until } : null };
   });
   ipcMain.handle('battle:act', (_e, action) => battleAct(action));
+  ipcMain.handle('pokemon:hold', (_e, id, itemId) => holdItem(String(id || ''), itemId ? String(itemId) : null));
   ipcMain.on('battle:close', () => { if (battle && battle.b.over) battle = null; });
   ipcMain.on('wild:open', (_e, encounter) => openWild(!!encounter));
   ipcMain.handle('battle:assets', async (_e, dex, shiny) => {
@@ -2716,6 +2832,9 @@ async function selfTest(dir) {
     S().party = []; changed();
     for (const id of ['pikachu', 'charmander']) { petOf(store.data, id).xp = Growth.xpFor(10); Object.assign(Care.careOf(store.data, id), { fainted: false, sick: false, status: null, health: 100 }); }
     S().party = ['pikachu', 'charmander']; changed();
+    // a held item: bought in the shop, given to Pikachu
+    shopBuy('leftovers', 1);
+    console.log('[test] hold leftovers:', JSON.stringify(holdItem('pikachu', 'leftovers')), petOf(store.data, 'pikachu').held, store.data.inventory.leftovers || 0);
     openWild(false);
   });
   await wait(4000);
@@ -2724,6 +2843,10 @@ async function selfTest(dir) {
   await wjs("document.querySelector('#menu button').click(); 0");
   await wait(9000);
   await shot(wildWin, '36-battle-start');
+  if (battle) {
+    const v = battleView();
+    console.log('[test] battle abilities:', JSON.stringify(v.party.map((m) => [m.key, m.ability && m.ability.id, m.item])), 'wild:', v.wild.ability && v.wild.ability.id, v.wild.item, 'weather:', v.weather, 'intro:', v.intro.map((e) => e.t).join(','));
+  }
   await wjs(`window.__drive = (async () => {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const btns = () => [...document.querySelectorAll('#menu button')];
@@ -2758,6 +2881,26 @@ async function selfTest(dir) {
   send(panelWin, 'panel:tab', 'pokemon');
   await wait(2000);
   await shot(panelWin, '39-panel-party');
+  console.log('[test] abilities on the team:', JSON.stringify(store.data.custom.map((c) => [c.id, (petOf(store.data, c.id).ability || {}).id || null, petOf(store.data, c.id).held || null])));
+  // the hidden battle command: weather, terrain, an ability and a held item in a forced battle
+  {
+    let words = null;
+    try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* not here */ }
+    if (words && words.battlefx && words.battle) {
+      await step('battle-fx', async () => {
+        await runSecret(`${words.battle} pikachu`);
+        for (const a of ['rain', 'grassy', 'swift-swim', 'leftovers']) console.log(`[test] battlefx ${a}:`, JSON.stringify(await runSecret(`${words.battlefx} ${a}`)));
+        const v = battleView();
+        console.log('[test] battlefx view:', v.weather, v.terrain, v.party[v.active].ability && v.party[v.active].ability.id, v.party[v.active].item);
+        const r = await battleAct({ type: 'move', index: 0 });
+        console.log('[test] battlefx turn events:', r.events.map((e) => e.t).join(','));
+      });
+      await wait(2500);
+      await shot(wildWin, '39b-battle-weather-terrain');
+      await runSecret(words.win);
+      await wait(1000);
+    } else console.log('[test] battlefx: skipped (no word in test/secrets.local.json)');
+  }
   // the update reminder (dialog stubbed out: it can't be clicked here)
   await step('update-popup', async () => {
     const real = dialog.showMessageBox;
@@ -2876,6 +3019,7 @@ if (!app.requestSingleInstanceLock()) {
     setTimeout(() => { greetHoliday(); checkWeather(); }, 6000);
     setTimeout(checkWeekly, 15000);
     setTimeout(() => ensurePmdSkins().catch((e) => console.error("PMD download failed", e)), 3000);
+    setTimeout(() => ensureAbilities().catch(() => {}), 8000);
     if (IS_MAC && app.dock) app.dock.hide();
     setAppMenu();
     registerIpc();

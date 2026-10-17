@@ -13,7 +13,8 @@ const COMMANDS = {
   '89daadd83375c3bc31be5d85d578c2f9b9285bf945b0eb79901242c21791aa43': 'catch',
   'ad66dc8cce6b0b3c93b820c32f70bd8e584c4db896ca0f10a1810e1b623e4f47': 'fishing',
   '7865ea6c656f619cc6821f555213260a0c8cd4cd57879179900ffa9ab28aecbe': 'update',
-  'd357527e18864d84b43a71899b8c09738b0b474af4ef898252c1127d5381c3f1': 'forecast'
+  'd357527e18864d84b43a71899b8c09738b0b474af4ef898252c1127d5381c3f1': 'forecast',
+  '8afa857eeac9b8c86b2ddd5c1d6b2a4b741e5cad5d7c5edf16a448e0294333cb': 'battlefx'
 };
 
 /** "word arg arg" → { cmd, args } (cmd null when the word isn't one). */

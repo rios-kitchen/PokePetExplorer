@@ -5,6 +5,15 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **特性**：每只宝可梦都有和原作一样的特性（宝可梦页卡片上能看到），100 多种在对战里有效果——威吓、茂盛、漂浮、结实、静电、降雨……；野生宝可梦偶尔有隐藏特性
+  **Abilities**: every Pokémon has its ability from the games (shown on its card); over 100 work in battle – Intimidate, Overgrow, Levitate, Sturdy, Static, Drizzle …; wild ones now and then have their hidden ability
+- **携带道具**：商店新增 46 种携带道具（吃剩的东西、文柚果、气势披带、生命宝珠、讲究系列、18 种属性强化道具……），在宝可梦页交给宝可梦携带；野生宝可梦也会带着原作里的道具，收服后一起带回来
+  **Held items**: 46 held items in the shop (Leftovers, Sitrus Berry, Focus Sash, Life Orb, the Choice items, 18 type boosters …), given to a Pokémon in the Pokémon tab; wild Pokémon carry what they carry in the games, and bring it along when caught
+- **天气和场地**：下雨、大晴天、沙暴、冰雹、下雪，电气 / 青草 / 薄雾 / 精神场地；外面真的在下雨或下雪时，对战也在雨中或雪中进行
+  **Weather and terrain**: rain, harsh sunlight, sandstorm, hail, snow, and Electric / Grassy / Misty / Psychic Terrain; when it's really raining or snowing outside, so is the battle
+- **一击必杀、束缚、替身**：地裂、紧束、黑色目光、替身等原来被跳过的招式现在都能用了，宝可梦的招式更接近原作
+  **One-hit KOs, trapping, Substitute**: Fissure, Wrap, Mean Look, Substitute and the other moves that used to be skipped now work, so movesets are closer to the games
+
 ## 1.4.5 · 2026-10-17
 
 - 修复：macOS 上在浏览器里全屏播放网页视频时宝可梦没有隐藏（#8）

@@ -43,6 +43,7 @@
 | 万灵药 | 8 | 治所有状态，健康 +30 |
 | 活力碎片 | 8 | 救醒晕倒的宝可梦 |
 | 精灵球 / 超级球 / 高级球 | 10 / 20 / 40 | 只能在对战中用来捕捉 |
+| 携带道具（46 种） | 3–35 | 交给宝可梦在对战中携带，见[第 7 节](07-Battles-and-catching) |
 
 背包里有的物品会**先用背包的**，没有才花树果。可以在 🍓 照顾页、右键菜单「照顾」或宝可梦的气泡按钮里使用；在 🛒 商店页购买。
 
@@ -94,6 +95,7 @@ Every Pokémon has its own **hunger, cleanliness, health and mood** (0–100).
 | Full Heal | 8 | Cures any condition, health +30 |
 | Revive | 8 | Wakes a fainted Pokémon |
 | Poké Ball / Great Ball / Ultra Ball | 10 / 20 / 40 | Battle only, for catching |
+| Held items (46) | 3–35 | Given to a Pokémon to hold in battles – see [section 7](07-Battles-and-catching) |
 
 Items in the bag are **used first**; berries are only spent when you have none. Buy them in the 🛒 Shop tab; use them from the 🍓 Care tab, the
 right-click "Care" menu or the buttons in the pet's speech bubble.
