@@ -477,7 +477,8 @@ body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display:
 /* ---- battle team */
 .poke .party-btn { margin-top: 5px; width: 100%; font-size: 11px; padding: 3px 4px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); cursor: pointer; }
 .poke .ability { margin-top: 4px; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.poke select.held { margin-top: 4px; width: 100%; font-size: 11px; padding: 2px 3px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.poke .held-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+.poke select.held { flex: 1; min-width: 0; font-size: 11px; padding: 2px 3px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
 .poke select.held:disabled { opacity: 0.55; }
 .poke .party-btn.on { border-color: var(--red); color: var(--red); font-weight: 700; }
 .dex-line { margin: 14px 0 0; font-weight: 700; }

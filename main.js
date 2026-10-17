@@ -396,6 +396,7 @@ async function hatchEgg(id) {
     delete pet.egg;
     store.data.stats.hatches = (store.data.stats.hatches || 0) + 1;
     changed();
+    setTimeout(() => ensureAbilities().catch(() => {}), 2000);
     if (S().pokemon === id) petEvent('hatched', { name: petName(id), shiny: !!sp.skin.shiny });
     notify(T('notif.hatched'), T('notif.hatchedBody', { name: petName(id) }));
     return { ok: true };
@@ -449,6 +450,7 @@ async function evolve(id, dex) {
     return { ok: false, error: e.code === 'not-found' ? 'not-found' : 'net' };
   }
   pet.species = { dex: option.dex, names: option.names };
+  setTimeout(() => ensureAbilities().catch(() => {}), 2000);   // the evolved species' ability
   Pokedex.caught(store.data, option.dex, option.names, { shiny: !!(store.data.skins[id] && store.data.skins[id].shiny) });
   pet.evolutions = (pet.evolutions || 0) + 1;
   pet.evolution = null;
@@ -883,6 +885,7 @@ function addPokemon({ id, dex, names, shiny = false, from }) {
   if (shiny) Shiny.obtained(store.data);
   Pokedex.caught(store.data, dex, names, { shiny });
   ensurePmdSkins().catch(() => {});
+  setTimeout(() => ensureAbilities().catch(() => {}), 2000);
   return id;
 }
 
@@ -1030,18 +1033,21 @@ async function ensureAbility(id, dex, abilities) {
 }
 
 /** Give every Pokémon on the team its ability (shown in the Pokémon tab), in the background. */
-let abilitiesBusy = false;
+let abilitiesBusy = false, abilitiesAgain = false;
 async function ensureAbilities() {
-  if (abilitiesBusy) return;
+  if (abilitiesBusy) { abilitiesAgain = true; return; }   // a Pokémon joined meanwhile: go round once more
   abilitiesBusy = true;
   let any = false;
   try {
-    for (const p of petList()) {
-      if (p.egg || !p.dex) continue;
-      const before = JSON.stringify(petOf(store.data, p.id).ability);
-      try { await ensureAbility(p.id, p.dex); } catch { /* offline: next time */ }
-      if (JSON.stringify(petOf(store.data, p.id).ability) !== before) any = true;
-    }
+    do {
+      abilitiesAgain = false;
+      for (const p of petList()) {
+        if (p.egg || !p.dex) continue;
+        const before = JSON.stringify(petOf(store.data, p.id).ability);
+        try { await ensureAbility(p.id, p.dex); } catch { /* offline: next time */ }
+        if (JSON.stringify(petOf(store.data, p.id).ability) !== before) any = true;
+      }
+    } while (abilitiesAgain);
   } finally { abilitiesBusy = false; }
   if (any) changed();
 }

@@ -429,18 +429,19 @@
   function heldPicker(id) {
     const held = (state.pets[id] && state.pets[id].held) || '';
     const ids = Object.keys(state.items).filter((k) => state.items[k].kind === 'held' && (k === held || state.inventory[k] > 0));
+    const plain = (k) => t(`item.${k}`).replace(/^[^\p{L}\p{N}]+\s/u, '');   // without the emoji: the card is narrow
     const sel = el('select', {
-      class: 'held', title: held ? t(`itemdesc.${held}`) : t('poke.held'),
+      class: 'held', title: held ? `${plain(held)} – ${t(`itemdesc.${held}`)}` : t('poke.held'),
       onclick: (e) => e.stopPropagation(),
       onchange: async (e) => {
         const res = await api.invoke('pokemon:hold', id, e.target.value || null);
         if (!res.ok) { e.target.value = held; if (res.reason === 'battle') e.target.title = t('care.refused.battle'); }
       }
-    }, el('option', { value: '' }, `${t('poke.held')}: ${t('poke.heldNone')}`),
-    ...ids.map((k) => el('option', { value: k }, `${t('poke.held')}: ${t(`item.${k}`)}${k !== held && state.inventory[k] > 1 ? ` ×${state.inventory[k]}` : ''}`)));
+    }, el('option', { value: '' }, t('poke.heldNone')),
+    ...ids.map((k) => el('option', { value: k }, `${plain(k)}${k !== held && state.inventory[k] > 1 ? ` ×${state.inventory[k]}` : ''}`)));
     sel.value = held;
     if (!ids.length) sel.disabled = true;
-    return sel;
+    return el('label', { class: 'held-row', onclick: (e) => e.stopPropagation() }, el('span', {}, t('poke.held')), sel);
   }
 
   /** Contest stats (😎 cool, 🎀 cute, 📚 smart, 💪 tough), and 🧭 when away. */
