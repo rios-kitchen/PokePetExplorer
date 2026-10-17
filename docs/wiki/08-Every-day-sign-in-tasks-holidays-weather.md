@@ -21,6 +21,7 @@
 
 - **节日**：元旦、情人节、宝可梦日（2/27）、儿童节、万圣节、平安夜、圣诞节、跨年，以及春节、元宵、端午、中秋（2026–2030 年的日期）。当天会问候并送 **3 🍓**。和搭档的**第 100 天**和**每周年**也会庆祝。
 - **天气**（默认关闭）：设置 → 天气与节日，打开并**手动输入城市**（不按 IP 定位），宝可梦会聊晴天、下雨、下雪、热和冷。数据来自 Open-Meteo，不需要账号。
+  - **天气预报**：每 3 小时，宝可梦会聊一聊**接下来 3 小时**的天气：快下雨 / 下雪 / 打雷了（大概几小时后、降雨概率）、雨快停了、还会一直下，或者接下来的温度范围（晴、多云、很热、很冷）。到 3 小时时如果它正在外出，或者你在专注、钓鱼，就等结束后再说。
 
 ## English
 
@@ -48,6 +49,9 @@
   Pokémon greets you with **3 🍓**. **Day 100** and **every anniversary** with your partner are celebrated too.
 - **Weather** (off by default): Settings → Weather & holidays, turn it on and **type your city** (never located by IP).
   Your Pokémon talks about sun, rain, snow, heat and cold. Data from Open-Meteo, no account needed.
+  - **Forecast**: every 3 hours your Pokémon talks about **the next 3 hours**: rain / snow / a storm on its way (in about
+    how many hours, chance of rain), the rain stopping, more rain, or the temperature range (sunny, cloudy, hot, cold).
+    If it's on an outing, or you're focusing or fishing when it's due, it waits until that's over.
 
 ---
 *[宝可宠探索 · PokePet Explorer](https://github.com/rios-kitchen/PokePetExplorer) · [下载 / Download](https://github.com/rios-kitchen/PokePetExplorer/releases/latest) · [反馈问题 / Report a problem](https://github.com/rios-kitchen/PokePetExplorer/issues/new/choose)*

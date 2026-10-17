@@ -521,14 +521,15 @@ const fullscreen = new FullscreenWatch((full) => {
   }
 });
 
-/** Apply the "hide over fullscreen apps" setting (macOS: Space visibility; Windows: the watcher). */
+/** Apply the "hide over fullscreen apps" setting (the watcher; on macOS also the fullscreen Spaces). */
 function applyFullscreenSetting() {
   const hide = S().hideOnFullscreen;
   if (IS_MAC) {
     for (const w of [petWin, ...poopWins.values()]) {
       if (w && !w.isDestroyed()) w.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: !hide });
     }
-  } else if (hide) fullscreen.start(); else fullscreen.stop();
+  }
+  if (hide && !process.env.POKEPET_TEST) fullscreen.start(); else fullscreen.stop();
 }
 
 /** The app was called "PokePet Plus" before: bring its save, sprites and photos over once. */
@@ -591,6 +592,11 @@ async function runSecret(text) {
     checkExpedition();
     return { ok: true };
   }
+  if (cmd === 'forecast') {
+    // testing: the Pokémon talks about the next 3 hours right now (with a made-up forecast when no city is set)
+    await checkForecast(true);
+    return { ok: true };
+  }
   if (cmd === 'update') {
     // testing: the "new version" popup for a pretend next version (opens the releases page); with "fail" / "fail2"
     // the states after an install that didn't take (manual install / link to GitHub), in the popup and in Settings
@@ -638,9 +644,9 @@ async function runSecret(text) {
     return { ok: true };
   }
   if (cmd === 'berries') {
-    store.data.berries += 10;
+    store.data.berries += 100;
     changed();
-    petEvent('daily-berries', { n: 10 });
+    petEvent('daily-berries', { n: 100 });
     return { ok: true };
   }
   if (cmd === 'shiny' && hasPet() && activePet().stage !== 'egg') {
@@ -1595,6 +1601,42 @@ async function checkWeather(force = false) {
   }
 }
 
+// ---------- what the weather will do: a word about the next 3 hours, every 3 hours ----------
+const FORECAST_EVERY = 3 * 3600e3;
+let forecastBusy = false;
+/** Away on an outing, focusing or fishing: the forecast waits and comes right after. */
+const forecastWaits = () => activeAway() || timer.phase === 'focus' || fishingNow();
+
+async function checkForecast(force = false) {
+  const w = S().weather, d = store.data;
+  if (!hasPet() || forecastBusy) return;
+  if (!force && (!w.enabled || w.lat == null)) return;
+  if (!force && Date.now() - (d.greeted.forecastAt || 0) < FORECAST_EVERY) return;
+  if (!force && forecastWaits()) return;   // due, but later – checked again every minute
+  forecastBusy = true;
+  try {
+    let now = d.weatherNow, next;
+    if (w.lat != null) {
+      // the forecast is what counts; the current weather only tells whether it's raining now (last report if it fails)
+      const [cur, fc] = await Promise.allSettled([Weather.current(w.lat, w.lon), Weather.forecast(w.lat, w.lon, 3)]);
+      if (fc.status !== 'fulfilled') throw fc.reason;
+      next = fc.value;
+      if (cur.status === 'fulfilled') d.weatherNow = now = cur.value;
+      now = now || { kind: next[0] && next[0].kind, temp: next[0] && next[0].temp };
+    } else {
+      // testing without a city: a made-up afternoon
+      now = { kind: 'clear', temp: 21 };
+      next = [{ kind: 'cloudy', temp: 20, pop: 30 }, { kind: 'rain', temp: 18, pop: 70 }, { kind: 'rain', temp: 17, pop: 80 }];
+    }
+    const r = Weather.forecastRemark(now, next);
+    if (r) petEvent('weather', { line: r.line, ...r.vars, temp: now && now.temp, place: w.place });
+    d.greeted.forecastAt = Date.now();
+    changed();
+  } catch { /* offline: try again later */ } finally {
+    forecastBusy = false;
+  }
+}
+
 async function setWeatherCity(query) {
   try {
     const c = await Weather.findCity(query, lang());
@@ -1704,6 +1746,7 @@ function poopTick(asleep) {
 
 function slowTick() {
   checkEncounter();
+  checkForecast();
   const asleep = powerMonitor.getSystemIdleTime() >= 180;
   poopTick(asleep);
   careStep(1 / 60, asleep);
@@ -2728,6 +2771,21 @@ async function selfTest(dir) {
     dialog.showMessageBox = real;
     console.log('[test] update popup:', shown && shown.message, '|', shown && shown.buttons.join(' / '));
   });
+  // the forecast talk (no city set: a made-up forecast)
+  await step('forecast-code', async () => {
+    let words = null;
+    try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* not here */ }
+    const city = { lat: S().weather.lat, lon: S().weather.lon };
+    S().weather.lat = null;   // the made-up forecast, so the test doesn't depend on the weather service
+    if (words && words.forecast) await runSecret(words.forecast); else await checkForecast(true);
+    Object.assign(S().weather, city);
+    console.log('[test] forecast talk at', store.data.greeted.forecastAt ? 'set' : 'missing');
+  });
+  for (let i = 0; i < 6; i++) {   // the bubble may wait a moment for its turn
+    await wait(1500);
+    if (await petWin.webContents.executeJavaScript("!document.querySelector('.bubble').classList.contains('hidden')")) break;
+  }
+  await shot(petWin, '41e-pet-forecast');
   // after an install that didn't take: the manual install button and the GitHub link in Settings
   await step('update-failed-states', async () => {
     const real = dialog.showMessageBox;

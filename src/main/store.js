@@ -64,7 +64,7 @@ function defaults(lang) {
     souvenirs: [],      // { id, region, at } brought back from travels
     photos: [],         // { id, file, expId, region, petId, at } – group photos from expeditions (userData/photos)
     aiKeys: {},         // provider -> encrypted API key (never sent to the windows)
-    greeted: { holiday: null, weather: null, weatherKind: null },   // last day / time something was greeted
+    greeted: { holiday: null, weather: null, weatherKind: null, forecastAt: null },   // last day / time something was greeted
     weatherNow: null,   // { kind, temp, isDay, at } – the last weather report
     wild: { encounter: null },   // a wild Pokémon met on an outing that waits for a battle
     limits: {},                  // mini-game plays today and in the last hour (limits.js)

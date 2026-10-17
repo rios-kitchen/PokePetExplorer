@@ -274,8 +274,10 @@
       P.showBubble(`${text}\n+${e.gift} 🍓`, { priority: 2, ms: 8000, emotion: 'Joyous' });
     },
     weather(e) {
-      if (P.isAway() || P.bubbleBusy()) return;
-      P.showBubble(say(e.line, { temp: e.temp, place: e.place }), { ms: 6000 });
+      if (P.isAway()) return;
+      // the 3-hourly forecast waits for a free moment instead of being dropped
+      if (P.bubbleBusy()) { if (e.line.startsWith('forecast')) setTimeout(() => handlers.weather(e), 8000); return; }
+      P.showBubble(say(e.line, e), { ms: e.line.startsWith('forecast') ? 9000 : 6000 });
     },
     encounter(e) {
       if (P.isAway()) return;

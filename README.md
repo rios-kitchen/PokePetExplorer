@@ -60,9 +60,8 @@ Questions, ideas and screenshots are welcome in **[Discussions](https://github.c
 - **AI chat is off unless you turn it on.** Then the chat and your Pokémon's state (name, level, mood,
   needs) go to the provider you chose – nothing else. Your API key is stored with the system keychain
   (Electron `safeStorage`) and never shown to the app's windows. The conversation isn't saved.
-- The keyboard helper only knows *when* a key was pressed, never which one. On Windows, the fullscreen
-  check reads only the size of the window in front, never its title or contents. The clipboard, the screen
-  and other apps' windows are never read. Everything stays in one local JSON file.
+- The keyboard helper only knows *when* a key was pressed, never which one. The fullscreen check (macOS and Windows) reads only the position and size of the window in front, never its title or contents. The clipboard, the screen
+  and the contents of other apps' windows are never read. Everything stays in one local JSON file.
 - The QQ Pet projects used as design references (see [Reference projects](#reference-projects--参考项目))
   were only read, not used: none of their code or assets is included. Things some desktop-pet clients
   do that this app deliberately leaves out: weather by IP location, reading the clipboard, watching
@@ -89,7 +88,7 @@ src/main/limits.js      daily / hourly limits for the mini-games (grass, fishing
 src/main/pokedex.js     the Pokédex: species seen and caught, kept for good
 src/wild/               grass exploring and battle window
 src/main/weather.js     holidays, anniversaries, optional weather (Open-Meteo)
-src/main/fullscreen.js  hide over fullscreen apps (Windows helper)
+src/main/fullscreen.js  hide over fullscreen apps (macOS and Windows helpers)
 src/starter/            choosing the first Pokémon
 src/main/album.js       photo album rules (3 recent + up to 20 favourites)
 src/fishing/            fishing window (pond, cast / wait / reel)
