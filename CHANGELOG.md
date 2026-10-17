@@ -5,6 +5,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **进化石、联系绳和亲密度**：和原作一样，皮卡丘用雷之石、伊布用各种石头进化；通信交换进化用联系绳代替；皮丘、超音蝠等在亲密度够高时进化（照顾它、让它开心就会变高）。宝可梦页能看到亲密度和进化方式。原来这些统一在 Lv30 进化
+  **Evolution stones, the Linking Cord and friendship**: as in the games, Pikachu evolves with a Thunder Stone and Eevee with the stones; a Linking Cord stands in for trade evolutions; Pichu, Zubat and the like evolve once their friendship is high (it grows when you care for it and keep it happy). The Pokémon tab shows friendship and how each one evolves. These all used to happen at Lv30
+
 - **究极异兽和悖谬宝可梦**：作为特殊遭遇出现（领头 Lv30 以后各 1/800，去阿罗拉旅行时更容易遇到究极异兽，去帕底亚时更容易遇到悖谬宝可梦），有专门的开场白，收服之前都还会再遇到
   **Ultra Beasts and Paradox Pokémon**: they turn up as special encounters (1 in 800 each from lead Lv30; Ultra Beasts more often on trips to Alola, Paradox Pokémon on trips to Paldea), with their own intro, and keep turning up until caught
 

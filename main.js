@@ -314,7 +314,12 @@ function notify(title, body) {
 function addMood(n) {
   const pet = activePet();
   pet.mood = Math.max(0, Math.min(100, pet.mood + n));
+  // good moods make closer friends; close enough for a friendship evolution → look its evolution up again
+  if (n > 0 && pet.stage === 'hatched' && Growth.befriend(pet, n / 2)) pet.evolveAt = null;
 }
+
+/** What it can evolve into and how, for its card: [{ dex, names, way, level, item }] (sources.js evolutionOptions). */
+const evoPaths = (options) => options.map((o) => ({ dex: o.dex, names: o.names, way: Growth.wayOf(o), level: o.level || null, item: Growth.itemFor(o) }));
 
 function addXp(n, id = S().pokemon) {
   if (!id || !store.data.custom.some((c) => c.id === id)) return;
@@ -352,7 +357,8 @@ async function lookupEvolveLevel(id) {
     const options = await Sources.evolutionOptions(p.dex);
     const pet = petOf(store.data, id);
     if (!options.length) pet.finalForm = true;
-    else pet.evolveAt = Math.min(...options.map(Growth.optionLevel));
+    else pet.evolveAt = Math.min(...options.map((o) => Growth.optionLevel(o, Growth.friendshipOf(pet))));
+    pet.evoPaths = evoPaths(options);
     changed();
     if (Growth.evolutionDue(pet)) offerEvolution(id);
   } catch { /* offline */ } finally {
@@ -417,9 +423,11 @@ async function offerEvolution(id) {
   try {
     const all = await Sources.evolutionOptions(p.dex);
     if (!all.length) { pet.finalForm = true; changed(); return; }
-    // only the forms it can reach at its level (e.g. Tyrogue's three at Lv20, Eevee's stones at the fallback level)
-    const options = all.filter((o) => Growth.optionLevel(o) <= levelOf(pet.xp));
-    if (!options.length) { pet.evolveAt = Math.min(...all.map(Growth.optionLevel)); changed(); return; }
+    // only the forms it can reach at its level and friendship (e.g. Tyrogue's three at Lv20; stones are used instead)
+    const need = (o) => Growth.optionLevel(o, Growth.friendshipOf(pet));
+    pet.evoPaths = evoPaths(all);
+    const options = all.filter((o) => need(o) <= levelOf(pet.xp));
+    if (!options.length) { pet.evolveAt = Math.min(...all.map(need)); changed(); return; }
     pet.evolution = { options, snoozeUntil: 0 };
     changed();
     if (S().pokemon === id) petEvent('evolve-ready', { name: petName(id), options: options.slice(0, 3) });
@@ -456,6 +464,7 @@ async function evolve(id, dex) {
   pet.evolution = null;
   pet.evolvedAt = Date.now();
   pet.evolveAt = null;   // the new form's next evolution is looked up again
+  pet.evoPaths = null;
   for (const a of Object.keys(pet.attrs)) pet.attrs[a] += 5;
   addMood(20);
   Diary.record(store.data, 'levelUps');
@@ -644,6 +653,22 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'evolution') {
+    // one of every evolution item into the bag; the active Pokémon becomes a close friend and may evolve right away
+    // (the week's wait is over); with a level ("evolution 36"), it also jumps to that level
+    for (const id of Object.keys(Care.ITEMS)) if (Care.ITEMS[id].kind === 'evo') store.data.inventory[id] = (store.data.inventory[id] || 0) + 1;
+    if (hasPet() && activePet().stage === 'hatched') {
+      const pet = activePet();
+      pet.friendship = Growth.FRIEND_MAX;
+      pet.evolvedAt = Date.now() - 30 * 86400e3;   // evolveNotBefore counts from here
+      if (Number(args[0]) > 0) pet.xp = Math.max(pet.xp, Growth.xpFor(Number(args[0])));
+      pet.evolveAt = null;
+      pet.evolution = null;
+      checkGrowth();
+    }
+    changed();
     return { ok: true };
   }
   if (cmd === 'battlefx') {
@@ -1903,6 +1928,7 @@ function offlineCare() {
 
 function useCareItem(itemId) {
   if (activeAway()) return { ok: false, reason: 'away' };
+  if (Care.ITEMS[itemId] && Care.ITEMS[itemId].kind === 'evo') return useEvoItem(itemId);
   const res = Care.useItem(store.data, S().pokemon, itemId);
   if (res.ok) {
     const field = { food: 'fed', bath: 'baths', med: 'meds', revive: 'meds' }[res.kind];
@@ -1921,6 +1947,36 @@ function useCareItem(itemId) {
     petEvent('care-refused', { item: itemId, reason: res.reason });
   }
   return res;
+}
+
+/**
+ * An evolution stone or the Linking Cord on the active Pokémon: it evolves right away if the games evolve it with that
+ * (still not sooner than evolveNotBefore). Nothing is used up when it has no effect or the evolution fails.
+ */
+async function useEvoItem(itemId, id = S().pokemon) {
+  const refuse = (reason) => { petEvent('care-refused', { item: itemId, reason }); return { ok: false, reason }; };
+  const item = Care.ITEMS[itemId];
+  const pet = petOf(store.data, id);
+  const p = petList().find((x) => x.id === id);
+  if (!p || !p.dex || pet.stage !== 'hatched' || pet.finalForm) return refuse('noEffect');
+  if (!(store.data.inventory?.[itemId] > 0) && (store.data.berries || 0) < item.cost) return refuse('berries');
+  let all;
+  try { all = await Sources.evolutionOptions(p.dex); } catch { return refuse('net'); }
+  const option = all.find((o) => Growth.itemFor(o) === itemId);
+  if (!option) return refuse('noEffect');
+  if (Date.now() < Growth.evolveNotBefore(pet)) return refuse('tooSoon');
+  if (!Care.pay(store.data, itemId, item)) return refuse('berries');
+  pet.evolution = { options: [option], snoozeUntil: 0 };
+  const res = await evolve(id, option.dex);
+  if (!res.ok) {
+    store.data.inventory[itemId] = (store.data.inventory[itemId] || 0) + 1;   // back into the bag
+    pet.evolution = null;
+    changed();
+    return refuse(res.error);
+  }
+  addMood(item.mood);
+  changed();
+  return { ok: true, item, kind: 'evo' };
 }
 
 // ---------- to-dos ----------
@@ -1996,7 +2052,7 @@ function buildMenu() {
     {
       label: `${T('menu.care')}  ·  🍓 ${store.data.berries}`,
       submenu: [
-        ...Object.entries(Care.ITEMS).filter(([, item]) => item.kind !== 'held').map(([itemId, item]) => {
+        ...Object.entries(Care.ITEMS).filter(([, item]) => item.kind !== 'held' && item.kind !== 'evo').map(([itemId, item]) => {
           const have = store.data.inventory[itemId] || 0;
           return {
             label: `${T(`item.${itemId}`)}${have ? `  ×${have}` : item.cost ? `  (${item.cost} 🍓)` : ''}`,
@@ -2996,6 +3052,31 @@ async function selfTest(dir) {
   });
   await wait(1500);
   await shot(petWin, '42-encounter-gone');
+  // evolution items: the wrong one has no effect, a Thunder Stone evolves Pikachu (as in the games)
+  await step('evolve-stone', async () => {
+    const pet = petOf(store.data, 'pikachu');
+    await lookupEvolveLevel('pikachu');
+    console.log('[test] pikachu evolves:', JSON.stringify(pet.evoPaths), 'at', pet.evolveAt, 'friendship', Growth.friendshipOf(pet));
+    pet.evolvedAt = Date.now() - 30 * 86400e3;
+    for (const id of ['firestone', 'thunderstone']) store.data.inventory[id] = (store.data.inventory[id] || 0) + 1;
+    console.log('[test] fire stone on pikachu:', JSON.stringify(await useEvoItem('firestone', 'pikachu')));
+    console.log('[test] thunder stone on pikachu:', JSON.stringify(await useEvoItem('thunderstone', 'pikachu')), (pet.species || {}).dex);
+  });
+  openPanel('pokemon');
+  await wait(2500);
+  await shot(panelWin, '43-panel-evolved-stone');
+  {
+    let words = null;
+    try { words = JSON.parse(fs.readFileSync(path.join(__dirname, 'test', 'secrets.local.json'), 'utf8')); } catch { /* not here */ }
+    if (words && words.evolution) {
+      await step('evolution-code', async () => {
+        console.log('[test] evolution code:', JSON.stringify(await runSecret(words.evolution)), Growth.friendshipOf(activePet()),
+          Object.keys(store.data.inventory).filter((k) => Care.ITEMS[k] && Care.ITEMS[k].kind === 'evo').length);
+      });
+      await wait(3000);
+      await shot(petWin, '44-evolution-code');
+    } else console.log('[test] evolution code: skipped (no word in test/secrets.local.json)');
+  }
   quitting = true;
   app.quit();
 }
@@ -3021,6 +3102,13 @@ if (!app.requestSingleInstanceLock()) {
     setTimeout(checkWeekly, 15000);
     setTimeout(() => ensurePmdSkins().catch((e) => console.error("PMD download failed", e)), 3000);
     setTimeout(() => ensureAbilities().catch(() => {}), 8000);
+    // how each one evolves (stones, the Linking Cord, friendship): looked up again once for pets from older versions
+    setTimeout(() => {
+      for (const c of store.data.custom) {
+        const pet = petOf(store.data, c.id);
+        if (pet.stage === 'hatched' && !pet.finalForm && !pet.evoPaths) lookupEvolveLevel(c.id);
+      }
+    }, 12000);
     if (IS_MAC && app.dock) app.dock.hide();
     setAppMenu();
     registerIpc();

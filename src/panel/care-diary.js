@@ -95,7 +95,8 @@ window.PanelExt = function PanelExt(env) {
 
     const items = $('#careItems');
     const away = !!(state.expedition && state.expedition.petId === id);
-    items.replaceChildren(...Object.entries(state.items).filter(([, item]) => item.kind !== 'ball' && item.kind !== 'held').map(([itemId, item]) => el('button', {
+    items.replaceChildren(...Object.entries(state.items).filter(([itemId, item]) => item.kind !== 'ball' && item.kind !== 'held'
+      && (item.kind !== 'evo' || state.inventory[itemId] > 0)).map(([itemId, item]) => el('button', {   // stones: once bought
       class: 'care-item',
       disabled: away || (!(state.inventory[itemId] > 0) && state.berries < item.cost) ? true : null,
       onclick: async () => {
