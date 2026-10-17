@@ -5,6 +5,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- 修复：macOS 上在浏览器里全屏播放网页视频时宝可梦没有隐藏（#8）
+  Fixed: on macOS the Pokémon didn't hide over fullscreen web video in a browser (#8)
+
 ## 1.4.4 · 2026-10-17
 
 - **天气预报**：开了天气后，宝可梦每 3 小时聊一聊接下来 3 小时的天气（快下雨了、雨快停了、温度范围……）；正在外出、专注或钓鱼时，等结束后再说

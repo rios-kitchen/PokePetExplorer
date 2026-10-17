@@ -1,9 +1,10 @@
 // Is a fullscreen app (video, game, slides) in front? Then the pet steps aside.
 //   macOS:   fullscreen apps get their own Space and the pet is kept off those (visibleOnFullScreen: false), but an
 //            always-on-top window of a menu-bar app can still show up over a fullscreen video (Safari, issue #5).
-//            So a small JavaScript-for-Automation helper also checks once a second whether the frontmost normal
-//            window covers a whole screen. It reads only window positions and sizes from the window list – no
-//            titles or contents, and no extra permission.
+//            So a small JavaScript-for-Automation helper also checks once a second whether the active Space is a
+//            fullscreen Space (browsers' fullscreen web video, issue #8) or a window of the front app covers a whole
+//            screen. It reads only Space types and window positions and sizes – no titles or contents, and no extra
+//            permission.
 //   Windows: a small PowerShell helper checks once a second whether the foreground window covers its
 //            whole monitor. Only the window's size is read – never its title or contents.
 const { spawn } = require('child_process');
@@ -50,28 +51,57 @@ public static class PokePetFullscreen {
 [PokePetFullscreen]::Run(__PARENT__)
 `;
 
+/**
+ * macOS: is a fullscreen app in front? Runs inside the helper (its source is pasted into MAC_SCRIPT) and in the tests.
+ *   fullscreenSpace: the active Space is a fullscreen Space – browsers put fullscreen web video there, as apps do
+ *   windows:         the window list, front to back (CGWindowListCopyWindowInfo, on screen only)
+ *   frontPid:        the frontmost app – a browser keeps small windows of its own (the "press Esc" bubble, the
+ *                    toolbar) in front of its fullscreen video, so all of the front app's windows count
+ */
+function macFullscreen({ self, frontPid, fullscreenSpace, screens, windows }) {
+  if (fullscreenSpace) return true;
+  // the menu bar's status icons (clock, Control Center …) are hidden in a fullscreen Space
+  const statusIcons = windows.some((x) => x.kCGWindowLayer === 25 && x.kCGWindowBounds && x.kCGWindowBounds.Y <= 1);
+  const normal = windows.filter((x) => x.kCGWindowLayer === 0 && x.kCGWindowOwnerPID !== self && x.kCGWindowAlpha > 0
+    && x.kCGWindowBounds && x.kCGWindowBounds.Width > 100);
+  const front = frontPid && frontPid !== self ? normal.filter((x) => x.kCGWindowOwnerPID === frontPid) : normal.slice(0, 1);
+  // full width down to the bottom, from the very top – or from just below the camera notch with the menu bar gone
+  return front.some(({ kCGWindowBounds: b }) => screens.some((s) => Math.abs(b.Width - s.w) < 2 && Math.abs(b.X - s.x) < 2
+    && Math.abs(b.Y + b.Height - s.h) < 2 && (b.Y <= 1 || (b.Y <= 50 && !statusIcons))));
+}
+
+// argv: our pid, and "nospace" to skip the Space check (if it ever took the helper down)
 const MAC_SCRIPT = `
 ObjC.import('CoreGraphics'); ObjC.import('AppKit');
 function out(s) { $.NSFileHandle.fileHandleWithStandardOutput.writeData($(s + '\\n').dataUsingEncoding($.NSUTF8StringEncoding)); }
+${macFullscreen.toString()}
+// the type of the active Space (4 = fullscreen) – reads only Space ids and types, no extra permission
+function spaceCheck() {
+  try {
+    ObjC.bindFunction('CGSMainConnectionID', ['int', []]);
+    ObjC.bindFunction('CGSGetActiveSpace', ['unsigned long long', ['int']]);
+    ObjC.bindFunction('CGSCopyManagedDisplaySpaces', ['id', ['int']]);
+    const cid = $.CGSMainConnectionID();
+    return () => {
+      try {
+        const active = Number($.CGSGetActiveSpace(cid));
+        const displays = ObjC.deepUnwrap($.CGSCopyManagedDisplaySpaces(cid)) || [];
+        return displays.some((d) => (d.Spaces || []).some((s) => Number(s.id64) === active && s.type === 4));
+      } catch (e) { return false; }
+    };
+  } catch (e) { return () => false; }
+}
 function run(argv) {
   const self = Number(argv[0]);
+  const fullscreenSpace = argv[1] === 'nospace' ? () => false : spaceCheck();
   for (;;) {
     if ($.NSRunningApplication.runningApplicationWithProcessIdentifier(self).isNil()) return;
-    let full = false;
     const ss = $.NSScreen.screens, screens = [];
     for (let i = 0; i < ss.count; i++) { const f = ss.objectAtIndex(i).frame; screens.push({ x: f.origin.x, w: f.size.width, h: f.size.height }); }
-    const list = ObjC.deepUnwrap(ObjC.castRefToObject($.CGWindowListCopyWindowInfo($.kCGWindowListOptionOnScreenOnly | $.kCGWindowListExcludeDesktopElements, 0))) || [];
-    // the menu bar's status icons (clock, Control Center …) are hidden in a fullscreen Space
-    const statusIcons = list.some((x) => x.kCGWindowLayer === 25 && x.kCGWindowBounds && x.kCGWindowBounds.Y <= 1);
-    // the frontmost normal window that isn't ours
-    const w = list.find((x) => x.kCGWindowLayer === 0 && x.kCGWindowOwnerPID !== self && x.kCGWindowAlpha > 0 && x.kCGWindowBounds && x.kCGWindowBounds.Width > 100);
-    if (w) {
-      const b = w.kCGWindowBounds;
-      // full width down to the bottom, from the very top – or from just below the camera notch with the menu bar gone
-      full = screens.some((s) => Math.abs(b.Width - s.w) < 2 && Math.abs(b.X - s.x) < 2 && Math.abs(b.Y + b.Height - s.h) < 2
-        && (b.Y <= 1 || (b.Y <= 50 && !statusIcons)));
-    }
-    out(full ? 'F' : '-');
+    const windows = ObjC.deepUnwrap(ObjC.castRefToObject($.CGWindowListCopyWindowInfo($.kCGWindowListOptionOnScreenOnly | $.kCGWindowListExcludeDesktopElements, 0))) || [];
+    const front = $.NSWorkspace.sharedWorkspace.frontmostApplication;
+    const frontPid = front.isNil() ? 0 : Number(front.processIdentifier);
+    out(macFullscreen({ self, frontPid, fullscreenSpace: fullscreenSpace(), screens, windows }) ? 'F' : '-');
     delay(1);
   }
 }
@@ -85,11 +115,12 @@ class FullscreenWatch {
     this.proc = null;
   }
 
-  start() {
+  start(noSpace = false) {
     if (this.proc || !['win32', 'darwin'].includes(process.platform)) return;
     try {
-      this.proc = process.platform === 'darwin'
-        ? spawn('/usr/bin/osascript', ['-l', 'JavaScript', '-e', MAC_SCRIPT, String(process.pid)], { stdio: ['ignore', 'pipe', 'pipe'] })
+      const args = ['-l', 'JavaScript', '-e', MAC_SCRIPT, String(process.pid)].concat(noSpace ? ['nospace'] : []);
+      const proc = this.proc = process.platform === 'darwin'
+        ? spawn('/usr/bin/osascript', args, { stdio: ['ignore', 'pipe', 'pipe'] })
         : spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', WIN_SCRIPT.replace('__PARENT__', String(process.pid))],
           { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
       let buf = '';
@@ -106,7 +137,12 @@ class FullscreenWatch {
           else if (!full && this.full && this.notFull >= 2) { this.full = false; this.onChange(false); }
         }
       });
-      this.proc.on('exit', () => { this.proc = null; });
+      proc.on('exit', (code) => {
+        if (this.proc !== proc) return;
+        this.proc = null;
+        // the macOS helper died on its own: once more, without the Space check
+        if (code !== 0 && process.platform === 'darwin' && !noSpace) this.start(true);
+      });
       this.proc.on('error', () => { this.proc = null; });
     } catch { this.proc = null; }
   }
@@ -118,4 +154,4 @@ class FullscreenWatch {
   }
 }
 
-module.exports = { FullscreenWatch, MAC_SCRIPT };
+module.exports = { FullscreenWatch, MAC_SCRIPT, macFullscreen };
