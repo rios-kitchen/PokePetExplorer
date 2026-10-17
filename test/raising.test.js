@@ -359,11 +359,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found.map((f) => f.cmd), ['berries', 'hatch', 'shiny']);
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update']) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast']) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -578,8 +578,8 @@ test('catching: low HP, status and better balls help', () => {
   const rate = (hpFrac, ball, status) => {
     wild.hp = Math.max(1, Math.round(wild.maxHp * hpFrac)); wild.status = status ? { id: status } : null;
     let n = 0;
-    for (let i = 0; i < 2000; i++) if (Battle.tryCatch(wild, ball, 45, Math.random).caught) n++;
-    return n / 2000;
+    for (let i = 0; i < 20000; i++) if (Battle.tryCatch(wild, ball, 45, Math.random).caught) n++;
+    return n / 20000;
   };
   assert.ok(rate(0.1, 'pokeball') > rate(1, 'pokeball') * 1.8);
   assert.ok(rate(0.5, 'ultraball') > rate(0.5, 'pokeball'));
@@ -764,4 +764,17 @@ test('wild encounters follow the games\' tables; legendaries are rare special en
   const all = new Set([...W.LEGENDARY, ...W.MYTHICAL]);
   assert.equal(W.pickLegend({ level: 40, drawn, caught: all, rnd: () => 0 }), null);
   assert.equal(W.legendLevel(80), 70);
+});
+
+test('the forecast talk: rain on its way, clearing up, or the temperature range', () => {
+  const r = (now, next) => Weather.forecastRemark(now, next);
+  const h = (kind, temp, pop = 0) => ({ kind, temp, pop });
+  assert.deepEqual(r(h('clear', 20), [h('cloudy', 19, 20), h('rain', 18, 70), h('rain', 17, 80)]), { line: 'forecastRainSoon', vars: { lo: 17, hi: 19, pop: 80, h: 2 } });
+  assert.equal(r(h('cloudy', 5), [h('snow', 1), h('snow', 0), h('cloudy', 0)]).line, 'forecastSnowSoon');
+  assert.equal(r(h('rain', 15), [h('cloudy', 15), h('clear', 16), h('clear', 17)]).line, 'forecastClearing');
+  assert.equal(r(h('rain', 15), [h('rain', 15), h('cloudy', 15), h('rain', 14)]).line, 'forecastStillRain');
+  assert.equal(r(h('clear', 33), [h('clear', 34), h('clear', 35), h('clear', 33)]).line, 'forecastHot');
+  assert.equal(r(h('clear', 20), [h('clear', 21), h('clear', 22), h('clear', 21)]).line, 'forecastSunny');
+  assert.equal(r(h('cloudy', 20), [h('cloudy', 21), h('clear', 22), h('cloudy', 21)]).line, 'forecastCloudy');
+  assert.equal(r(h('clear', 20), []), null);
 });

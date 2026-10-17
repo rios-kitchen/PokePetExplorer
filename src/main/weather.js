@@ -74,6 +74,44 @@ async function current(lat, lon) {
   return { kind: kindOf(Number(c.weather_code) || 0), temp: Math.round(Number(c.temperature_2m)), isDay: !!c.is_day, at: Date.now() };
 }
 
+/** The next few hours: [{ kind, temp, pop (chance of rain %) }], hour by hour from the next full hour. */
+async function forecast(lat, lon, hours = 3) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${Number(lat).toFixed(3)}&longitude=${Number(lon).toFixed(3)}&hourly=temperature_2m,weather_code,precipitation_probability&forecast_hours=${hours + 1}&timezone=auto`;
+  const res = await fetchAllowed(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const h = (await res.json()).hourly || {};
+  return (h.time || []).slice(1, hours + 1).map((_, i) => ({
+    kind: kindOf(Number(h.weather_code[i + 1]) || 0), temp: Math.round(Number(h.temperature_2m[i + 1])),
+    pop: Math.round(Number((h.precipitation_probability || [])[i + 1]) || 0)
+  }));
+}
+
+const WET = ['rain', 'snow', 'storm'];
+/**
+ * What the pet says about the coming hours: { line, vars } – rain / snow / a storm on its way (in h hours),
+ * clearing up, still raining, or else hot / cold / sunny / cloudy, with the temperature range and chance of rain.
+ * now: the current weather ({ kind, temp }), next: forecast() hours.
+ */
+function forecastRemark(now, next) {
+  if (!next || !next.length) return null;
+  const temps = next.map((x) => x.temp);
+  const vars = { lo: Math.min(...temps), hi: Math.max(...temps), pop: Math.max(...next.map((x) => x.pop || 0)), h: 1 };
+  const wetNow = now && WET.includes(now.kind);
+  const firstWet = next.findIndex((x) => WET.includes(x.kind));
+  if (!wetNow && firstWet >= 0) {
+    const kind = next[firstWet].kind;
+    return { line: kind === 'storm' ? 'forecastStormSoon' : kind === 'snow' ? 'forecastSnowSoon' : 'forecastRainSoon', vars: { ...vars, h: firstWet + 1 } };
+  }
+  if (wetNow && firstWet < 0) {
+    return { line: 'forecastClearing', vars };
+  }
+  if (wetNow) return { line: next.some((x) => x.kind === 'snow') ? 'forecastStillSnow' : 'forecastStillRain', vars };
+  if (vars.hi >= 32) return { line: 'forecastHot', vars };
+  if (vars.lo <= 0) return { line: 'forecastCold', vars };
+  if (next.every((x) => x.kind === 'clear')) return { line: 'forecastSunny', vars };
+  return { line: 'forecastCloudy', vars };
+}
+
 /** What the pet says about the weather (a line key), or null when it's unremarkable. */
 function remark(w) {
   if (!w) return null;
@@ -87,4 +125,4 @@ function remark(w) {
   return 'weatherCloudy';
 }
 
-module.exports = { FIXED, LUNAR, HOLIDAY_GIFT, holidayOn, anniversary, kindOf, findCity, current, remark };
+module.exports = { FIXED, LUNAR, HOLIDAY_GIFT, holidayOn, anniversary, kindOf, findCity, current, forecast, forecastRemark, remark };
