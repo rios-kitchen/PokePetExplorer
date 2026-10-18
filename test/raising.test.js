@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -1020,6 +1020,32 @@ test('Shiny Hunt: boards, rewards, limits', () => {
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'hunt', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'hunt', day, t0 + 5)), 'rest');
+});
+
+test('Chinchou Lights: taps, scrambles, replays, rewards, limits', () => {
+  const C = require('../src/main/lights');
+  const Limits = require('../src/main/limits');
+  assert.equal(C.isLit(C.allLit()), true);
+  // a corner switches 3 lamps, the middle 5; tapping twice undoes it
+  assert.equal(C.tap(C.allLit(), 0).filter((v) => !v).length, 3);
+  assert.equal(C.tap(C.allLit(), 5).filter((v) => !v).length, 5);
+  assert.deepEqual(C.tap(C.tap(C.allLit(), 6), 6), C.allLit());
+  assert.equal(C.tap(C.allLit(), 16), null);
+  assert.equal(C.tap(C.allLit(), 1.5), null);
+  for (let k = 0; k < 30; k++) {
+    const { board, cells } = C.scramble();
+    assert.equal(cells.length, C.SCRAMBLE);
+    assert.equal(new Set(cells).size, cells.length);
+    assert.equal(C.isLit(board), false);
+    // the scramble's own cells, in any order, light it again
+    assert.equal(C.isLit(C.replay(board, cells.slice().reverse())), true);
+  }
+  assert.equal(C.replay(C.allLit(), [0, 99]), null);
+  assert.deepEqual([6, 10, 16, 40].map((n) => C.rewardFor(n, 6).berries), [4, 3, 2, 1]);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'lights', day, t0 + i), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'lights', day, t0 + 5)), 'rest');
 });
 
 test('Quick Attack: waits, grades, rewards, limits', () => {
