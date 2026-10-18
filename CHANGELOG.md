@@ -5,6 +5,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **新小游戏「灯笼鱼点灯」**：夜晚的池塘里有 4×4 只灯笼鱼，点一只，它和上下左右的邻居都会切换亮灭，把它们全部点亮；步数越接近“标准”树果越多（最多 4 个）；每天 6 个池塘，每小时 2 个，不用联网
+  **New mini-game "Chinchou Lights"**: a night-time pond of 4×4 Chinchou – tapping one switches it and its neighbours; light them all; the closer to par, the more berries (up to 4); 6 ponds a day, 2 an hour, works offline
+
 ## 1.10.0 · 2026-10-18
 
 - **新小游戏「电光一闪」**：伙伴在草丛里等着，红色的“！”一出现就尽快点一下（或按空格），点早了算抢跑；一局 5 次，反应越快分数越高，最多 4 个树果；会记下最快的反应时间；每天 6 局，每小时 2 局，不用联网

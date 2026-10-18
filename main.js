@@ -27,6 +27,7 @@ const Jump = require('./src/main/jump');
 const Puzzle = require('./src/main/puzzle');
 const Hunt = require('./src/main/hunt');
 const Quick = require('./src/main/quick');
+const Lights = require('./src/main/lights');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -99,7 +100,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false, freeQuick: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false, freeQuick: false, freeLights: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -293,6 +294,7 @@ function snapshot() {
     puzzle: puzzleInfo(),
     hunt: huntInfo(),
     quick: quickInfo(),
+    lights: lightsInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -681,6 +683,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'lights') {
+    // testing: Chinchou Lights without daily / hourly limits, until used again or the app restarts
+    testFlags.freeLights = !testFlags.freeLights;
+    changed();
+    if (testFlags.freeLights) openLights();
     return { ok: true };
   }
   if (cmd === 'quickattack') {
@@ -2314,6 +2323,74 @@ function quickHit(token) {
   return { ...res, done: true, reward, early: g.early, record: stats.quickBest || null, info: quickInfo() };
 }
 
+// ---------- Chinchou Lights (灯笼鱼点灯) ----------
+let lightsWin = null;
+let lightsGame = null;   // { token, board, cells } – the pond being played (one at a time)
+
+function openLights() {
+  if (!lightsWin || lightsWin.isDestroyed()) {
+    lightsWin = new BrowserWindow({
+      width: 420, height: 600, resizable: false, show: false, title: T('lights.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) lightsWin.setMenu(null);
+    if (process.env.POKEPET_TEST) lightsWin.webContents.on('console-message', (e) => console.log('[lights]', e.message));
+    lightsWin.loadFile(path.join(__dirname, 'src', 'lights', 'lights.html'));
+    lightsWin.once('ready-to-show', () => { lightsWin.show(); lightsWin.focus(); });
+    lightsWin.on('closed', () => { lightsWin = null; lightsGame = null; });
+  } else {
+    lightsWin.show();
+    lightsWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Chinchou Lights limits as the windows see them (unlimited while testing). */
+function lightsInfo() {
+  if (testFlags.freeLights) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'lights', today());
+}
+
+/** Start a pond (counts one play), with Chinchou's portrait for the window. */
+async function lightsStart() {
+  const lim = lightsInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'lights', today());
+  const { board, cells } = Lights.scramble();
+  lightsGame = { token: `l${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, board, cells };
+  const token = lightsGame.token;
+  changed();
+  let face = null;
+  try {
+    const buf = await Sources.portrait(170, 'Normal', spritesDir());
+    if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
+  } catch { /* the window draws 💡 instead */ }
+  if (!lightsGame || lightsGame.token !== token) return { ok: false };
+  return { ok: true, token, board: board.slice(), par: cells.length, face, info: lightsInfo() };
+}
+
+/** The pond is lit in the window: replay its taps here, and reward it only if they really light every Chinchou. */
+function lightsFinish(token, taps) {
+  const g = lightsGame;
+  if (!g || g.token !== token) return { ok: false };
+  const end = Lights.replay(g.board, taps);
+  if (!end || !Lights.isLit(end)) return { ok: false };
+  lightsGame = null;
+  const reward = Lights.rewardFor(taps.length, g.cells.length);
+  const stats = store.data.stats;
+  stats.lightsBest = stats.lightsBest ? Math.min(stats.lightsBest, taps.length) : taps.length;
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    if (reward.berries >= 3) petEvent('lights-done', { n: taps.length });
+  }
+  changed();
+  return { ok: true, reward, best: stats.lightsBest, info: lightsInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -3139,6 +3216,7 @@ function buildMenu() {
     { label: T('menu.puzzle'), click: () => openPuzzle() },
     { label: T('menu.hunt'), click: () => openHunt() },
     { label: T('menu.quick'), click: () => openQuick() },
+    { label: T('menu.lights'), click: () => openLights() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -3516,6 +3594,9 @@ function registerIpc() {
   ipcMain.handle('quick:ready', (_e, token) => quickReady(String(token || '')));
   ipcMain.handle('quick:hit', (_e, token) => quickHit(String(token || '')));
   ipcMain.on('quick:open', () => openQuick());
+  ipcMain.handle('lights:start', () => lightsStart());
+  ipcMain.handle('lights:finish', (_e, token, taps) => lightsFinish(String(token || ''), Array.isArray(taps) ? taps.slice(0, 5000).map(Number) : []));
+  ipcMain.on('lights:open', () => openLights());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -4458,6 +4539,25 @@ async function selfTest(dir) {
   await wait(800);
   await shot(quickWin, '85-quick-result');
   console.log('[test] quick after a round:', store.data.stats.quickBest || 0, JSON.stringify(quickInfo()));
+  // Chinchou Lights: one wrong tap (tapped again to undo it), then the scramble's own cells
+  await step('lights', async () => openLights());
+  await wait(2500);
+  await shot(lightsWin, '86-lights-start');
+  await step('lights-play', async () => {
+    await lightsWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    for (let i = 0; i < 40 && !(lightsGame && (await lightsWin.webContents.executeJavaScript('document.body.dataset.phase')) === 'play'); i++) await wait(100);
+    await wait(600);
+    await shot(lightsWin, '87-lights-pond');
+    const cells = lightsGame ? lightsGame.cells.slice() : [];
+    const odd = [...Array(Lights.N).keys()].find((i) => !cells.includes(i));
+    for (const cell of [odd, odd, ...cells]) {
+      await lightsWin.webContents.executeJavaScript(`document.querySelector('.lamp[data-cell="${cell}"]').click()`);
+      await wait(150);
+    }
+  });
+  await wait(1500);
+  await shot(lightsWin, '88-lights-lit');
+  console.log('[test] lights after a pond:', store.data.stats.lightsBest || 0, JSON.stringify(lightsInfo()));
   quitting = true;
   app.quit();
 }
