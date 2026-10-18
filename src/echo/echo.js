@@ -198,7 +198,14 @@
     labels();
     showCount(state.echo);
     idle(t('echo.rules'));
-    // Chatot itself in the middle, animated, instead of 🦜
+    // Chatot itself in the middle, animated, instead of 🦜 (its portrait while the sprite downloads)
+    api.invoke('diary:portrait', 441, 'Normal', false).catch(() => null).then((url) => {
+      if (!url || $('#bird canvas')) return;
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      $('#bird').replaceChildren(img);
+    });
     const sp = await Anim.load(441, false, ['Idle']);
     if (sp) {
       const cv = document.createElement('canvas');

@@ -151,6 +151,8 @@
     idle(t('lights.rules'));
     sprite = await Anim.load(170, false, ['Idle']);
     if (!sprite) portrait = await api.invoke('diary:portrait', 170, 'Normal', false).catch(() => null);
-    if (!game && (sprite || portrait)) idle(t('lights.rules'));
+    if (!sprite && !portrait) return;
+    // the first download can finish after a pond was started: redraw whichever board is showing
+    if (game) draw(game.board, game.face || portrait); else idle(t('lights.rules'));
   })();
 })();

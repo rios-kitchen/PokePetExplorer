@@ -22,6 +22,7 @@ h1 { margin: 12px 0 2px; text-align: center; font-size: 18px; color: var(--yello
 body:not([data-phase="input"]) .pad { cursor: default; }
 .bird { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border: 3px solid #23221f; border-radius: 50%;
   background: #1d1c1a; display: flex; align-items: center; justify-content: center; font-size: 32px; pointer-events: none; }
+.bird img { width: 58px; height: 58px; border-radius: 50%; image-rendering: pixelated; }
 .bird canvas { width: 58px; height: 58px; image-rendering: pixelated; }
 .bird.sing { animation: bob 0.3s ease-in-out infinite alternate; }
 @keyframes bob { to { transform: translateY(-4px) rotate(-6deg); } }
