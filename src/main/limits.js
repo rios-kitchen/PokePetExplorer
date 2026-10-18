@@ -10,7 +10,8 @@ const LIMITS = {
   memory:  { day: 6, hour: 2 },    // Memory Match boards
   whack:   { day: 6, hour: 2 },    // Whack-a-Diglett rounds
   types:   { day: 6, hour: 2 },    // Type Match-up rounds (10 questions each)
-  rps:     { day: 8, hour: 3 }     // Fire-Water-Grass matches (first to 3)
+  rps:     { day: 8, hour: 3 },    // Fire-Water-Grass matches (first to 3)
+  flip:    { day: 6, hour: 2 }     // Voltorb Flip boards
 };
 const HOUR = 3600e3;
 

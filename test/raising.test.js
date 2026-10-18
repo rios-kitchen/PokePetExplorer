@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -946,6 +946,37 @@ test('Type Match-up: questions, answers, rewards, limits', () => {
   assert.equal(Limits.use(data, 'types', day, t0), true);
   assert.equal(Limits.use(data, 'types', day, t0 + 1), true);
   assert.equal(Limits.blocked(Limits.info(data, 'types', day, t0 + 2)), 'rest');
+});
+
+test('Voltorb Flip: boards, hints, clearing, rewards, limits', () => {
+  const V = require('../src/main/voltorb');
+  const Limits = require('../src/main/limits');
+  for (let n = 0; n < 50; n++) {
+    const cards = V.deal();
+    assert.equal(cards.length, 25);
+    const count = (v) => cards.filter((c) => c === v).length;
+    assert.ok(V.LAYOUTS.some(([a, b, c]) => count(2) === a && count(3) === b && count(0) === c));
+    // the hints add up to the board
+    const h = V.hints(cards);
+    assert.equal(h.rows.reduce((s, r) => s + r.sum, 0), cards.reduce((s, c) => s + c, 0));
+    assert.equal(h.cols.reduce((s, r) => s + r.volts, 0), count(0));
+  }
+  const cards = [2, 1, 0, 3, 1, ...Array(20).fill(1)];
+  const up = cards.map(() => false);
+  assert.equal(V.coinsOf(cards, up), 1);
+  up[0] = true;
+  assert.equal(V.cleared(cards, up), false);
+  up[3] = true;
+  assert.equal(V.cleared(cards, up), true);
+  assert.equal(V.coinsOf(cards, up), 6);
+  assert.deepEqual(V.rewardFor(false, 6), { won: false, berries: 0, xp: 6, mood: 2 });
+  assert.equal(V.rewardFor(true, 6).berries, 3);
+  assert.equal(V.rewardFor(true, 54).berries, 4);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  assert.equal(Limits.use(data, 'flip', day, t0), true);
+  assert.equal(Limits.use(data, 'flip', day, t0 + 1), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'flip', day, t0 + 2)), 'rest');
 });
 
 test('Fire-Water-Grass: the type triangle, rewards, limits', () => {
