@@ -31,6 +31,7 @@
     $('#previewLbl').textContent = t('puzzle.goal');
   }
 
+  const nameOf = (names) => (names ? names[L()] || names.en : '');
   function verdict(text, cls = '') {
     $('#verdict').className = `verdict ${cls}`;
     $('#verdict').textContent = text;
@@ -144,7 +145,8 @@
     if (game.face) draw(game.board, game.face, true);   // the missing piece drops in
     Sound.play('fanfare');
     const r = res.reward;
-    verdict(t(r.clean ? 'puzzle.doneClean' : 'puzzle.done', { n: r.moves, b: r.berries, xp: r.xp, best: res.best, h: r.hints }), 'win');
+    verdict(t(r.clean ? 'puzzle.doneClean' : 'puzzle.done', { n: r.moves, b: r.berries, xp: r.xp, best: res.best, h: r.hints })
+      + (res.share ? `\n${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : ''), 'win');
     showCount(res.info);
     game = null;
     hintLabel();
@@ -184,7 +186,7 @@
     draw(game.board, game.face);
     preview(game.face);
     score();
-    verdict(t('puzzle.go'));
+    verdict(res.player ? `${t('game.player', { name: nameOf(res.player.names) })} · ${t('puzzle.go')}` : t('puzzle.go'));
     Sound.play('switch');
     phase('play');
     hintLabel();

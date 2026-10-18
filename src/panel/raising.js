@@ -349,6 +349,28 @@ window.PanelRaising = function PanelRaising(env) {
     }
   }
 
+  // the pixel-art tuft of grass on the "go to the grass" button: one character per pixel
+  const GRASS = [
+    '.....l.......l..',
+    '..l..gl...l..gl.',
+    '..gl.gg..lg..gg.',
+    '.lgg.dg..gg.lgd.',
+    '.ggd.dgl.gd.ggd.',
+    'lgdd.ddg.dd.gdd.',
+    'gdd.lddglddlgdd.',
+    'gdd.gddgdddgddd.',
+    'dddlgdddddddddd.',
+    'ddddddddddddddd.',
+    '.d.d.d.d.d.d.d..',
+  ];
+  const GRASS_INK = { l: '#9be36b', g: '#4cb648', d: '#2b7a3b' };
+  function grassIcon() {
+    const cv = el('canvas', { class: 'pixel-grass', width: GRASS[0].length, height: GRASS.length, 'aria-hidden': 'true' });
+    const g = cv.getContext('2d');
+    GRASS.forEach((row, y) => [...row].forEach((c, x) => { if (GRASS_INK[c]) { g.fillStyle = GRASS_INK[c]; g.fillRect(x, y, 1, 1); } }));
+    return cv;
+  }
+
   function renderBattleBar(state) {
     renderGameFaces(state);
     const f = state.fishing;
@@ -407,7 +429,7 @@ window.PanelRaising = function PanelRaising(env) {
       bar.replaceChildren(
         ...(e ? [el('button', { class: 'primary', onclick: () => api.send('wild:open', true) },
           t('dex.battleWaiting', { name: e.names[L()] || e.names.en, m: mins(e.until) }))] : []),
-        el('button', { class: 'secondary', onclick: () => api.send('wild:open') }, t('dex.goWild')),
+        el('button', { class: 'secondary grass-btn', onclick: () => api.send('wild:open') }, grassIcon(), el('span', {}, t('dex.goWild'))),
         el('span', { class: 'hint' }, g.dayLeft > 0 && g.hourLeft <= 0 ? t('wild.error.rest', { m: mins(g.nextAt) })
           : `${t('wild.explore', { n: g.dayLeft, max: g.max })}${t('wild.hour', { h: g.hourLeft, hmax: g.hourMax })}`));
     }

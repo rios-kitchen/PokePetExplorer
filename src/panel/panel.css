@@ -489,6 +489,10 @@ body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display:
 .battle-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; }
 .battle-bar button { padding: 4px 12px; font-size: 12.5px; }
 .battle-bar .hint { flex: 1 1 200px; margin: 0; }
+.battle-bar .grass-btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px 3px 8px; }
+.pixel-grass { width: 32px; height: 22px; image-rendering: pixelated; image-rendering: crisp-edges; }
+.grass-btn:hover .pixel-grass { animation: grass-sway 600ms steps(2) infinite alternate; transform-origin: bottom center; }
+@keyframes grass-sway { from { transform: skewX(-6deg); } to { transform: skewX(6deg); } }
 .dex-head { margin-bottom: 2px; }
 .pokedex .fish.seen .fish-face img { filter: grayscale(1) brightness(0.55); }
 .pokedex .fish.seen b { opacity: 0.75; }

@@ -101,7 +101,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false, freeQuick: false, freeLights: false, freeDitto: false, freeHints: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false, freeQuick: false, freeLights: false, freeDitto: false, freeHints: false, otherPlayer: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -222,6 +222,30 @@ const careOfActive = () => (hasPet() ? Care.careOf(store.data, S().pokemon) : Ca
 const activePet = () => (hasPet() ? petOf(store.data, S().pokemon) : freshPet());
 /** The partner's team entry ({ id, dex, names }), or null while there is none or it is still an egg. */
 const partnerEntry = () => (hasPet() ? petList().find((p) => p.id === S().pokemon && !p.egg && p.dex) || null : null);
+
+const PARTNER_SHARE = 0.25;   // the partner's share of a mini-game's XP when another team member played it
+/**
+ * Who plays a partner mini-game (Shuffle, Slide Puzzle, Shiny Hunt, Quick Attack): a random team member that has
+ * hatched and isn't away on an outing – { id, dex, names, shiny }; Pikachu (no id) when there's none.
+ */
+function gamePlayer(rnd = Math.random) {
+  let pool = hasPet() ? petList().filter((p) => !p.egg && p.dex && !Expedition.isAway(store.data, p.id)) : [];
+  if (testFlags.otherPlayer && pool.some((p) => p.id !== S().pokemon)) pool = pool.filter((p) => p.id !== S().pokemon);
+  const p = pool.length ? pool[Math.floor(rnd() * pool.length)] : null;
+  return p ? { id: p.id, dex: p.dex, names: p.names, shiny: !!(store.data.skins[p.id] || {}).shiny } : { id: null, dex: 25, names: Sprites.DEFS.pikachu.name, shiny: false };
+}
+/** A partner mini-game's XP: all of it for the one who played, and a small share for the partner when it didn't. */
+function gameXp(player, xp) {
+  const partnerHere = hasPet() && !activeAway() && activePet().stage !== 'egg';
+  if (player && player.id && player.id !== S().pokemon) {
+    addXp(xp, player.id);
+    const share = partnerHere ? Math.max(1, Math.round(xp * PARTNER_SHARE)) : 0;
+    if (share) addXp(share);
+    return share;
+  }
+  if (partnerHere) addXp(xp);
+  return 0;
+}
 
 function petName(id = S().pokemon) {
   const p = petList().find((x) => x.id === id);
@@ -727,6 +751,14 @@ async function runSecret(text) {
     testFlags.freeHints = !testFlags.freeHints;
     changed();
     if (testFlags.freeHints) openPuzzle();
+    return { ok: true };
+  }
+  if (cmd === 'teamplay') {
+    // testing: the partner mini-games always pick a team member other than the partner (when there is one), until
+    // used again or the app restarts
+    testFlags.otherPlayer = !testFlags.otherPlayer;
+    changed();
+    if (testFlags.otherPlayer) openShuffle();
     return { ok: true };
   }
   if (cmd === 'jump') {
@@ -1985,9 +2017,10 @@ async function shuffleStart() {
   changed();
   // the partner's face, plus how it looks when it's found (happy) and when the wrong ball was picked (sad)
   let face = null, happy = null, sad = null;
-  const pet = partnerEntry() || { id: null, dex: 25 };   // Pikachu while the partner is still an egg
+  const pet = gamePlayer();
+  shuffleGame.player = pet;
   if (pet) {
-    const shiny = !!(store.data.skins[pet.id] || {}).shiny;
+    const shiny = pet.shiny;
     const url = async (emotion) => {
       try {
         const buf = await Sources.portrait(pet.dex, emotion, spritesDir(), shiny);
@@ -1997,7 +2030,7 @@ async function shuffleStart() {
     [face, happy, sad] = await Promise.all([url('Normal'), url('Happy'), url('Sad')]);
   }
   if (!shuffleGame || shuffleGame.token !== token) return { ok: false };
-  return { ok: true, token, round: shuffleGame.cur, rounds: Shuffle.ROUNDS.length, face, happy: happy || face, sad: sad || face, info: shuffleInfo() };
+  return { ok: true, token, player: { id: pet.id, dex: pet.dex, names: pet.names, shiny: pet.shiny }, round: shuffleGame.cur, rounds: Shuffle.ROUNDS.length, face, happy: happy || face, sad: sad || face, info: shuffleInfo() };
 }
 
 /** Point at a ball: found → the next round (or won after the last); missed → the game ends and is rewarded. */
@@ -2017,13 +2050,13 @@ function shufflePick(token, i) {
   const stats = store.data.stats;
   stats.shuffleBest = Math.max(stats.shuffleBest || 0, g.found);
   store.data.berries += reward.berries;
+  const share = gameXp(g.player, reward.xp);
   if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
-    addXp(reward.xp);
     addMood(reward.mood);
     if (g.found >= 3) petEvent('shuffle-good', { n: g.found });
   }
   changed();
-  return { ok: true, right, at, found: g.found, done: true, reward, best: stats.shuffleBest, info: shuffleInfo() };
+  return { ok: true, right, at, found: g.found, done: true, reward, share, shareTo: share ? partnerEntry().names : null, best: stats.shuffleBest, info: shuffleInfo() };
 }
 
 // ---------- Magikarp Jump (鲤鱼王跳跳) ----------
@@ -2134,15 +2167,16 @@ async function puzzleStart() {
   const token = puzzleGame.token;
   changed();
   let face = null;
-  const pet = partnerEntry() || { id: null, dex: 25 };   // Pikachu while the partner is still an egg
+  const pet = gamePlayer();
+  puzzleGame.player = pet;
   if (pet) {
     try {
-      const buf = await Sources.portrait(pet.dex, Puzzle.emotionOf(), spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
+      const buf = await Sources.portrait(pet.dex, Puzzle.emotionOf(), spritesDir(), pet.shiny);
       if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
     } catch { /* numbered tiles instead */ }
   }
   if (!puzzleGame || puzzleGame.token !== token) return { ok: false };
-  return { ok: true, token, board: puzzleGame.board.slice(), face, hints: hintsLeft(puzzleGame), info: puzzleInfo() };
+  return { ok: true, token, player: { id: pet.id, dex: pet.dex, names: pet.names, shiny: pet.shiny }, board: puzzleGame.board.slice(), face, hints: hintsLeft(puzzleGame), info: puzzleInfo() };
 }
 
 const hintsLeft = (g) => (testFlags.freeHints ? 99 : Math.max(0, Puzzle.HINTS - g.hints));
@@ -2169,13 +2203,13 @@ function puzzleFinish(token, moves) {
   const stats = store.data.stats;
   stats.puzzleBest = stats.puzzleBest ? Math.min(stats.puzzleBest, moves.length) : moves.length;
   store.data.berries += reward.berries;
+  const share = gameXp(g.player, reward.xp);
   if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
-    addXp(reward.xp);
     addMood(reward.mood);
     petEvent('puzzle-done', { n: moves.length });
   }
   changed();
-  return { ok: true, reward, best: stats.puzzleBest, info: puzzleInfo() };
+  return { ok: true, reward, share, shareTo: share ? partnerEntry().names : null, best: stats.puzzleBest, info: puzzleInfo() };
 }
 
 // ---------- Shiny Hunt (找闪光) ----------
@@ -2219,7 +2253,8 @@ async function huntStart() {
   const token = huntGame.token;
   changed();
   // the partner's face, plus how it looks when the shiny is found (happy) and when the wrong one is clicked (sad)
-  const pet = partnerEntry() || { id: null, dex: 25 };   // Pikachu while the partner is still an egg
+  const pet = gamePlayer();
+  huntGame.player = pet;
   const url = async (emotion) => {
     try {
       const buf = await Sources.portrait(pet.dex, emotion, spritesDir());
@@ -2229,7 +2264,7 @@ async function huntStart() {
   const [face, happy, sad] = await Promise.all([url('Normal'), url('Happy'), url('Sad')]);
   if (!huntGame || huntGame.token !== token) return { ok: false };
   huntGame.at = Date.now();   // the clock starts once the board can be shown
-  return { ok: true, token, seconds: Hunt.ROUND_S, board: huntBoard(huntGame.cur), face, happy: happy || face, sad: sad || face, info: huntInfo() };
+  return { ok: true, token, player: { id: pet.id, dex: pet.dex, names: pet.names, shiny: pet.shiny }, seconds: Hunt.ROUND_S, board: huntBoard(huntGame.cur), face, happy: happy || face, sad: sad || face, info: huntInfo() };
 }
 
 const huntOver = (g) => Date.now() - g.at > Hunt.ROUND_S * 1000 + 1500;   // a little slack for the window's clock
@@ -2255,13 +2290,13 @@ function huntFinish(token) {
   const stats = store.data.stats;
   stats.huntBest = Math.max(stats.huntBest || 0, g.found);
   store.data.berries += reward.berries;
+  const share = gameXp(g.player, reward.xp);
   if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
-    addXp(reward.xp);
     addMood(reward.mood);
     if (g.found >= 8) petEvent('hunt-good', { n: g.found });
   }
   changed();
-  return { ok: true, reward, misses: g.misses, best: stats.huntBest, info: huntInfo() };
+  return { ok: true, reward, share, shareTo: share ? partnerEntry().names : null, misses: g.misses, best: stats.huntBest, info: huntInfo() };
 }
 
 // ---------- Quick Attack (电光一闪) ----------
@@ -2303,15 +2338,16 @@ async function quickStart() {
   const token = quickGame.token;
   changed();
   let face = null;
-  const pet = partnerEntry() || { id: null, dex: 25 };   // Pikachu while the partner is still an egg
+  const pet = gamePlayer();
+  quickGame.player = pet;
   if (pet) {
     try {
-      const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
+      const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), pet.shiny);
       if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
     } catch { /* the window draws ⚡ instead */ }
   }
   if (!quickGame || quickGame.token !== token) return { ok: false };
-  return { ok: true, token, draws: Quick.DRAWS, face, info: quickInfo() };
+  return { ok: true, token, player: { id: pet.id, dex: pet.dex, names: pet.names, shiny: pet.shiny }, draws: Quick.DRAWS, face, info: quickInfo() };
 }
 
 /** The window is ready for the next draw: pick the wait before the "!" and start the clock. */
@@ -2341,13 +2377,13 @@ function quickHit(token) {
   const stats = store.data.stats;
   if (g.best !== null) stats.quickBest = stats.quickBest ? Math.min(stats.quickBest, g.best) : g.best;
   store.data.berries += reward.berries;
+  const share = gameXp(g.player, reward.xp);
   if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
-    addXp(reward.xp);
     addMood(reward.mood);
     if (g.points >= 10) petEvent('quick-good', { ms: g.best });
   }
   changed();
-  return { ...res, done: true, reward, early: g.early, record: stats.quickBest || null, info: quickInfo() };
+  return { ...res, done: true, reward, share, shareTo: share ? partnerEntry().names : null, early: g.early, record: stats.quickBest || null, info: quickInfo() };
 }
 
 // ---------- Chinchou Lights (灯笼鱼点灯) ----------
@@ -4550,7 +4586,12 @@ async function selfTest(dir) {
   await wait(1200);
   await shot(echoWin, '70-echo-result');
   console.log('[test] echo after a round:', store.data.stats.echoBest || 0, JSON.stringify(echoInfo()));
-  // Poké Ball Shuffle: find the partner three times, then pick a wrong ball
+  // Poké Ball Shuffle: find the player three times, then pick a wrong ball; the player is a team member other than
+  // the partner when there is one, so the partner gets only its share of the XP
+  testFlags.otherPlayer = true;
+  const xpOf = (id) => (petOf(store.data, id) || {}).xp || 0;
+  const xpBefore = Object.fromEntries(petList().map((p) => [p.id, xpOf(p.id)]));
+  let shufflePlayer = null;
   await step('shuffle', async () => openShuffle());
   await wait(2500);
   await shot(shuffleWin, '71-shuffle-start');
@@ -4561,6 +4602,7 @@ async function selfTest(dir) {
       for (let i = 0; i < 40 && (await phase()) === 'idle'; i++) await wait(100);
       if (n === 1) { await wait(1500); await shot(shuffleWin, '72-shuffle-swapping'); }
       for (let i = 0; i < 100 && (await phase()) !== 'pick'; i++) await wait(100);
+      shufflePlayer ||= shuffleGame.player;
       const g = shuffleGame.cur;
       const at = Shuffle.trace(g.start, g.swaps);
       const slot = n < 3 ? at : (at + 1) % g.balls;
@@ -4571,6 +4613,9 @@ async function selfTest(dir) {
   await wait(1200);
   await shot(shuffleWin, '73-shuffle-result');
   console.log('[test] shuffle after a game:', store.data.stats.shuffleBest || 0, JSON.stringify(shuffleInfo()));
+  testFlags.otherPlayer = false;
+  console.log('[test] shuffle player:', shufflePlayer && shufflePlayer.id, 'partner:', S().pokemon,
+    'xp gained:', JSON.stringify(Object.fromEntries(petList().map((p) => [p.id, xpOf(p.id) - (xpBefore[p.id] || 0)]))));
   // Magikarp Jump: stop the bar on the target each time (it's checked in the main process anyway)
   await step('jump', async () => openJump());
   await wait(2500);

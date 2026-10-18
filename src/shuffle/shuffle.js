@@ -25,10 +25,14 @@
       : info.dayLeft > 0 ? t('shuffle.rest', { m: mins(info.nextAt) }) : t('shuffle.tired');
   }
 
+  // who plays this game: a random team member, picked by the main process
+  let player = null;
+  const nameOf = (names) => (names ? names[L()] || names.en : '');
   function partner() {
-    const pet = state && (state.custom || []).find((c) => c.id === state.settings.pokemon);
-    return pet && pet.names ? (pet.names[L()] || pet.names.en) : t('shuffle.partner');
+    return player && player.names ? nameOf(player.names) : t('shuffle.partner');
   }
+  // the partner's small share of the XP when another team member played
+  const shareLine = (res) => (res.share ? `\n${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : '');
 
   function labels() {
     document.title = t('shuffle.title');
@@ -108,6 +112,7 @@
     }
     showCount(res.info);
     $('#next').classList.add('hidden');
+    player = res.player || null;
     game = { token: res.token, n: 0, found: 0, rounds: res.rounds, face: res.face, happy: res.happy, sad: res.sad, round: null };
     Sound.play('switch');
     play(res.round);
@@ -136,7 +141,7 @@
     }
     const r = res.reward;
     if (r.won) Sound.play('fanfare');
-    verdict(t(r.won ? 'shuffle.won' : 'shuffle.missed', { name: partner(), found: r.found, b: r.berries, xp: r.xp, best: res.best }), r.won ? 'win' : 'lose');
+    verdict(t(r.won ? 'shuffle.won' : 'shuffle.missed', { name: partner(), found: r.found, b: r.berries, xp: r.xp, best: res.best }) + shareLine(res), r.won ? 'win' : 'lose');
     showCount(res.info);
     game = null;
     phase('idle');

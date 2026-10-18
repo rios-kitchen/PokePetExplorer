@@ -28,6 +28,7 @@
     $('#title').textContent = t('hunt.title');
   }
 
+  const nameOf = (names) => (names ? names[L()] || names.en : '');
   function verdict(text, cls = '') {
     $('#verdict').className = `verdict ${cls}`;
     $('#verdict').textContent = text;
@@ -35,7 +36,8 @@
 
   function score() {
     const left = game ? Math.max(0, Math.ceil((game.ends - Date.now()) / 1000)) : 0;
-    $('#score').textContent = game ? t('hunt.score', { n: game.found, s: left }) : '';
+    const who = game && game.player ? `${t('game.player', { name: nameOf(game.player.names) })} · ` : '';
+    $('#score').textContent = game ? who + t('hunt.score', { n: game.found, s: left }) : '';
   }
 
   // the board: every cell your partner, the shiny one with its colours turned by `hue` degrees
@@ -98,7 +100,8 @@
     if (!res.ok) { idle(t('hunt.rules')); return; }
     const r = res.reward;
     Sound.play(r.found >= 8 ? 'fanfare' : 'chime');
-    verdict(t('hunt.result', { n: r.found, miss: res.misses, b: r.berries, xp: r.xp, best: res.best }), r.found >= 8 ? 'win' : '');
+    verdict(t('hunt.result', { n: r.found, miss: res.misses, b: r.berries, xp: r.xp, best: res.best })
+      + (res.share ? `\n${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : ''), r.found >= 8 ? 'win' : '');
     showCount(res.info);
     button(t('hunt.again'));
   }
@@ -132,7 +135,7 @@
     }
     showCount(res.info);
     $('#next').classList.add('hidden');
-    game = { token: res.token, face: res.face, happy: res.happy, sad: res.sad, board: res.board, found: 0, misses: 0, seconds: res.seconds, ends: Date.now() + res.seconds * 1000, busy: false };
+    game = { token: res.token, player: res.player || null, face: res.face, happy: res.happy, sad: res.sad, board: res.board, found: 0, misses: 0, seconds: res.seconds, ends: Date.now() + res.seconds * 1000, busy: false };
     draw(game.board, game.face);
     verdict(t('hunt.go'));
     Sound.play('switch');
