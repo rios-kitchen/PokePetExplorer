@@ -23,7 +23,8 @@ const COMMANDS = {
   'd6dde6b78972b5ebdec01fb0b242f85965d2fb0856062e213de8b8ecf55463b5': 'typequiz',
   'a237266f7de214aa9a8f397d0de82f56d98fcfae92476993783b079d4d01c055': 'rps',
   'c549f4b4f9c84ec6464b67e62d67be8f0b936335e84a1c458d66cb13deee9e20': 'voltorbflip',
-  '76132fb5a501cb5ecabb265edc6769929e7459b366c55c2bcaefc5f06440d05a': 'echo'
+  '76132fb5a501cb5ecabb265edc6769929e7459b366c55c2bcaefc5f06440d05a': 'echo',
+  '60e59ea518e188c7c08383632be3a27554a68e13ff5787019c5969dda1258cf6': 'shuffle'
 };
 
 /** "word arg arg" → { cmd, args } (cmd null when the word isn't one). */
