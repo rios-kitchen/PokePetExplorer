@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -946,6 +946,27 @@ test('Type Match-up: questions, answers, rewards, limits', () => {
   assert.equal(Limits.use(data, 'types', day, t0), true);
   assert.equal(Limits.use(data, 'types', day, t0 + 1), true);
   assert.equal(Limits.blocked(Limits.info(data, 'types', day, t0 + 2)), 'rest');
+});
+
+test('Fire-Water-Grass: the type triangle, rewards, limits', () => {
+  const R = require('../src/main/rps');
+  const Limits = require('../src/main/limits');
+  const TypeChart = require('../src/main/typechart');
+  assert.equal(R.outcome('fire', 'grass'), 'win');
+  assert.equal(R.outcome('grass', 'water'), 'win');
+  assert.equal(R.outcome('water', 'fire'), 'win');
+  assert.equal(R.outcome('grass', 'fire'), 'lose');
+  assert.equal(R.outcome('water', 'water'), 'draw');
+  // the same triangle as the type chart
+  for (const a of R.MOVES) for (const b of R.MOVES) if (R.outcome(a, b) === 'win') assert.equal(TypeChart.effectiveness(a, [b]), 2);
+  assert.deepEqual(R.rewardFor(true), { won: true, berries: 3, xp: 20, mood: 6 });
+  assert.equal(R.rewardFor(false).berries, 1);
+  assert.ok(R.MOVES.includes(R.throwOf()));
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'rps', day, t0 + i), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'rps', day, t0 + 5)), 'rest');
+  assert.equal(Limits.LIMITS.rps.day, 8);
 });
 
 test('Whack-a-Diglett: points, rewards, limits', () => {

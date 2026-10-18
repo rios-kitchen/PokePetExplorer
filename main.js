@@ -19,6 +19,7 @@ const CatchRules = require('./src/shared/catch-rules');
 const MemoryRules = require('./src/shared/memory-rules');
 const WhackRules = require('./src/shared/whack-rules');
 const TypeQuiz = require('./src/main/typequiz');
+const Rps = require('./src/main/rps');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -91,7 +92,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -275,6 +276,7 @@ function snapshot() {
     memory: memoryInfo(),
     whack: whackInfo(),
     types: typesInfo(),
+    rps: rpsInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -663,6 +665,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'rps') {
+    // testing: Fire-Water-Grass without daily / hourly limits, until used again or the app restarts
+    testFlags.freeRps = !testFlags.freeRps;
+    changed();
+    if (testFlags.freeRps) openRps();
     return { ok: true };
   }
   if (cmd === 'typequiz') {
@@ -1654,6 +1663,70 @@ function typesAnswer(token, i, choice) {
   return { ...out, done: true, reward, best: stats.typesBest, info: typesInfo() };
 }
 
+// ---------- Fire-Water-Grass (火水草猜拳) ----------
+let rpsWin = null;
+let rpsMatch = null;   // { token, you, them } – the match being played (one at a time)
+
+function openRps() {
+  if (!rpsWin || rpsWin.isDestroyed()) {
+    rpsWin = new BrowserWindow({
+      width: 420, height: 440, resizable: false, show: false, title: T('rps.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) rpsWin.setMenu(null);
+    if (process.env.POKEPET_TEST) rpsWin.webContents.on('console-message', (e) => console.log('[rps]', e.message));
+    rpsWin.loadFile(path.join(__dirname, 'src', 'rps', 'rps.html'));
+    rpsWin.once('ready-to-show', () => { rpsWin.show(); rpsWin.focus(); });
+    rpsWin.on('closed', () => { rpsWin = null; rpsMatch = null; });
+  } else {
+    rpsWin.show();
+    rpsWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Fire-Water-Grass limits as the windows see them (unlimited while testing). */
+function rpsInfo() {
+  if (testFlags.freeRps) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'rps', today());
+}
+
+/** Start a match (counts one play). */
+function rpsStart() {
+  const lim = rpsInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'rps', today());
+  rpsMatch = { token: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, you: 0, them: 0 };
+  changed();
+  return { ok: true, token: rpsMatch.token, info: rpsInfo() };
+}
+
+/** One throw: the other side throws too; at 3 wins the match is over and rewarded. */
+function rpsThrow(token, move) {
+  const m = rpsMatch;
+  if (!m || m.token !== token || !Rps.MOVES.includes(move)) return { ok: false };
+  const theirs = Rps.throwOf();
+  const result = Rps.outcome(move, theirs);
+  if (result === 'win') m.you++;
+  if (result === 'lose') m.them++;
+  const out = { ok: true, theirs, result, you: m.you, them: m.them };
+  if (m.you < Rps.TO_WIN && m.them < Rps.TO_WIN) return out;
+  rpsMatch = null;
+  const reward = Rps.rewardFor(m.you >= Rps.TO_WIN);
+  const stats = store.data.stats;
+  if (reward.won) stats.rpsWins = (stats.rpsWins || 0) + 1;
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    if (reward.won) petEvent('rps-won', {});
+  }
+  changed();
+  return { ...out, done: true, reward, wins: stats.rpsWins || 0, info: rpsInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -2471,6 +2544,7 @@ function buildMenu() {
     { label: T('menu.memory'), click: () => openMemory() },
     { label: T('menu.whack'), click: () => openWhack() },
     { label: T('menu.types'), click: () => openTypes() },
+    { label: T('menu.rps'), click: () => openRps() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -2822,6 +2896,9 @@ function registerIpc() {
   ipcMain.handle('types:start', () => typesStart());
   ipcMain.handle('types:answer', (_e, token, i, choice) => typesAnswer(String(token || ''), Number(i), String(choice || '')));
   ipcMain.on('types:open', () => openTypes());
+  ipcMain.handle('rps:start', () => rpsStart());
+  ipcMain.handle('rps:throw', (_e, token, move) => rpsThrow(String(token || ''), String(move || '')));
+  ipcMain.on('rps:open', () => openRps());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -3605,6 +3682,22 @@ async function selfTest(dir) {
   await wait(800);
   await shot(typesWin, '60-types-result');
   console.log('[test] types after a round:', store.data.stats.typesBest, JSON.stringify(typesInfo()));
+  // Fire-Water-Grass: throw fire until the match is over
+  await step('rps', async () => openRps());
+  await wait(2500);
+  await shot(rpsWin, '61-rps-start');
+  await step('rps-play', async () => {
+    await rpsWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    await wait(600);
+    for (let i = 0; i < 30 && rpsMatch; i++) {
+      await rpsWin.webContents.executeJavaScript(`document.querySelector('#moves button[data-move="fire"]').click()`);
+      await wait(300);
+      if (i === 0) await shot(rpsWin, '62-rps-throw');
+    }
+  });
+  await wait(600);
+  await shot(rpsWin, '63-rps-result');
+  console.log('[test] rps after a match:', store.data.stats.rpsWins || 0, JSON.stringify(rpsInfo()));
   quitting = true;
   app.quit();
 }

@@ -1,0 +1,28 @@
+:root { --ink: #f0ede6; --muted: #a39f95; --card: #fbf8f0; --yellow: #ffd84a; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1c1a; color: var(--ink); user-select: none;
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+h1 { margin: 12px 0 2px; text-align: center; font-size: 18px; color: var(--yellow); letter-spacing: 1px; }
+.score { margin: 0 0 10px; text-align: center; font-size: 15px; font-weight: 800; min-height: 21px; }
+.arena { display: flex; align-items: center; justify-content: center; gap: 16px; width: 360px; margin: 0 auto; padding: 14px 10px;
+  border: 3px solid #2a2420; border-radius: 12px; background: #2f2d29; }
+.side { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.lbl { color: var(--muted); font-size: 12px; }
+.hand { width: 88px; height: 88px; border: 3px solid #2a2420; border-radius: 50%; background: #45423c; display: flex; align-items: center;
+  justify-content: center; font-size: 44px; font-weight: 800; color: var(--muted); transition: transform 0.15s; }
+.hand.fire { background: #e2603b; } .hand.water { background: #3b78c4; } .hand.grass { background: #4fa04a; }
+.hand.win { transform: scale(1.12); box-shadow: 0 0 0 3px var(--yellow); }
+.vs { font-size: 20px; font-weight: 900; color: var(--yellow); }
+.hidden { display: none !important; }
+.verdict { margin: 10px 16px 6px; text-align: center; min-height: 20px; font-size: 15px; font-weight: 700; white-space: pre-line; }
+.verdict.win { color: #7be0a2; } .verdict.lose { color: #ff8a80; }
+.moves { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 360px; margin: 0 auto; }
+.moves button { border: 2px solid #23221f; border-radius: 10px; padding: 9px 6px; font: inherit; font-weight: 800; color: #fff; cursor: pointer;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45); }
+.moves button[data-move="fire"] { background: #e2603b; } .moves button[data-move="water"] { background: #3b78c4; } .moves button[data-move="grass"] { background: #4fa04a; }
+.moves button:hover:not(:disabled) { filter: brightness(1.12); }
+.moves button:disabled { cursor: default; opacity: 0.5; }
+.foot { width: 360px; margin: 10px auto 0; text-align: center; }
+.primary { background: var(--yellow); border: 2px solid #23221f; border-radius: 10px; padding: 6px 22px; font: inherit; font-weight: 700; color: #23221f; cursor: pointer; }
+.primary:disabled { opacity: 0.5; cursor: default; }
+.count { margin: 6px 0 0; color: var(--muted); font-size: 12px; white-space: pre-line; }
