@@ -7,6 +7,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 - **新小游戏「拼图」**：伙伴的照片切成 9 块、少一块、打乱了，把方块滑回原位拼好；步数越少树果越多（最多 4 个）；每天 6 局，每小时 2 局，不用联网（伙伴的头像下载过才有照片，否则是数字方块）
   **New mini-game "Slide Puzzle"**: your partner's picture is cut into 9 tiles with one missing and mixed up – slide them back into place; fewer moves, more berries (up to 4); 6 a day, 2 an hour, works offline (numbered tiles until your partner's portrait has been downloaded)
+- **新小游戏「找闪光」**：一格格都是你的伙伴，其中一只是颜色稍有不同的闪光宝可梦，限时 30 秒尽量多找；越往后格子越多、颜色越接近；找到越多树果越多（最多 4 个）；每天 6 局，每小时 2 局，不用联网
+  **New mini-game "Shiny Hunt"**: a grid full of your partner, one of them a shiny with slightly different colours – find as many as you can in 30 seconds; the grid grows and the colours get closer; more finds, more berries (up to 4); 6 a day, 2 an hour, works offline
+
 ## 1.8.0 · 2026-10-18
 
 - **新小游戏「聒噪鸟学舌」**：聒噪鸟在火、水、草、电四个按钮上唱一段曲子，你照着按一遍，每次多一个音，最多 15 个音；唱对越多树果越多（最多 5 个）；也可以按 1 2 3 4；每天 6 局，每小时 2 局，不用联网

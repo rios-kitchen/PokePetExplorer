@@ -26,7 +26,8 @@ const COMMANDS = {
   '76132fb5a501cb5ecabb265edc6769929e7459b366c55c2bcaefc5f06440d05a': 'echo',
   '60e59ea518e188c7c08383632be3a27554a68e13ff5787019c5969dda1258cf6': 'shuffle',
   '44d8c8e2038692ccab0dec2399014d221191bb565d93a53d7ef4a6708054ecb0': 'jump',
-  'babd84de4184f5c12cc457e7933c90beba52208f9a62d6297d16fb1f6f9bab5b': 'puzzle'
+  'babd84de4184f5c12cc457e7933c90beba52208f9a62d6297d16fb1f6f9bab5b': 'puzzle',
+  '9290e22d054663e59e75467b2ff519c42fdd819ea147a1beb11c52a4d8c62fd6': 'shinyhunt'
 };
 
 /** "word arg arg" → { cmd, args } (cmd null when the word isn't one). */
