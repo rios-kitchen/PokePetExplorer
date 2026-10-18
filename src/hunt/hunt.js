@@ -28,6 +28,7 @@
     $('#title').textContent = t('hunt.title');
   }
 
+  const nameOf = (names) => (names ? names[L()] || names.en : '');
   function verdict(text, cls = '') {
     $('#verdict').className = `verdict ${cls}`;
     $('#verdict').textContent = text;
@@ -98,7 +99,8 @@
     if (!res.ok) { idle(t('hunt.rules')); return; }
     const r = res.reward;
     Sound.play(r.found >= 8 ? 'fanfare' : 'chime');
-    verdict(t('hunt.result', { n: r.found, miss: res.misses, b: r.berries, xp: r.xp, best: res.best }), r.found >= 8 ? 'win' : '');
+    verdict(t('hunt.result', { n: r.found, miss: res.misses, b: r.berries, xp: r.xp, best: res.best })
+      + (res.share ? ` ${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : ''), r.found >= 8 ? 'win' : '');
     showCount(res.info);
     button(t('hunt.again'));
   }
@@ -134,7 +136,7 @@
     $('#next').classList.add('hidden');
     game = { token: res.token, face: res.face, happy: res.happy, sad: res.sad, board: res.board, found: 0, misses: 0, seconds: res.seconds, ends: Date.now() + res.seconds * 1000, busy: false };
     draw(game.board, game.face);
-    verdict(t('hunt.go'));
+    verdict(res.player ? `${t('game.player', { name: nameOf(res.player.names) })} · ${t('hunt.go')}` : t('hunt.go'));
     Sound.play('switch');
     phase('play');
     score();

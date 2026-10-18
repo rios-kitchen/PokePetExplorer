@@ -4,7 +4,7 @@
 
 ### 怎么开始
 
-- **去草丛**：右键 →「🌿 去草丛探索…」，或在面板的 🧭 外出页点「🌿 去草丛」，再点「走进草丛」。**每天最多 16 次，并且任意 1 小时内最多 3 次**（每天零点重置；1 小时的次数满了会提示还要等几分钟）。
+- **去草丛**：右键 →「🌿 去草丛探索…」，或在面板的 🧭 外出页点画着像素草的「去草丛」按钮，再点「走进草丛」。**每天最多 16 次，并且任意 1 小时内最多 3 次**（每天零点重置；1 小时的次数满了会提示还要等几分钟）。
 - **外出遇到**：外出回来时跟回来的野生宝可梦（见[第 5 节](05-Outings)）。可以在宝可梦的气泡里点「去对战！」，或在对战窗口、面板的 🧭 外出页点「⚔ 和…对战」。**不占草丛次数**，只等 **30 分钟**，过时它就离开。
 - 桌面上**不会**随机冒出野生宝可梦。
 
@@ -137,7 +137,7 @@
 
 ### Starting a battle
 
-- **The grass**: right-click → "🌿 Explore the grass…", or "🌿 Explore the grass" in the panel's 🧭 Outing tab, then "Into the grass". **Up to 16 encounters a day and at most 3 within any hour** (resets at midnight; when the
+- **The grass**: right-click → "🌿 Explore the grass…", or the "Explore the grass" button with the pixel grass in the panel's 🧭 Outing tab, then "Into the grass". **Up to 16 encounters a day and at most 3 within any hour** (resets at midnight; when the
   hour's three are used, it tells you how many minutes to wait).
 - **From an outing**: the wild Pokémon that came back from an outing ([section 5](05-Outings)). Press "Battle!" in your Pokémon's
   bubble, or "⚔ Battle …" in the battle window or the panel's 🧭 Outing tab. It **doesn't use a grass
