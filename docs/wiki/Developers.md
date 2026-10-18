@@ -17,7 +17,7 @@ Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等�
 | 钓鱼 / Fishing | `src/main/fishing.js` | `FISH`, `JUNK`, `FATIGUE`, `TIERS`, `ZONES` (4 rings), `TIER_WEIGHTS`, `JOIN_CHANCE`, `REPEAT_WEIGHT`, `SHINY_RATE` |
 | 招式数据 / Move data | `src/main/pokedata.js` | `GAMES` (newest game first), `usable`, `movesAt` |
 | 对战引擎 / Battle engine | `src/main/battle.js` | `BALLS`, `STATUS_CATCH`, `WILD_IV`, `wildLevel()`, `expFor()` |
-| 小游戏次数 / Mini-game limits | `src/main/limits.js` | `LIMITS` (grass 16/day 3/hour, fishing 20/day 6/hour, quiz 12/day 4/hour, catch 6/day 2/hour, memory 6/day 2/hour) – 新的小游戏也加在这里 / add new mini-games here |
+| 小游戏次数 / Mini-game limits | `src/main/limits.js` | `LIMITS` (grass 16/day 3/hour, fishing 20/day 6/hour, quiz 12/day 4/hour, catch 6/day 2/hour, memory 6/day 2/hour, whack 6/day 2/hour) – 新的小游戏也加在这里 / add new mini-games here |
 | 出现表 / Encounter tables | `src/main/encounters.json` (built by `npm run encounters` → `tools/build-encounters.js` from PokeAPI) | `GAMES` per region, place kinds |
 | 野生宝可梦 / Wild species | `src/main/wild.js` | `pickFromTables`, `pickLegend` (`LEGEND_CHANCE` 1/400, `MYTHICAL_CHANCE` 1/2000, `ULTRA_CHANCE` / `PARADOX_CHANCE` 1/800, `LEGEND_MIN_LEVEL` 30) |
 | 野生宝可梦（旧） / Wild species (fallback) | `src/main/wild.js` | `HABITATS`, `REGION_DEX`, `REPEAT_SEEN`, `SPECIAL`, `SHINY_RATE` |

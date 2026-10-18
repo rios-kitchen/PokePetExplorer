@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -915,4 +915,24 @@ test('Memory Match: dealing, rewards, limits', () => {
   assert.equal(Limits.use(data, 'memory', day, t0 + 1), true);
   assert.equal(Limits.blocked(Limits.info(data, 'memory', day, t0 + 2)), 'rest');
   assert.equal(Limits.LIMITS.memory.day, 6);
+});
+
+test('Whack-a-Diglett: points, rewards, limits', () => {
+  const W = require('../src/shared/whack-rules');
+  const Limits = require('../src/main/limits');
+  assert.deepEqual(W.rewardFor(0), { score: 0, berries: 0, xp: 0, mood: 0 });
+  assert.deepEqual(W.rewardFor(16), { score: 16, berries: 2, xp: 32, mood: 6 });
+  assert.equal(W.rewardFor(1e6).score, W.MAX_SCORE);
+  assert.equal(W.rewardFor(1e6).berries, 4);
+  assert.equal(W.rewardFor('x').score, 0);
+  // more Voltorb late in the round, and everyone ducks quicker
+  const count = (t) => { const n = {}; for (let i = 0; i < 1000; i++) { const k = W.pickMole(i / 1000, t); n[k] = (n[k] || 0) + 1; } return n; };
+  assert.ok(count(1).voltorb > count(0).voltorb);
+  for (const k of Object.keys(count(0))) assert.ok(k in W.POINTS, k);
+  assert.ok(W.upTime(1) < W.upTime(0));
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  assert.equal(Limits.use(data, 'whack', day, t0), true);
+  assert.equal(Limits.use(data, 'whack', day, t0 + 1), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'whack', day, t0 + 2)), 'rest');
 });
