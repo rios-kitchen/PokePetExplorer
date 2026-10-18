@@ -5,6 +5,8 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+## 1.10.0 · 2026-10-18
+
 - **新小游戏「电光一闪」**：伙伴在草丛里等着，红色的“！”一出现就尽快点一下（或按空格），点早了算抢跑；一局 5 次，反应越快分数越高，最多 4 个树果；会记下最快的反应时间；每天 6 局，每小时 2 局，不用联网
   **New mini-game "Quick Attack"**: your partner waits in the grass – click (or press Space) the moment the red "!" flashes; too early is a false start; 5 draws a round, faster reactions score more, up to 4 berries; your fastest time is kept; 6 a day, 2 an hour, works offline
 
