@@ -24,6 +24,7 @@ const Voltorb = require('./src/main/voltorb');
 const Echo = require('./src/main/echo');
 const Shuffle = require('./src/main/shuffle');
 const Jump = require('./src/main/jump');
+const Puzzle = require('./src/main/puzzle');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -96,7 +97,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -285,6 +286,7 @@ function snapshot() {
     echo: echoInfo(),
     shuffle: shuffleInfo(),
     jump: jumpInfo(),
+    puzzle: puzzleInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -673,6 +675,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'puzzle') {
+    // testing: Slide Puzzle without daily / hourly limits, until used again or the app restarts
+    testFlags.freePuzzle = !testFlags.freePuzzle;
+    changed();
+    if (testFlags.freePuzzle) openPuzzle();
     return { ok: true };
   }
   if (cmd === 'jump') {
@@ -2044,6 +2053,76 @@ function jumpStop(token, pos) {
   return { ...out, done: true, reward, best: stats.jumpBest, high: stats.jumpHigh, info: jumpInfo() };
 }
 
+// ---------- Slide Puzzle (拼图) ----------
+let puzzleWin = null;
+let puzzleGame = null;   // { token, board } – the board being solved (one at a time)
+
+function openPuzzle() {
+  if (!puzzleWin || puzzleWin.isDestroyed()) {
+    puzzleWin = new BrowserWindow({
+      width: 420, height: 600, resizable: false, show: false, title: T('puzzle.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) puzzleWin.setMenu(null);
+    if (process.env.POKEPET_TEST) puzzleWin.webContents.on('console-message', (e) => console.log('[puzzle]', e.message));
+    puzzleWin.loadFile(path.join(__dirname, 'src', 'puzzle', 'puzzle.html'));
+    puzzleWin.once('ready-to-show', () => { puzzleWin.show(); puzzleWin.focus(); });
+    puzzleWin.on('closed', () => { puzzleWin = null; puzzleGame = null; });
+  } else {
+    puzzleWin.show();
+    puzzleWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Slide Puzzle limits as the windows see them (unlimited while testing). */
+function puzzleInfo() {
+  if (testFlags.freePuzzle) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'puzzle', today());
+}
+
+/** Shuffle a board (counts one play), with the partner's portrait to cut into tiles when there is one. */
+async function puzzleStart() {
+  const lim = puzzleInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'puzzle', today());
+  puzzleGame = { token: `z${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, board: Puzzle.shuffle() };
+  const token = puzzleGame.token;
+  changed();
+  let face = null;
+  const pet = hasPet() ? activePet() : null;
+  if (pet && pet.dex && pet.stage !== 'egg') {
+    try {
+      const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
+      if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
+    } catch { /* numbered tiles instead */ }
+  }
+  if (!puzzleGame || puzzleGame.token !== token) return { ok: false };
+  return { ok: true, token, board: puzzleGame.board.slice(), face, info: puzzleInfo() };
+}
+
+/** The board is solved in the window: replay its moves here, and reward it only if they really solve it. */
+function puzzleFinish(token, moves) {
+  const g = puzzleGame;
+  if (!g || g.token !== token) return { ok: false };
+  const end = Puzzle.replay(g.board, moves);
+  if (!end || !Puzzle.isSolved(end)) return { ok: false };
+  puzzleGame = null;
+  const reward = Puzzle.rewardFor(moves.length);
+  const stats = store.data.stats;
+  stats.puzzleBest = stats.puzzleBest ? Math.min(stats.puzzleBest, moves.length) : moves.length;
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    petEvent('puzzle-done', { n: moves.length });
+  }
+  changed();
+  return { ok: true, reward, best: stats.puzzleBest, info: puzzleInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -2866,6 +2945,7 @@ function buildMenu() {
     { label: T('menu.echo'), click: () => openEcho() },
     { label: T('menu.shuffle'), click: () => openShuffle() },
     { label: T('menu.jump'), click: () => openJump() },
+    { label: T('menu.puzzle'), click: () => openPuzzle() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -3232,6 +3312,9 @@ function registerIpc() {
   ipcMain.handle('jump:start', () => jumpStart());
   ipcMain.handle('jump:stop', (_e, token, pos) => jumpStop(String(token || ''), Number(pos)));
   ipcMain.on('jump:open', () => openJump());
+  ipcMain.handle('puzzle:start', () => puzzleStart());
+  ipcMain.handle('puzzle:finish', (_e, token, moves) => puzzleFinish(String(token || ''), Array.isArray(moves) ? moves.slice(0, 5000).map(Number) : []));
+  ipcMain.on('puzzle:open', () => openPuzzle());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -4116,6 +4199,23 @@ async function selfTest(dir) {
   await wait(800);
   await shot(jumpWin, '76-jump-result');
   console.log('[test] jump after a round:', store.data.stats.jumpBest || 0, JSON.stringify(jumpInfo()));
+  // Slide Puzzle: solve the board the shortest way
+  await step('puzzle', async () => openPuzzle());
+  await wait(2500);
+  await shot(puzzleWin, '77-puzzle-start');
+  await step('puzzle-play', async () => {
+    await puzzleWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    for (let i = 0; i < 40 && !(puzzleGame && (await puzzleWin.webContents.executeJavaScript('document.body.dataset.phase')) === 'play'); i++) await wait(100);
+    await shot(puzzleWin, '78-puzzle-shuffled');
+    const path = puzzleGame ? Puzzle.solve(puzzleGame.board) : [];
+    for (const cell of path) {
+      await puzzleWin.webContents.executeJavaScript(`document.querySelector('.tile[data-cell="${cell}"]').click()`);
+      await wait(120);
+    }
+  });
+  await wait(1200);
+  await shot(puzzleWin, '79-puzzle-solved');
+  console.log('[test] puzzle after a board:', store.data.stats.puzzleBest || 0, JSON.stringify(puzzleInfo()));
   quitting = true;
   app.quit();
 }

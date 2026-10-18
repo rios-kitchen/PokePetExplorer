@@ -30,6 +30,7 @@ raising, outings, fishing, battles and catching, a Pokédex.
 - [20. 聒噪鸟学舌 🦜 · Chatot Echo 🦜](20-Chatot-Echo)
 - [21. 藏在哪个球里 🔴 · Poké Ball Shuffle 🔴](21-Poke-Ball-Shuffle)
 - [22. 鲤鱼王跳跳 🐟 · Magikarp Jump 🐟](22-Magikarp-Jump)
+- [23. 拼图 🧩 · Slide Puzzle 🧩](23-Slide-Puzzle)
 - [常见问题 · FAQ](FAQ)
 - [开发者 · Developers](Developers)
 

@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -998,6 +998,33 @@ test('Fire-Water-Grass: the type triangle, rewards, limits', () => {
   for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'rps', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'rps', day, t0 + 5)), 'rest');
   assert.equal(Limits.LIMITS.rps.day, 8);
+});
+
+test('Slide Puzzle: shuffles, slides, replays, rewards, limits', () => {
+  const Z = require('../src/main/puzzle');
+  const Limits = require('../src/main/limits');
+  assert.equal(Z.isSolved(Z.solved()), true);
+  assert.deepEqual(Z.neighbours(4).sort(), [1, 3, 5, 7]);
+  assert.deepEqual(Z.neighbours(0).sort(), [1, 3]);
+  // only a tile next to the gap slides
+  assert.equal(Z.slide(Z.solved(), 0), null);
+  assert.deepEqual(Z.slide(Z.solved(), 7), [0, 1, 2, 3, 4, 5, 6, 8, 7]);
+  for (let k = 0; k < 5; k++) {
+    const b = Z.shuffle();
+    assert.equal(Z.isSolved(b), false);
+    assert.deepEqual(b.slice().sort(), Z.solved());
+    const path = Z.solve(b);
+    assert.ok(path && path.length > 0);
+    assert.equal(Z.isSolved(Z.replay(b, path)), true);
+  }
+  // a made-up move list is refused
+  assert.equal(Z.replay(Z.solved(), [0]), null);
+  assert.equal(Z.replay(Z.solved(), [NaN]), null);
+  assert.deepEqual([10, 30, 31, 60, 100, 101].map((n) => Z.rewardFor(n).berries), [4, 4, 3, 3, 2, 1]);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'puzzle', day, t0 + i), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'puzzle', day, t0 + 5)), 'rest');
 });
 
 test('Magikarp Jump: targets, grades, rewards, limits', () => {

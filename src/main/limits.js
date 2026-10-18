@@ -14,7 +14,8 @@ const LIMITS = {
   flip:    { day: 6, hour: 2 },    // Voltorb Flip boards
   echo:    { day: 6, hour: 2 },    // Chatot Echo rounds
   shuffle: { day: 6, hour: 2 },    // Poké Ball Shuffle games (5 rounds each)
-  jump:    { day: 6, hour: 2 }     // Magikarp Jump rounds (5 jumps each)
+  jump:    { day: 6, hour: 2 },    // Magikarp Jump rounds (5 jumps each)
+  puzzle:  { day: 6, hour: 2 }     // Slide Puzzle boards
 };
 const HOUR = 3600e3;
 
