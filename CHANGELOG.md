@@ -5,6 +5,8 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+## 1.12.2 · 2026-10-18
+
 - **伙伴类小游戏随机出场**：藏在哪个球里、拼图、找闪光、电光一闪每局从队伍里随机挑一只已孵化、没在外出的宝可梦出场；它拿全部经验，不是当前伙伴时伙伴也得到约四分之一
   **Partner mini-games pick a random player**: Poké Ball Shuffle, Slide Puzzle, Shiny Hunt and Quick Attack each pick a random hatched team member that isn't on an outing; it gets the round's XP, and your partner gets about a quarter when it didn't play
 - **去草丛按钮换成像素草**：外出页的「去草丛」按钮上画了一丛像素草，鼠标移上去会摆动
