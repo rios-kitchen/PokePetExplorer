@@ -261,6 +261,7 @@ window.PanelRaising = function PanelRaising(env) {
   }
   $('#goFish').addEventListener('click', () => api.send('fish:open'));
   $('#goQuiz').addEventListener('click', () => api.send('quiz:open'));
+  $('#goCatch').addEventListener('click', () => api.send('catch:open'));
 
   // the Pokédex: every species met (grey face) or caught (with its portrait), kept even after one leaves the team
   const dexFaces = {};
@@ -324,6 +325,9 @@ window.PanelRaising = function PanelRaising(env) {
     const q = state.quiz;
     $('#quizLeft').textContent = q.left > 0 || q.dayLeft <= 0 ? (q.dayLeft > 0 ? t('quiz.left', { n: q.dayLeft, max: q.max, h: q.hourLeft, hmax: q.hourMax }) : t('quiz.tired'))
       : t('quiz.rest', { m: fm(q.nextAt) });
+    const c = state.catchGame;
+    $('#catchLeft').textContent = c.left > 0 || c.dayLeft <= 0 ? (c.dayLeft > 0 ? t('catch.left', { n: c.dayLeft, max: c.max, h: c.hourLeft, hmax: c.hourMax }) : t('catch.tired'))
+      : t('catch.rest', { m: fm(c.nextAt) });
     const g = state.grass;
     const e = state.encounter;
     const mins = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));

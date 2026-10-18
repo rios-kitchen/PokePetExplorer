@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -866,4 +866,29 @@ test('Who\'s That Pokémon?: questions, rewards, limits', () => {
   assert.equal(Limits.blocked(Limits.info(data, 'quiz', day, t0 + 5)), 'rest');
   assert.equal(Limits.info(data, 'quiz', day, t0 + 3600e3 + 10).hourLeft, 4);
   assert.equal(Limits.LIMITS.quiz.day, 12);
+});
+
+test('Berry Catch: points, rewards, limits', () => {
+  const C = require('../src/shared/catch-rules');
+  const Limits = require('../src/main/limits');
+  // the score becomes berries (at most 4), XP and mood; a score that can't be real counts as the most a round can give
+  assert.deepEqual(C.rewardFor(0), { score: 0, berries: 0, xp: 0, mood: 0 });
+  assert.deepEqual(C.rewardFor(7), { score: 7, berries: 0, xp: 14, mood: 2 });
+  assert.deepEqual(C.rewardFor(16), { score: 16, berries: 2, xp: 32, mood: 6 });
+  assert.equal(C.rewardFor(1e6).score, C.MAX_SCORE);
+  assert.equal(C.rewardFor(1e6).berries, 4);
+  assert.equal(C.rewardFor('x').score, 0);
+  assert.equal(C.rewardFor(-5).score, 0);
+  // what falls: more poop and stars late in the round
+  const count = (t) => { const n = {}; for (let i = 0; i < 1000; i++) { const k = C.pickItem(i / 1000, t); n[k] = (n[k] || 0) + 1; } return n; };
+  const early = count(0), late = count(1);
+  assert.ok(late.poop > early.poop && late.star > early.star && late.berry < early.berry);
+  for (const k of Object.keys(early)) assert.ok(k in C.POINTS, k);
+  // limits: 6 rounds a day, 2 an hour
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  assert.equal(Limits.use(data, 'catch', day, t0), true);
+  assert.equal(Limits.use(data, 'catch', day, t0 + 1), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'catch', day, t0 + 2)), 'rest');
+  assert.equal(Limits.LIMITS.catch.day, 6);
 });

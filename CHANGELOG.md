@@ -5,6 +5,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **新小游戏「接树果」**：树上掉下树果、泡芙和星星，左右移动宝可梦去接，小心便便；一局 30 秒，按分数得树果和经验；每天 6 局，每小时 2 局
+  **New mini-game "Berry Catch"**: berries, Poké Puffs and stars fall from the trees – move your Pokémon to catch them and dodge the poop; 30-second rounds, berries and XP by score; 6 a day, 2 an hour
+
 - **新小游戏「猜猜我是谁」**：看宝可梦的黑色剪影，从 4 个名字里选一个，答对得树果，连对 3 题有额外奖励；每天 12 题，每小时 4 题。在外出页或右键菜单打开
   **New mini-game "Who's That Pokémon?"**: a Pokémon's silhouette and 4 names to pick from; right answers earn berries, with a bonus for 3 in a row; 12 a day, 4 an hour. Open it from the Outings tab or the tray menu
 

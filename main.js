@@ -15,6 +15,7 @@ const Secrets = require('./src/main/secrets');
 const Album = require('./src/main/album');
 const Fishing = require('./src/main/fishing');
 const Quiz = require('./src/main/quiz');
+const CatchRules = require('./src/shared/catch-rules');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -87,7 +88,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -267,6 +268,7 @@ function snapshot() {
     grass: grassInfo(),
     fishing: fishingInfo(),
     quiz: quizInfo(),
+    catchGame: catchInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -655,6 +657,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'catchgame') {
+    // testing: Berry Catch without daily / hourly limits, until used again or the app restarts
+    testFlags.freeCatch = !testFlags.freeCatch;
+    changed();
+    if (testFlags.freeCatch) openCatch();
     return { ok: true };
   }
   if (cmd === 'quiz') {
@@ -1435,6 +1444,65 @@ function quizAnswer(token, dex) {
   return { ok: true, correct, answer: { dex: q.answer, names: q.names[q.answer] }, reward, info: quizInfo() };
 }
 
+// ---------- Berry Catch (接树果) ----------
+let catchWin = null;
+let catchRound = null;   // { token, at } – the round being played (one at a time)
+
+function openCatch() {
+  if (!catchWin || catchWin.isDestroyed()) {
+    catchWin = new BrowserWindow({
+      width: 500, height: 560, resizable: false, show: false, title: T('catch.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) catchWin.setMenu(null);
+    if (process.env.POKEPET_TEST) catchWin.webContents.on('console-message', (e) => console.log('[catch]', e.message));
+    catchWin.loadFile(path.join(__dirname, 'src', 'catch', 'catch.html'));
+    catchWin.once('ready-to-show', () => { catchWin.show(); catchWin.focus(); });
+    catchWin.on('closed', () => { catchWin = null; catchRound = null; });
+  } else {
+    catchWin.show();
+    catchWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Berry Catch limits as the windows see them (unlimited while testing). */
+function catchInfo() {
+  if (testFlags.freeCatch) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'catch', today());
+}
+
+/** Start a round (counts one play). */
+function catchStart() {
+  const lim = catchInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'catch', today());
+  catchRound = { token: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: Date.now() };
+  changed();
+  return { ok: true, token: catchRound.token, seconds: CatchRules.ROUND_S, info: catchInfo() };
+}
+
+/** The round is over: its score becomes berries, XP and mood for the partner (a round can't end before its time). */
+function catchFinish(token, score) {
+  const round = catchRound;
+  if (!round || round.token !== token) return { ok: false };
+  catchRound = null;
+  const early = Date.now() - round.at < (CatchRules.ROUND_S - 3) * 1000;
+  const r = CatchRules.rewardFor(early ? 0 : score);
+  const stats = store.data.stats;
+  stats.catchBest = Math.max(stats.catchBest || 0, r.score);
+  store.data.berries += r.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    if (r.xp) addXp(r.xp);
+    if (r.mood) addMood(r.mood);
+    if (r.score >= 12) petEvent('catch-good', { n: r.score });
+  }
+  changed();
+  return { ok: true, ...r, best: stats.catchBest, info: catchInfo() };
+}
+
 // ---------- desktop play: fling (丢丢乐) and peeking from the screen edge ----------
 let flingIv = null;
 let peek = null;          // { side: 'left' | 'right' } while hiding halfway off the screen
@@ -2165,6 +2233,7 @@ function buildMenu() {
     expeditionMenu(),
     { label: T('menu.fishing'), click: () => openFishing() },
     { label: T('menu.quiz'), click: () => openQuiz() },
+    { label: T('menu.catch'), click: () => openCatch() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -2504,6 +2573,9 @@ function registerIpc() {
   ipcMain.handle('quiz:ask', () => quizAsk());
   ipcMain.handle('quiz:answer', (_e, token, dex) => quizAnswer(String(token || ''), dex));
   ipcMain.on('quiz:open', () => openQuiz());
+  ipcMain.handle('catch:start', () => catchStart());
+  ipcMain.handle('catch:finish', (_e, token, score) => catchFinish(String(token || ''), score));
+  ipcMain.on('catch:open', () => openCatch());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -3210,6 +3282,21 @@ async function selfTest(dir) {
     console.log('[test] quiz after wrong answer: streak', store.data.stats.quizStreak, JSON.stringify(quizInfo()));
   });
   await shot(quizWin, '47-quiz-wrong');
+  // Berry Catch: play a round, sweeping the Pokémon back and forth, and see the result
+  await step('catch', async () => openCatch());
+  await wait(4000);
+  await shot(catchWin, '48-catch-start');
+  await step('catch-play', async () => {
+    await catchWin.webContents.executeJavaScript(`document.querySelector('#ovButton').click();
+      (() => { const c = document.querySelector('#field'); const r = c.getBoundingClientRect(); let i = 0;
+        const iv = setInterval(() => { i++; c.dispatchEvent(new MouseEvent('mousemove', { clientX: r.left + r.width * (0.5 + 0.4 * Math.sin(i / 6)), clientY: r.top + 300, bubbles: true }));
+          if (i > 400) clearInterval(iv); }, 80); })()`);
+  });
+  await wait(9000);
+  await shot(catchWin, '49-catch-playing');
+  await wait(24000);
+  await shot(catchWin, '50-catch-result');
+  console.log('[test] catch after a round:', store.data.stats.catchBest, JSON.stringify(catchInfo()));
   quitting = true;
   app.quit();
 }
