@@ -503,5 +503,13 @@ body.no-pet-mode .hero, body.no-pet-mode .tabs, body.no-pet-mode main { display:
 .fish-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
 .fish-bar button { padding: 4px 12px; font-size: 12.5px; }
 .fish-bar .hint { flex: 1 1 200px; margin: 0; }
+/* the mini-games: cards, as many a row as fit */
+.game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 6px; margin: 4px 0 12px; }
+.game { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--card, transparent); }
+.game-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 2px; font-size: 12px; text-align: center; font-weight: 600; background: none; border: none; color: var(--ink); cursor: pointer; border-radius: 8px; }
+.game-btn:hover { background: rgba(127,127,127,0.12); }
+.game-face { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: rgba(127,127,127,0.12); visibility: hidden; }
+.game-face.on { visibility: visible; }
+.game .hint { margin: 0; font-size: 11px; line-height: 1.35; text-align: center; }
 .about-links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 10px; }
 .about-links .link { margin-top: 0; }

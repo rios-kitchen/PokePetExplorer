@@ -11,20 +11,20 @@
 | 每日任务 | 每天 4 个 + 全部完成奖励 |
 | 钓鱼 | 每天 20 次上钩，任意 1 小时内 6 次；1 小时内第 3 次起越来越多垃圾 |
 | 猜猜我是谁 | 每天 12 题，任意 1 小时内 4 题 |
-| 接树果 | 每天 6 局，任意 1 小时内 2 局；每局最多 4 🍓 |
-| 记忆翻牌 | 每天 6 局，任意 1 小时内 2 局；每局最多 4 🍓 |
-| 敲敲地鼠 | 每天 6 局，任意 1 小时内 2 局；每局最多 4 🍓 |
-| 属性相克 | 每天 6 局（每局 10 题），任意 1 小时内 2 局；每局最多 4 🍓 |
+| 接树果 | 每天 6 局，任意 1 小时内 3 局；每局最多 4 🍓 |
+| 记忆翻牌 | 每天 6 局，任意 1 小时内 3 局；每局最多 4 🍓 |
+| 敲敲地鼠 | 每天 6 局，任意 1 小时内 3 局；每局最多 4 🍓 |
+| 属性相克 | 每天 6 局（每局 10 题），任意 1 小时内 3 局；每局最多 4 🍓 |
 | 火水草猜拳 | 每天 8 局，任意 1 小时内 3 局；赢 3 🍓，输 1 🍓 |
-| 霹雳电球翻牌 | 每天 6 局，任意 1 小时内 2 局；赢 3–4 🍓 |
-| 聒噪鸟学舌 | 每天 6 局，任意 1 小时内 2 局；每局最多 5 🍓 |
-| 藏在哪个球里 | 每天 6 局（每局 5 轮），任意 1 小时内 2 局；每局最多 4 🍓 |
-| 鲤鱼王跳跳 | 每天 6 局（每局 5 跳），任意 1 小时内 2 局；每局最多 4 🍓 |
-| 拼图 | 每天 6 局，任意 1 小时内 2 局；每局最多 4 🍓 |
-| 找闪光 | 每天 6 局（每局 30 秒），任意 1 小时内 2 局；每局最多 4 🍓 |
-| 电光一闪 | 每天 6 局（每局 5 次），任意 1 小时内 2 局；每局最多 4 🍓 |
-| 灯笼鱼点灯 | 每天 6 个池塘，任意 1 小时内 2 个；每个最多 4 🍓 |
-| 百变怪照着变 | 每天 6 局（每局 5 轮），任意 1 小时内 2 局；每局最多 4 🍓 |
+| 霹雳电球翻牌 | 每天 6 局，任意 1 小时内 3 局；赢 3–4 🍓 |
+| 聒噪鸟学舌 | 每天 6 局，任意 1 小时内 3 局；每局最多 5 🍓 |
+| 藏在哪个球里 | 每天 6 局（每局 5 轮），任意 1 小时内 3 局；每局最多 4 🍓 |
+| 鲤鱼王跳跳 | 每天 6 局（每局 5 跳），任意 1 小时内 3 局；每局最多 4 🍓 |
+| 拼图 | 每天 6 局，任意 1 小时内 3 局；每局最多 4 🍓 |
+| 找闪光 | 每天 6 局（每局 30 秒），任意 1 小时内 3 局；每局最多 4 🍓 |
+| 电光一闪 | 每天 6 局（每局 5 次），任意 1 小时内 3 局；每局最多 4 🍓 |
+| 灯笼鱼点灯 | 每天 6 个池塘，任意 1 小时内 3 个；每个最多 4 🍓 |
+| 百变怪照着变 | 每天 6 局（每局 5 轮），任意 1 小时内 3 局；每局最多 4 🍓 |
 | 节日礼物 | 每个节日 1 次 |
 | 摸摸给经验 | 每 15 秒最多 1 点，每天最多 20 点 |
 | 进化 | 原作等级（或进化石、联系绳、亲密度 220），且加入满 7 天 / 上次进化后满 14 天 |
@@ -48,20 +48,20 @@
 | Daily tasks | 4 a day + an all-done bonus |
 | Fishing | 20 bites a day, 6 within any hour; from the 3rd bite in an hour, more and more junk |
 | Who's That Pokémon? | 12 questions a day, 4 within any hour |
-| Berry Catch | 6 rounds a day, 2 within any hour; at most 4 🍓 a round |
-| Memory Match | 6 games a day, 2 within any hour; at most 4 🍓 a game |
-| Whack-a-Diglett | 6 rounds a day, 2 within any hour; at most 4 🍓 a round |
-| Type Match-up | 6 rounds of 10 questions a day, 2 within any hour; at most 4 🍓 a round |
+| Berry Catch | 6 rounds a day, 3 within any hour; at most 4 🍓 a round |
+| Memory Match | 6 games a day, 3 within any hour; at most 4 🍓 a game |
+| Whack-a-Diglett | 6 rounds a day, 3 within any hour; at most 4 🍓 a round |
+| Type Match-up | 6 rounds of 10 questions a day, 3 within any hour; at most 4 🍓 a round |
 | Fire-Water-Grass | 8 matches a day, 3 within any hour; 3 🍓 for a win, 1 for a loss |
-| Voltorb Flip | 6 boards a day, 2 within any hour; 3–4 🍓 for a cleared board |
-| Chatot Echo | 6 rounds a day, 2 within any hour; at most 5 🍓 a round |
-| Poké Ball Shuffle | 6 games of 5 rounds a day, 2 within any hour; at most 4 🍓 a game |
-| Magikarp Jump | 6 rounds of 5 jumps a day, 2 within any hour; at most 4 🍓 a round |
-| Slide Puzzle | 6 puzzles a day, 2 within any hour; at most 4 🍓 a puzzle |
-| Shiny Hunt | 6 rounds of 30 seconds a day, 2 within any hour; at most 4 🍓 a round |
-| Quick Attack | 6 rounds of 5 draws a day, 2 within any hour; at most 4 🍓 a round |
-| Chinchou Lights | 6 ponds a day, 2 within any hour; at most 4 🍓 a pond |
-| Ditto Copy | 6 games of 5 rounds a day, 2 within any hour; at most 4 🍓 a game |
+| Voltorb Flip | 6 boards a day, 3 within any hour; 3–4 🍓 for a cleared board |
+| Chatot Echo | 6 rounds a day, 3 within any hour; at most 5 🍓 a round |
+| Poké Ball Shuffle | 6 games of 5 rounds a day, 3 within any hour; at most 4 🍓 a game |
+| Magikarp Jump | 6 rounds of 5 jumps a day, 3 within any hour; at most 4 🍓 a round |
+| Slide Puzzle | 6 puzzles a day, 3 within any hour; at most 4 🍓 a puzzle |
+| Shiny Hunt | 6 rounds of 30 seconds a day, 3 within any hour; at most 4 🍓 a round |
+| Quick Attack | 6 rounds of 5 draws a day, 3 within any hour; at most 4 🍓 a round |
+| Chinchou Lights | 6 ponds a day, 3 within any hour; at most 4 🍓 a pond |
+| Ditto Copy | 6 games of 5 rounds a day, 3 within any hour; at most 4 🍓 a game |
 | Holiday gifts | once per holiday |
 | XP from patting | at most 1 every 15 s, 20 a day |
 | Evolution | the games' level (or a stone, the Linking Cord, friendship 220), plus 7 days on the team / 14 days since the last one |

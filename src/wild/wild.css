@@ -25,6 +25,11 @@ canvas { display: block; image-rendering: pixelated; }
 .hpbox .bar > div.low { background: #e2463b; }
 .hpbox .st { font-size: 10.5px; font-weight: 700; color: #fff; border-radius: 4px; padding: 0 4px; }
 .hpbox .st:empty { display: none; }
+.hpbox .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; margin-top: 3px; }
+.hpbox .tags:empty { display: none; }
+.hpbox .tag { font-size: 10px; font-weight: 700; color: #fff; border-radius: 4px; padding: 0 5px; line-height: 15px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.hpbox .ability { font-size: 10px; font-weight: 700; color: #5a564e; border: 1px solid #c9c3b4; border-radius: 4px; padding: 0 4px; line-height: 13px;
+  max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st.burn { background: #e2603b; } .st.poison { background: #9a4ab8; } .st.paralysis { background: #d8b020; }
 .st.freeze { background: #4aa8d8; } .st.confusion { background: #c86a9a; } .st.sleep { background: #7a7a9a; }
 .panel { width: 480px; margin: 8px auto 0; }

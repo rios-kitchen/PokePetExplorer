@@ -3,20 +3,21 @@
 ## 中文
 
 - 在 🧭 外出页的「去玩」里点「🐟 鲤鱼王跳跳」，或者右键菜单「🐟 鲤鱼王跳跳…」。
-- 下面的能量条会来回移动。**点击**（或按**空格键**）把它停住：停在正中的深绿色得 **3 分**，绿色 **2 分**，黄色 **1 分**，没停到目标上就只是水溅跃（0 分）。
-- 分数越高，鲤鱼王跳得越高。一共 **5 跳**，目标越来越小，能量条越来越快。
-- 3 分得 1 🍓，6 分 2 🍓，10 分 3 🍓，14 分以上 4 🍓；还有经验和心情。会记下最好分数和最高跳了多少米。
-- 每天 **6 局**，任意 1 小时内最多 **2 局**，零点重置。不用联网（鲤鱼王的头像下载过就会显示）。
+- 鲤鱼王在池塘左边，**有宝可梦从右边游过来**（千针鱼、玛瑙水母、大舌贝、铁炮鱼、利牙鱼）。**点击**池塘（或按**空格键**）让鲤鱼王跳起来，从它们头上跳过去。跳早了或跳晚了都会被撞到。
+- 每局 **12 只**，越往后游得越快、来得越密。被撞 **3 次**这局就结束。
+- 躲过 3 只得 1 🍓，6 只 2 🍓，9 只 3 🍓，12 只全躲过 4 🍓；还有经验和心情。会记下最好成绩。
+- 每天 **6 局**，任意 1 小时内最多 **3 局**，零点重置。鲤鱼王是会动的像素形象（下载过一次以后不用联网；还没下载时先显示头像）。
 
 ## English
 
 - In the 🧭 Outings tab under "Play outside", click "🐟 Magikarp Jump", or use the tray menu.
-- The power bar sweeps back and forth. **Click** (or press **Space**) to stop it: the dark-green bull's-eye is
-  **3 points**, green **2**, yellow **1**, and anywhere else is just a Splash (0).
-- The more points, the higher Magikarp leaps. **5 jumps**, with a smaller target and a quicker bar each time.
-- 3 points = 1 🍓, 6 = 2 🍓, 10 = 3 🍓, 14 or more = 4 🍓, plus XP and mood. Your best score and highest total are kept.
-- **6 rounds a day**, at most **2 within any hour**, reset at midnight. Works offline (Magikarp's portrait shows once
-  it has been downloaded).
+- Magikarp waits on the left of the pond while **Pokémon swim in from the right** (Qwilfish, Tentacool, Shellder,
+  Remoraid, Carvanha). **Click** the pond (or press **Space**) to make Magikarp leap over each one – too early or too
+  late and it gets bumped.
+- **12 a round**, faster and closer together as it goes. **3 bumps** and the round is over.
+- 3 cleared = 1 🍓, 6 = 2 🍓, 9 = 3 🍓, all 12 = 4 🍓, plus XP and mood. Your best is kept.
+- **6 rounds a day**, at most **3 within any hour**, reset at midnight. Magikarp is its animated sprite (offline once
+  downloaded; its portrait until then).
 
 ---
 *[宝可宠探索 · PokePet Explorer](https://github.com/rios-kitchen/PokePetExplorer) · [下载 / Download](https://github.com/rios-kitchen/PokePetExplorer/releases/latest) · [反馈问题 / Report a problem](https://github.com/rios-kitchen/PokePetExplorer/issues/new/choose)*

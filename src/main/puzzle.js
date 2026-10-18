@@ -73,10 +73,25 @@ function solve(board) {
   return null;
 }
 
-/** What a solved board is worth: fewer moves, more berries. */
-function rewardFor(moves) {
-  const berries = moves <= 30 ? 4 : moves <= 60 ? 3 : moves <= 100 ? 2 : 1;
-  return { moves, berries, xp: 10 + berries * 6, mood: 2 + berries };
+// a different face each puzzle (a Pokémon without that portrait shows its usual face)
+const EMOTIONS = ['Normal', 'Happy', 'Joyous', 'Surprised', 'Determined', 'Inspired', 'Angry', 'Worried', 'Sad', 'Teary-Eyed', 'Dizzy'];
+const emotionOf = (rnd = Math.random) => EMOTIONS[Math.floor(rnd() * EMOTIONS.length)];
+
+const HINTS = 3;        // hints a board: each one shows the way for the next few moves
+const HINT_STEPS = 5;
+const CLEAN_BONUS = 2;  // extra berries for solving it without a hint
+
+/** The next few cells to click from `board` towards the solution (empty when it's already solved). */
+function hint(board, steps = HINT_STEPS) {
+  return (solve(board) || []).slice(0, steps);
 }
 
-module.exports = { SIZE, N, BLANK, SHUFFLE, solved, isSolved, neighbours, slide, shuffle, replay, solve, rewardFor };
+/** What a solved board is worth: fewer moves, more berries – and a bonus when no hint was used. */
+function rewardFor(moves, hints = 0) {
+  const base = moves <= 30 ? 4 : moves <= 60 ? 3 : moves <= 100 ? 2 : 1;
+  const clean = hints === 0;
+  const berries = base + (clean ? CLEAN_BONUS : 0);
+  return { moves, hints, clean, berries, xp: 10 + base * 6 + (clean ? 8 : 0), mood: 2 + base + (clean ? 1 : 0) };
+}
+
+module.exports = { SIZE, N, BLANK, SHUFFLE, EMOTIONS, emotionOf, HINTS, HINT_STEPS, CLEAN_BONUS, solved, isSolved, neighbours, slide, shuffle, replay, solve, hint, rewardFor };

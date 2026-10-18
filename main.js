@@ -101,7 +101,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false, freeQuick: false, freeLights: false, freeDitto: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false, freeQuick: false, freeLights: false, freeDitto: false, freeHints: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -720,6 +720,13 @@ async function runSecret(text) {
     testFlags.freePuzzle = !testFlags.freePuzzle;
     changed();
     if (testFlags.freePuzzle) openPuzzle();
+    return { ok: true };
+  }
+  if (cmd === 'puzzlehint') {
+    // testing: as many Slide Puzzle hints as you like, until used again or the app restarts
+    testFlags.freeHints = !testFlags.freeHints;
+    changed();
+    if (testFlags.freeHints) openPuzzle();
     return { ok: true };
   }
   if (cmd === 'jump') {
@@ -1976,16 +1983,21 @@ async function shuffleStart() {
   shuffleGame = { token: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, n: 0, found: 0, cur: Shuffle.round(0) };
   const token = shuffleGame.token;
   changed();
-  let face = null;
-  const pet = partnerEntry();
+  // the partner's face, plus how it looks when it's found (happy) and when the wrong ball was picked (sad)
+  let face = null, happy = null, sad = null;
+  const pet = partnerEntry() || { id: null, dex: 25 };   // Pikachu while the partner is still an egg
   if (pet) {
-    try {
-      const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
-      if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
-    } catch { /* the window draws a Pikachu-yellow ⚡ instead */ }
+    const shiny = !!(store.data.skins[pet.id] || {}).shiny;
+    const url = async (emotion) => {
+      try {
+        const buf = await Sources.portrait(pet.dex, emotion, spritesDir(), shiny);
+        return buf ? `data:image/png;base64,${buf.toString('base64')}` : null;
+      } catch { return null; }   // the window draws a Pikachu-yellow ⚡ instead
+    };
+    [face, happy, sad] = await Promise.all([url('Normal'), url('Happy'), url('Sad')]);
   }
   if (!shuffleGame || shuffleGame.token !== token) return { ok: false };
-  return { ok: true, token, round: shuffleGame.cur, rounds: Shuffle.ROUNDS.length, face, info: shuffleInfo() };
+  return { ok: true, token, round: shuffleGame.cur, rounds: Shuffle.ROUNDS.length, face, happy: happy || face, sad: sad || face, info: shuffleInfo() };
 }
 
 /** Point at a ball: found → the next round (or won after the last); missed → the game ends and is rewarded. */
@@ -2016,7 +2028,7 @@ function shufflePick(token, i) {
 
 // ---------- Magikarp Jump (鲤鱼王跳跳) ----------
 let jumpWin = null;
-let jumpRound = null;   // { token, n, at, cur, total, height } – the round being played (one at a time)
+let jumpRound = null;   // { token, at, swimmers } – the round being played (one at a time)
 
 function openJump() {
   if (!jumpWin || jumpWin.isDestroyed()) {
@@ -2043,13 +2055,13 @@ function jumpInfo() {
   return Limits.info(store.data, 'jump', today());
 }
 
-/** Start a round (counts one play): the first target, and Magikarp's portrait when it's been downloaded. */
+/** Start a round (counts one play): the swimmers to leap over, and Magikarp's portrait when it's been downloaded. */
 async function jumpStart() {
   const lim = jumpInfo();
   const why = Limits.blocked(lim);
   if (why) return { ok: false, error: why, nextAt: lim.nextAt };
   if (!lim.free) Limits.use(store.data, 'jump', today());
-  jumpRound = { token: `j${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, n: 0, at: Date.now(), cur: Jump.jumpOf(0), total: 0, height: 0 };
+  jumpRound = { token: `j${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: Date.now(), swimmers: Jump.swimmersOf() };
   const token = jumpRound.token;
   changed();
   let face = null;
@@ -2059,36 +2071,28 @@ async function jumpStart() {
   } catch { /* the window draws a 🐟 instead */ }
   if (!jumpRound || jumpRound.token !== token) return { ok: false };
   jumpRound.at = Date.now();
-  return { ok: true, token, jump: jumpRound.cur, jumps: Jump.JUMPS, face, info: jumpInfo() };
+  return { ok: true, token, swimmers: jumpRound.swimmers, lives: Jump.LIVES, face, info: jumpInfo() };
 }
 
-/** Stop the bar at `pos` (0 … 1): graded against the target; after the last jump the round is rewarded. */
-function jumpStop(token, pos) {
+/** The round is over in the window: replay its jump times (ms after the start) against the swimmers and reward it. */
+function jumpFinish(token, times) {
   const r = jumpRound;
-  if (!r || r.token !== token || !(pos >= 0 && pos <= 1)) return { ok: false };
-  const points = Date.now() - r.at < 400 ? 0 : Jump.grade(r.cur, pos);   // nobody stops a bar that quickly
-  const cm = Jump.heightOf(points);
-  r.total += points;
-  r.height += cm;
-  const out = { ok: true, points, cm, total: r.total, height: r.height, center: r.cur.center };
-  if (++r.n < Jump.JUMPS) {
-    r.cur = Jump.jumpOf(r.n);
-    r.at = Date.now();
-    return { ...out, jump: r.cur };
-  }
+  if (!r || r.token !== token) return { ok: false };
+  const out = Jump.replay(r.swimmers, times);
+  const last = r.swimmers[Math.max(0, out.results.length - 1)];
+  if (Date.now() - r.at < last.at - 1500) return { ok: false };   // finished before those swimmers could have come
   jumpRound = null;
-  const reward = Jump.rewardFor(r.total);
+  const reward = Jump.rewardFor(out.dodged);
   const stats = store.data.stats;
-  stats.jumpBest = Math.max(stats.jumpBest || 0, r.total);
-  stats.jumpHigh = Math.max(stats.jumpHigh || 0, r.height);
+  stats.jumpDodged = Math.max(stats.jumpDodged || 0, out.dodged);   // a new stat: jumpBest counted points of the old power-bar game
   store.data.berries += reward.berries;
   if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
     addXp(reward.xp);
     addMood(reward.mood);
-    if (r.total >= 10) petEvent('jump-good', { n: r.total });
+    if (out.dodged >= 9) petEvent('jump-good', { n: out.dodged });
   }
   changed();
-  return { ...out, done: true, reward, best: stats.jumpBest, high: stats.jumpHigh, info: jumpInfo() };
+  return { ok: true, ...out, reward, best: stats.jumpDodged, info: jumpInfo() };
 }
 
 // ---------- Slide Puzzle (拼图) ----------
@@ -2126,19 +2130,32 @@ async function puzzleStart() {
   const why = Limits.blocked(lim);
   if (why) return { ok: false, error: why, nextAt: lim.nextAt };
   if (!lim.free) Limits.use(store.data, 'puzzle', today());
-  puzzleGame = { token: `z${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, board: Puzzle.shuffle() };
+  puzzleGame = { token: `z${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, board: Puzzle.shuffle(), hints: 0 };
   const token = puzzleGame.token;
   changed();
   let face = null;
-  const pet = partnerEntry();
+  const pet = partnerEntry() || { id: null, dex: 25 };   // Pikachu while the partner is still an egg
   if (pet) {
     try {
-      const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
+      const buf = await Sources.portrait(pet.dex, Puzzle.emotionOf(), spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
       if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
     } catch { /* numbered tiles instead */ }
   }
   if (!puzzleGame || puzzleGame.token !== token) return { ok: false };
-  return { ok: true, token, board: puzzleGame.board.slice(), face, info: puzzleInfo() };
+  return { ok: true, token, board: puzzleGame.board.slice(), face, hints: hintsLeft(puzzleGame), info: puzzleInfo() };
+}
+
+const hintsLeft = (g) => (testFlags.freeHints ? 99 : Math.max(0, Puzzle.HINTS - g.hints));
+
+/** A hint (one of 3 a board): the next few cells to click from where the window's moves have got to. */
+function puzzleHint(token, moves) {
+  const g = puzzleGame;
+  if (!g || g.token !== token) return { ok: false };
+  const now = Puzzle.replay(g.board, moves);
+  if (!now) return { ok: false };
+  if (hintsLeft(g) <= 0) return { ok: false, error: 'none', left: 0 };
+  g.hints++;
+  return { ok: true, steps: Puzzle.hint(now), left: hintsLeft(g) };
 }
 
 /** The board is solved in the window: replay its moves here, and reward it only if they really solve it. */
@@ -2148,7 +2165,7 @@ function puzzleFinish(token, moves) {
   const end = Puzzle.replay(g.board, moves);
   if (!end || !Puzzle.isSolved(end)) return { ok: false };
   puzzleGame = null;
-  const reward = Puzzle.rewardFor(moves.length);
+  const reward = Puzzle.rewardFor(moves.length, g.hints);
   const stats = store.data.stats;
   stats.puzzleBest = stats.puzzleBest ? Math.min(stats.puzzleBest, moves.length) : moves.length;
   store.data.berries += reward.berries;
@@ -2201,17 +2218,18 @@ async function huntStart() {
   huntGame = { token: `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: 0, found: 0, misses: 0, cur: Hunt.boardOf(0) };
   const token = huntGame.token;
   changed();
-  let face = null;
-  const pet = partnerEntry();
-  if (pet) {
+  // the partner's face, plus how it looks when the shiny is found (happy) and when the wrong one is clicked (sad)
+  const pet = partnerEntry() || { id: null, dex: 25 };   // Pikachu while the partner is still an egg
+  const url = async (emotion) => {
     try {
-      const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir());
-      if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
-    } catch { /* the window draws ⚡ tiles instead */ }
-  }
+      const buf = await Sources.portrait(pet.dex, emotion, spritesDir());
+      return buf ? `data:image/png;base64,${buf.toString('base64')}` : null;
+    } catch { return null; }   // the window draws dots instead
+  };
+  const [face, happy, sad] = await Promise.all([url('Normal'), url('Happy'), url('Sad')]);
   if (!huntGame || huntGame.token !== token) return { ok: false };
   huntGame.at = Date.now();   // the clock starts once the board can be shown
-  return { ok: true, token, seconds: Hunt.ROUND_S, board: huntBoard(huntGame.cur), face, info: huntInfo() };
+  return { ok: true, token, seconds: Hunt.ROUND_S, board: huntBoard(huntGame.cur), face, happy: happy || face, sad: sad || face, info: huntInfo() };
 }
 
 const huntOver = (g) => Date.now() - g.at > Hunt.ROUND_S * 1000 + 1500;   // a little slack for the window's clock
@@ -2285,7 +2303,7 @@ async function quickStart() {
   const token = quickGame.token;
   changed();
   let face = null;
-  const pet = partnerEntry();
+  const pet = partnerEntry() || { id: null, dex: 25 };   // Pikachu while the partner is still an egg
   if (pet) {
     try {
       const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
@@ -3666,9 +3684,10 @@ function registerIpc() {
   ipcMain.handle('shuffle:pick', (_e, token, i) => shufflePick(String(token || ''), Number(i)));
   ipcMain.on('shuffle:open', () => openShuffle());
   ipcMain.handle('jump:start', () => jumpStart());
-  ipcMain.handle('jump:stop', (_e, token, pos) => jumpStop(String(token || ''), Number(pos)));
+  ipcMain.handle('jump:finish', (_e, token, times) => jumpFinish(String(token || ''), Array.isArray(times) ? times.slice(0, 200).map(Number) : []));
   ipcMain.on('jump:open', () => openJump());
   ipcMain.handle('puzzle:start', () => puzzleStart());
+  ipcMain.handle('puzzle:hint', (_e, token, moves) => puzzleHint(String(token || ''), Array.isArray(moves) ? moves.slice(0, 5000).map(Number) : []));
   ipcMain.handle('puzzle:finish', (_e, token, moves) => puzzleFinish(String(token || ''), Array.isArray(moves) ? moves.slice(0, 5000).map(Number) : []));
   ipcMain.on('puzzle:open', () => openPuzzle());
   ipcMain.handle('hunt:start', () => huntStart());
@@ -4518,6 +4537,8 @@ async function selfTest(dir) {
     const phase = () => echoWin.webContents.executeJavaScript('document.body.dataset.phase');
     const press = (pad) => echoWin.webContents.executeJavaScript(`document.querySelector('.pad[data-pad="${pad}"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))`);
     await echoWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    await wait(1200);
+    await shot(echoWin, '68b-echo-intro');   // the four pads once, lit, before Chatot sings
     for (let round = 0; round < 4 && echoGame; round++) {
       for (let i = 0; i < 60 && (await phase()) !== 'input'; i++) await wait(100);
       if (round === 1) await shot(echoWin, '69-echo-input');
@@ -4555,20 +4576,18 @@ async function selfTest(dir) {
   await wait(2500);
   await shot(jumpWin, '74-jump-start');
   await step('jump-play', async () => {
+    // leap over the first 7 swimmers, then let the others bump into Magikarp
+    await jumpWin.webContents.executeJavaScript(`window.__autoJump = 7; document.querySelector('#next').click()`);
+    for (let i = 0; i < 40 && !jumpRound; i++) await wait(100);
+    const sw = jumpRound ? jumpRound.swimmers : [];
+    await wait(sw.length ? sw[1].at + 300 : 2000);
+    await shot(jumpWin, '75-jump-flying');
     const phase = () => jumpWin.webContents.executeJavaScript('document.body.dataset.phase');
-    await jumpWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
-    for (let n = 0; n < Jump.JUMPS && jumpRound; n++) {
-      for (let i = 0; i < 60 && (await phase()) !== 'aim'; i++) await wait(100);
-      await wait(600);
-      await jumpWin.webContents.executeJavaScript(`window.__stopAt(${jumpRound.cur.center + (n === 2 ? 0.07 : 0)})`);
-      await wait(300);
-      if (n === 1) await shot(jumpWin, '75-jump-flying');
-      for (let i = 0; i < 60 && (await phase()) === 'fly'; i++) await wait(100);
-    }
+    for (let i = 0; i < 400 && (await phase()) !== 'idle'; i++) await wait(100);
   });
   await wait(800);
   await shot(jumpWin, '76-jump-result');
-  console.log('[test] jump after a round:', store.data.stats.jumpBest || 0, JSON.stringify(jumpInfo()));
+  console.log('[test] jump after a round:', store.data.stats.jumpDodged || 0, JSON.stringify(jumpInfo()));
   // Slide Puzzle: solve the board the shortest way
   await step('puzzle', async () => openPuzzle());
   await wait(2500);
@@ -4578,6 +4597,11 @@ async function selfTest(dir) {
     for (let i = 0; i < 40 && !(puzzleGame && (await puzzleWin.webContents.executeJavaScript('document.body.dataset.phase')) === 'play'); i++) await wait(100);
     await wait(600);   // let the shuffled tiles paint before the screenshot
     await shot(puzzleWin, '78-puzzle-shuffled');
+    // one hint: the next tile glows
+    await puzzleWin.webContents.executeJavaScript(`document.querySelector('#hint').click()`);
+    await wait(500);
+    await shot(puzzleWin, '78b-puzzle-hint');
+    console.log('[test] puzzle hint:', puzzleGame && puzzleGame.hints, await puzzleWin.webContents.executeJavaScript(`document.querySelectorAll('.tile.next').length + ' ' + document.querySelector('#hint').textContent`));
     const path = puzzleGame ? Puzzle.solve(puzzleGame.board) : [];
     for (const cell of path) {
       await puzzleWin.webContents.executeJavaScript(`document.querySelector('.tile[data-cell="${cell}"]').click()`);
@@ -4599,7 +4623,8 @@ async function selfTest(dir) {
       const b = huntGame.cur;
       const i = k === 3 ? (b.at + 1) % (b.size * b.size) : b.at;
       await huntWin.webContents.executeJavaScript(`document.querySelectorAll('#grid .cell')[${i}].click()`);
-      await wait(350);
+      if (k === 2 || k === 3) { await wait(200); await shot(huntWin, k === 2 ? '81a-hunt-found-happy' : '81b-hunt-miss-sad'); }
+      await wait(k === 3 ? 700 : 500);
       if (k === 5) await shot(huntWin, '81-hunt-playing');
     }
     for (let i = 0; i < 400 && huntGame; i++) await wait(100);

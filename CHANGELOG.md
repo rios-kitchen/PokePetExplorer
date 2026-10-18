@@ -5,6 +5,27 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **小游戏列表改成卡片**：外出页的「去玩」里，每个小游戏一张带宝可梦头像的卡片，窗口越宽一行放得越多；整块可以折叠，会记住
+  **Mini-game cards**: under "Play outside" in the Outings tab, each mini-game is a card with a Pokémon's portrait, as many a row as the window fits; the whole list folds away and remembers it
+- **每个小游戏每小时 3 局**（原来是 2 局；钓鱼、猜猜我是谁本来就更多，不变）
+  **Every mini-game: 3 an hour** (was 2; fishing and Who's That Pokémon? already allowed more)
+- **藏在哪个球里**：猜对时伙伴开心地跳出来，猜错时它在真正的球里难过地探出头
+  **Poké Ball Shuffle**: your partner pops out happy when you find it, and peeks out sad when you pick the wrong ball
+- **电光一闪、鲤鱼王跳跳、灯笼鱼点灯**用会动的像素形象代替头像；电光一闪里伙伴会出招、抢跑时会受伤
+  **Quick Attack, Magikarp Jump, Chinchou Lights** use the animated sprites instead of portraits; in Quick Attack your partner attacks, or gets hurt on a false start
+- **聒噪鸟学舌**：每局开始前先把四个按钮各响一次；聒噪鸟唱的时候只有琴音，按钮不再跟着亮，要靠耳朵
+  **Chatot Echo**: each game starts with the four pads sounding once; while Chatot sings only the notes play – the pads no longer light up, so you go by ear
+- **拼图提示**：每局 3 次，发光的方块带你走接下来 5 步；一次提示都没用多得 2 🍓
+  **Slide Puzzle hints**: 3 a puzzle, a glowing tile shows the way for the next 5 moves; solve it without one for 2 more 🍓
+- **少用 emoji，多用宝可梦**：聒噪鸟学舌的按钮和中间的聒噪鸟、火水草猜拳的出拳、霹雳电球翻牌的电球、百变怪照着变的空棋盘都换成宝可梦的形象；伙伴还是蛋的时候，伙伴类小游戏由皮卡丘出场
+  **Pokémon instead of emoji**: Chatot Echo's pads and Chatot itself, Fire-Water-Grass's throws, Voltorb Flip's Voltorbs and Ditto Copy's empty board now show Pokémon; Pikachu stands in for the partner games while your partner is still an egg
+- **鲤鱼王跳跳改玩法**：不再停能量条，而是有宝可梦从右边游过来，点击或按空格让鲤鱼王跳过去；每局 12 只，被撞 3 次结束
+  **Magikarp Jump, new way to play**: no more power bar – Pokémon swim in from the right and you click or press Space to leap over them; 12 a round, 3 bumps and it's over
+- **更多表情**：灯笼鱼全部点亮时一起开心；找闪光找对了闪光那只开心，点错了被点的和闪光的都难过；拼图每局随机换一种伙伴表情
+  **More expressions**: every Chinchou looks happy when the pond is lit; in Shiny Hunt the shiny looks happy when found, and both it and the wrong pick look sad on a miss; Slide Puzzle uses a different partner expression each time
+- **对战显示属性和特性**：双方血条下面显示属性（草、火、水……）和特性
+  **Types and abilities in battle**: both sides show their types (Grass, Fire, Water …) and ability under the HP bar
+
 ## 1.12.0 · 2026-10-18
 
 - **新小游戏「百变怪照着变」**：格子里亮出几只百变怪又消失，记住位置点出同样的格子；一共 5 轮，每轮多一只（3 到 7 只）；照对越多树果越多（最多 4 个）；每天 6 局，每小时 2 局，不用联网

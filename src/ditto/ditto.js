@@ -47,6 +47,7 @@
     }));
   }
 
+  let idleFace = null;   // Ditto's portrait for the board between games (plain blobs until it's downloaded)
   function draw(face) {
     const cells = Array.from({ length: N }, (_, i) => {
       const el = document.createElement('div');
@@ -138,7 +139,7 @@
     clearTimeout(timer);
     phase('idle');
     score();
-    draw(null);
+    draw(idleFace);
     [0, 5, 10, 15, 3, 12].forEach((i) => cellEls()[i].classList.add('lit'));
     dots(5);
     verdict(text);
@@ -175,5 +176,7 @@
     labels();
     showCount(state.ditto);
     idle(t('ditto.rules'));
+    idleFace = await api.invoke('diary:portrait', 132, 'Normal', false).catch(() => null);
+    if (idleFace && !game) idle(t('ditto.rules'));
   })();
 })();

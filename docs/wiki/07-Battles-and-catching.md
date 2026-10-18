@@ -45,7 +45,7 @@
 ### 特性
 
 - 每只宝可梦都有一个**特性**，和原作一样从它这个种族的普通特性里定下来（在 🐾 宝可梦页卡片上能看到「特性：……」）。进化后换成进化后种族**同一个位置**的特性。
-- 野生宝可梦也有特性，偶尔（1/20）是**隐藏特性**；收服后保留。对战里把鼠标停在血条上能看到特性。
+- 野生宝可梦也有特性，偶尔（1/20）是**隐藏特性**；收服后保留。对战时双方的血条下面都会显示**属性**（草、火、水……）和**特性**，方便你挑招式。
 - 100 多种常见特性在对战里有效果，例如：
   - **茂盛 / 猛火 / 激流 / 虫之预感**：HP 剩 1/3 以下时同属性招式威力 ×1.5
   - **威吓**：出场时降低对手攻击；**恒净之躯、白色烟雾、怪力钳、锐利目光……** 挡住能力下降
@@ -198,8 +198,8 @@ Galar Sword/Shield):
 
 - Every Pokémon has an **ability**, picked as in the games from its species' regular abilities (shown on its card in the
   🐾 Pokémon tab). When it evolves it gets the evolved species' ability **in the same slot**.
-- Wild Pokémon have one too, now and then (1 in 20) their **hidden ability**; they keep it when caught. Hover over an HP
-  bar in battle to see it.
+- Wild Pokémon have one too, now and then (1 in 20) their **hidden ability**; they keep it when caught. In battle, both
+  sides' **types** (Grass, Fire, Water …) and **abilities** are shown under their HP bars, to help you pick a move.
 - Over 100 common abilities work in battle, for example:
   - **Overgrow / Blaze / Torrent / Swarm**: moves of that type ×1.5 at a third of HP or less
   - **Intimidate** lowers the other side's Attack when it comes out; **Clear Body, White Smoke, Hyper Cutter, Keen Eye …** stop drops

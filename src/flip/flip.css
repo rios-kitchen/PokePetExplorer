@@ -18,7 +18,10 @@ h1 { margin: 10px 0 0; text-align: center; font-size: 18px; color: var(--yellow)
 .hintcell { border: 3px solid rgba(0, 0, 0, 0.3); border-radius: 6px; display: flex; flex-direction: column; justify-content: center;
   align-items: center; font-weight: 800; color: #23221f; line-height: 1.15; }
 .hintcell .sum { font-size: 17px; }
-.hintcell .v { font-size: 12px; }
+.hintcell .v { font-size: 12px; display: inline-flex; align-items: center; gap: 2px; }
+.voltorb { width: 70%; height: 70%; max-width: 40px; max-height: 40px; border-radius: 50%; image-rendering: pixelated; pointer-events: none; }
+.hintcell .voltorb { width: 14px; height: 14px; }
+.tile.memo .voltorb { width: 50%; height: 50%; opacity: 0.8; }
 .hintcell.c0 { background: #e8806a; } .hintcell.c1 { background: #6ac078; } .hintcell.c2 { background: #e8c050; }
 .hintcell.c3 { background: #5a98e0; } .hintcell.c4 { background: #b07ae0; }
 .hidden { visibility: hidden; }

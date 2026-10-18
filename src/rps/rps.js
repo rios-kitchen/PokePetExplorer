@@ -7,7 +7,16 @@
   const $ = (s) => document.querySelector(s);
 
   const MOVES = ['fire', 'water', 'grass'];
-  const ICON = { fire: '🔥', water: '💧', grass: '🌿' };
+  const ICON = { fire: '🔥', water: '💧', grass: '🌿' };   // until the starters' portraits have been downloaded
+  const DEX = { fire: 4, water: 7, grass: 1 };   // Charmander, Squirtle, Bulbasaur
+  const faces = {};
+  const mark = (move) => {
+    if (!faces[move]) return document.createTextNode(ICON[move]);
+    const img = document.createElement('img');
+    img.src = faces[move];
+    img.alt = '';
+    return img;
+  };
 
   let state = null;
   const L = () => (state ? state.settings.lang : 'en');
@@ -29,12 +38,12 @@
     const pet = state && (state.custom || []).find((c) => c.id === state.settings.pokemon);
     $('#youLbl').textContent = pet && pet.names ? (pet.names[L()] || pet.names.en) : t('rps.you');
     $('#themLbl').textContent = t('rps.them');
-    for (const b of document.querySelectorAll('#moves button')) b.textContent = `${ICON[b.dataset.move]} ${t(`type.${b.dataset.move}`)}`;
+    for (const b of document.querySelectorAll('#moves button')) b.replaceChildren(mark(b.dataset.move), ` ${t(`type.${b.dataset.move}`)}`);
   }
 
   function hand(el, move, win) {
     el.className = `hand${move ? ` ${move}` : ''}${win ? ' win' : ''}`;
-    el.textContent = move ? ICON[move] : '?';
+    el.replaceChildren(move ? mark(move) : '?');
   }
 
   function score() {
@@ -123,5 +132,8 @@
     labels();
     showCount(state.rps);
     idle(t('rps.rules'));
+    await Promise.all(Object.entries(DEX).map(async ([move, dex]) => { faces[move] = await api.invoke('diary:portrait', dex, 'Normal', false).catch(() => null); }));
+    labels();
+    if (!match) { hand($('#you'), null); hand($('#them'), null); }
   })();
 })();

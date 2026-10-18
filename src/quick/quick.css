@@ -13,6 +13,7 @@ body[data-phase="idle"] .arena, body[data-phase="done"] .arena { cursor: default
 .face { position: absolute; left: 50%; bottom: 30px; width: 120px; height: 120px; margin-left: -60px; z-index: 1;
   display: flex; align-items: center; justify-content: center; font-size: 64px; transition: transform 0.08s; }
 .face img { width: 100%; height: 100%; image-rendering: pixelated; border-radius: 10px; }
+.face canvas { width: 120px; height: 120px; image-rendering: pixelated; }
 body[data-phase="go"] .face { transform: translateY(-6px) scale(1.06); }
 body[data-phase="hit"].hit-good .face { transform: translateX(70px) scale(1.04); }
 .bang { position: absolute; left: 50%; top: 18px; margin-left: -28px; width: 56px; height: 56px; border-radius: 50%; z-index: 2;

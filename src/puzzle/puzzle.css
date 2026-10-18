@@ -24,4 +24,8 @@ body[data-phase="done"] .tile { border-color: transparent; border-radius: 0; }
 .foot { width: 380px; margin: 4px auto 0; text-align: center; }
 .primary { background: var(--yellow); border: 2px solid #23221f; border-radius: 10px; padding: 6px 22px; font: inherit; font-weight: 700; color: #23221f; cursor: pointer; }
 .primary:disabled { opacity: 0.5; cursor: default; }
+.hintbtn { margin-left: 8px; background: #3b78c4; border: 2px solid #23221f; border-radius: 10px; padding: 6px 16px; font: inherit; font-weight: 700; color: #fff; cursor: pointer; }
+.hintbtn:disabled { opacity: 0.45; cursor: default; }
+.tile.next { box-shadow: 0 0 0 3px var(--yellow), 0 0 14px 4px rgba(255, 216, 74, 0.7); z-index: 2; animation: nudge 0.6s ease-in-out infinite alternate; }
+@keyframes nudge { to { filter: brightness(1.25); } }
 .count { margin: 6px 0 0; color: var(--muted); font-size: 12px; white-space: pre-line; }
