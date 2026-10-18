@@ -24,6 +24,7 @@
 | 找闪光 | 每天 6 局（每局 30 秒），任意 1 小时内 2 局；每局最多 4 🍓 |
 | 电光一闪 | 每天 6 局（每局 5 次），任意 1 小时内 2 局；每局最多 4 🍓 |
 | 灯笼鱼点灯 | 每天 6 个池塘，任意 1 小时内 2 个；每个最多 4 🍓 |
+| 百变怪照着变 | 每天 6 局（每局 5 轮），任意 1 小时内 2 局；每局最多 4 🍓 |
 | 节日礼物 | 每个节日 1 次 |
 | 摸摸给经验 | 每 15 秒最多 1 点，每天最多 20 点 |
 | 进化 | 原作等级（或进化石、联系绳、亲密度 220），且加入满 7 天 / 上次进化后满 14 天 |
@@ -60,6 +61,7 @@
 | Shiny Hunt | 6 rounds of 30 seconds a day, 2 within any hour; at most 4 🍓 a round |
 | Quick Attack | 6 rounds of 5 draws a day, 2 within any hour; at most 4 🍓 a round |
 | Chinchou Lights | 6 ponds a day, 2 within any hour; at most 4 🍓 a pond |
+| Ditto Copy | 6 games of 5 rounds a day, 2 within any hour; at most 4 🍓 a game |
 | Holiday gifts | once per holiday |
 | XP from patting | at most 1 every 15 s, 20 a day |
 | Evolution | the games' level (or a stone, the Linking Cord, friendship 220), plus 7 days on the team / 14 days since the last one |

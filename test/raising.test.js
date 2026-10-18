@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights', 'ditto']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights', 'ditto']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -1020,6 +1020,28 @@ test('Shiny Hunt: boards, rewards, limits', () => {
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'hunt', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'hunt', day, t0 + 5)), 'rest');
+});
+
+test('Ditto Copy: patterns, checks, rewards, limits', () => {
+  const D = require('../src/main/ditto');
+  const Limits = require('../src/main/limits');
+  for (let n = 0; n < D.ROUNDS.length; n++) {
+    const p = D.patternOf(n);
+    assert.equal(p.length, D.ROUNDS[n]);
+    assert.equal(new Set(p).size, p.length);
+    assert.ok(p.every((i) => i >= 0 && i < D.N));
+    assert.ok(D.showMs(n) >= 1200);
+  }
+  assert.equal(D.matches([1, 5, 9], [9, 1, 5]), true);
+  assert.equal(D.matches([1, 5, 9], [1, 5, 8]), false);
+  assert.equal(D.matches([1, 5, 9], [1, 5, 5]), false);
+  assert.equal(D.matches([1, 5, 9], [1, 5]), false);
+  assert.equal(D.matches([1, 5, 9], null), false);
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map((n) => D.rewardFor(n).berries), [0, 1, 2, 2, 3, 4]);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'ditto', day, t0 + i), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'ditto', day, t0 + 5)), 'rest');
 });
 
 test('Chinchou Lights: taps, scrambles, replays, rewards, limits', () => {

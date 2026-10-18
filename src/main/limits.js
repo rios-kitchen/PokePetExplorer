@@ -18,7 +18,8 @@ const LIMITS = {
   puzzle:  { day: 6, hour: 2 },    // Slide Puzzle boards
   hunt:    { day: 6, hour: 2 },    // Shiny Hunt rounds (30 seconds each)
   quick:   { day: 6, hour: 2 },    // Quick Attack rounds (5 draws each)
-  lights:  { day: 6, hour: 2 }     // Chinchou Lights ponds
+  lights:  { day: 6, hour: 2 },    // Chinchou Lights ponds
+  ditto:   { day: 6, hour: 2 }     // Ditto Copy games (5 patterns each)
 };
 const HOUR = 3600e3;
 
