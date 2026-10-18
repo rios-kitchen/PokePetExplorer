@@ -5,6 +5,8 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+## 1.12.0 · 2026-10-18
+
 - **新小游戏「百变怪照着变」**：格子里亮出几只百变怪又消失，记住位置点出同样的格子；一共 5 轮，每轮多一只（3 到 7 只）；照对越多树果越多（最多 4 个）；每天 6 局，每小时 2 局，不用联网
   **New mini-game "Ditto Copy"**: some Ditto light up on a grid and vanish – tap the same cells from memory; 5 rounds, one more Ditto each (3 to 7); the more you copy, the more berries (up to 4); 6 a day, 2 an hour, works offline
 
