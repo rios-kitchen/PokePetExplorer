@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>PokePet Explorer</title>
+  <link rel="stylesheet" href="types.css">
+</head>
+<body>
+  <h1 id="title"></h1>
+  <p id="progress" class="progress"></p>
+  <div class="match">
+    <div class="side"><span class="lbl" id="atkLbl"></span><div id="atk" class="types"></div></div>
+    <div class="arrow">➜</div>
+    <div class="side"><span class="lbl" id="defLbl"></span><div id="def" class="types"></div></div>
+  </div>
+  <p id="verdict" class="verdict"></p>
+  <div id="choices" class="choices"></div>
+  <div class="foot">
+    <button id="next" class="primary hidden"></button>
+    <p id="count" class="count"></p>
+  </div>
+  <script src="../shared/i18n.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="types.js"></script>
+</body>
+</html>

@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -915,6 +915,37 @@ test('Memory Match: dealing, rewards, limits', () => {
   assert.equal(Limits.use(data, 'memory', day, t0 + 1), true);
   assert.equal(Limits.blocked(Limits.info(data, 'memory', day, t0 + 2)), 'rest');
   assert.equal(Limits.LIMITS.memory.day, 6);
+});
+
+test('Type Match-up: questions, answers, rewards, limits', () => {
+  const Q = require('../src/main/typequiz');
+  const TypeChart = require('../src/main/typechart');
+  const Limits = require('../src/main/limits');
+  // the games' wording
+  assert.equal(Q.categoryOf(0), 'none');
+  assert.equal(Q.categoryOf(0.25), 'weak');
+  assert.equal(Q.categoryOf(1), 'normal');
+  assert.equal(Q.categoryOf(4), 'super');
+  // a round: 10 questions, single types first, then two different types; the answer fits the chart
+  const r = Q.round();
+  assert.equal(r.length, Q.ROUND);
+  r.forEach((q, i) => {
+    assert.equal(q.def.length, i >= Q.DUAL_FROM ? 2 : 1);
+    if (q.def.length === 2) assert.notEqual(q.def[0], q.def[1]);
+    assert.equal(q.mult, TypeChart.effectiveness(q.atk, q.def));
+    assert.equal(q.answer, Q.categoryOf(q.mult));
+    assert.ok(Q.CHOICES.includes(q.answer));
+  });
+  // rewards: a berry for every 3 right, one more for a perfect round
+  assert.deepEqual(Q.rewardFor(0), { right: 0, berries: 0, xp: 0, mood: 0 });
+  assert.deepEqual(Q.rewardFor(7), { right: 7, berries: 2, xp: 28, mood: 6 });
+  assert.equal(Q.rewardFor(10).berries, 4);
+  assert.equal(Q.rewardFor(99).right, 10);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  assert.equal(Limits.use(data, 'types', day, t0), true);
+  assert.equal(Limits.use(data, 'types', day, t0 + 1), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'types', day, t0 + 2)), 'rest');
 });
 
 test('Whack-a-Diglett: points, rewards, limits', () => {
