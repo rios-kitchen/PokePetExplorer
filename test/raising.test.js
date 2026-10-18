@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -998,6 +998,28 @@ test('Fire-Water-Grass: the type triangle, rewards, limits', () => {
   for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'rps', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'rps', day, t0 + 5)), 'rest');
   assert.equal(Limits.LIMITS.rps.day, 8);
+});
+
+test('Shiny Hunt: boards, rewards, limits', () => {
+  const H = require('../src/main/hunt');
+  const Limits = require('../src/main/limits');
+  let prev = null;
+  for (let n = 0; n < 30; n++) {
+    const b = H.boardOf(n);
+    assert.ok(b.size >= 2 && b.size <= 6);
+    assert.ok(b.at >= 0 && b.at < b.size * b.size);
+    assert.ok(b.hue >= 14);
+    // bigger grids and closer colours as the hunt goes on
+    if (prev) assert.ok(b.size >= prev.size && b.hue <= prev.hue);
+    prev = b;
+  }
+  assert.equal(H.boardOf(0).size, 2);
+  assert.equal(H.boardOf(40).size, 6);
+  assert.deepEqual([0, 3, 8, 14, 20, 30].map((n) => H.rewardFor(n).berries), [0, 1, 2, 3, 4, 4]);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'hunt', day, t0 + i), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'hunt', day, t0 + 5)), 'rest');
 });
 
 test('Slide Puzzle: shuffles, slides, replays, rewards, limits', () => {

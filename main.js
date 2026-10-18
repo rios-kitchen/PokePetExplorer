@@ -25,6 +25,7 @@ const Echo = require('./src/main/echo');
 const Shuffle = require('./src/main/shuffle');
 const Jump = require('./src/main/jump');
 const Puzzle = require('./src/main/puzzle');
+const Hunt = require('./src/main/hunt');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -97,7 +98,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -287,6 +288,7 @@ function snapshot() {
     shuffle: shuffleInfo(),
     jump: jumpInfo(),
     puzzle: puzzleInfo(),
+    hunt: huntInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -675,6 +677,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'shinyhunt') {
+    // testing: Shiny Hunt without daily / hourly limits, until used again or the app restarts
+    testFlags.freeHunt = !testFlags.freeHunt;
+    changed();
+    if (testFlags.freeHunt) openHunt();
     return { ok: true };
   }
   if (cmd === 'puzzle') {
@@ -2123,6 +2132,91 @@ function puzzleFinish(token, moves) {
   return { ok: true, reward, best: stats.puzzleBest, info: puzzleInfo() };
 }
 
+// ---------- Shiny Hunt (找闪光) ----------
+let huntWin = null;
+let huntGame = null;   // { token, at, found, misses, cur } – the hunt being played (one at a time)
+
+function openHunt() {
+  if (!huntWin || huntWin.isDestroyed()) {
+    huntWin = new BrowserWindow({
+      width: 420, height: 600, resizable: false, show: false, title: T('hunt.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) huntWin.setMenu(null);
+    if (process.env.POKEPET_TEST) huntWin.webContents.on('console-message', (e) => console.log('[hunt]', e.message));
+    huntWin.loadFile(path.join(__dirname, 'src', 'hunt', 'hunt.html'));
+    huntWin.once('ready-to-show', () => { huntWin.show(); huntWin.focus(); });
+    huntWin.on('closed', () => { huntWin = null; huntGame = null; });
+  } else {
+    huntWin.show();
+    huntWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Shiny Hunt limits as the windows see them (unlimited while testing). */
+function huntInfo() {
+  if (testFlags.freeHunt) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'hunt', today());
+}
+
+const huntBoard = (b) => ({ size: b.size, hue: b.hue, at: b.at });
+
+/** Start a hunt (counts one play): the first board, and the partner's portrait to fill it with. */
+async function huntStart() {
+  const lim = huntInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'hunt', today());
+  huntGame = { token: `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: 0, found: 0, misses: 0, cur: Hunt.boardOf(0) };
+  const token = huntGame.token;
+  changed();
+  let face = null;
+  const pet = hasPet() ? activePet() : null;
+  if (pet && pet.dex && pet.stage !== 'egg') {
+    try {
+      const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir());
+      if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
+    } catch { /* the window draws ⚡ tiles instead */ }
+  }
+  if (!huntGame || huntGame.token !== token) return { ok: false };
+  huntGame.at = Date.now();   // the clock starts once the board can be shown
+  return { ok: true, token, seconds: Hunt.ROUND_S, board: huntBoard(huntGame.cur), face, info: huntInfo() };
+}
+
+const huntOver = (g) => Date.now() - g.at > Hunt.ROUND_S * 1000 + 1500;   // a little slack for the window's clock
+
+/** A click on tile `i`: the shiny → a new, harder board; anything else → a new board of the same kind. */
+function huntPick(token, i) {
+  const g = huntGame;
+  if (!g || g.token !== token || !(i >= 0 && i < g.cur.size * g.cur.size)) return { ok: false };
+  if (huntOver(g)) return { ok: true, over: true };
+  const right = i === g.cur.at;
+  const was = g.cur.at;
+  if (right) g.found++; else g.misses++;
+  g.cur = Hunt.boardOf(g.found);
+  return { ok: true, right, at: was, found: g.found, board: huntBoard(g.cur) };
+}
+
+/** Time's up: the shinies found become berries, XP and mood. */
+function huntFinish(token) {
+  const g = huntGame;
+  if (!g || g.token !== token) return { ok: false };
+  huntGame = null;
+  const reward = Hunt.rewardFor(g.found);
+  const stats = store.data.stats;
+  stats.huntBest = Math.max(stats.huntBest || 0, g.found);
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    if (g.found >= 8) petEvent('hunt-good', { n: g.found });
+  }
+  changed();
+  return { ok: true, reward, misses: g.misses, best: stats.huntBest, info: huntInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -2946,6 +3040,7 @@ function buildMenu() {
     { label: T('menu.shuffle'), click: () => openShuffle() },
     { label: T('menu.jump'), click: () => openJump() },
     { label: T('menu.puzzle'), click: () => openPuzzle() },
+    { label: T('menu.hunt'), click: () => openHunt() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -3315,6 +3410,10 @@ function registerIpc() {
   ipcMain.handle('puzzle:start', () => puzzleStart());
   ipcMain.handle('puzzle:finish', (_e, token, moves) => puzzleFinish(String(token || ''), Array.isArray(moves) ? moves.slice(0, 5000).map(Number) : []));
   ipcMain.on('puzzle:open', () => openPuzzle());
+  ipcMain.handle('hunt:start', () => huntStart());
+  ipcMain.handle('hunt:pick', (_e, token, i) => huntPick(String(token || ''), Number(i)));
+  ipcMain.handle('hunt:finish', (_e, token) => huntFinish(String(token || '')));
+  ipcMain.on('hunt:open', () => openHunt());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -4216,6 +4315,26 @@ async function selfTest(dir) {
   await wait(1200);
   await shot(puzzleWin, '79-puzzle-solved');
   console.log('[test] puzzle after a board:', store.data.stats.puzzleBest || 0, JSON.stringify(puzzleInfo()));
+  // Shiny Hunt: find six shinies, miss once, then let the time run out
+  await step('hunt', async () => openHunt());
+  await wait(2500);
+  await shot(huntWin, '80-hunt-start');
+  await step('hunt-play', async () => {
+    await huntWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    for (let i = 0; i < 40 && !(huntGame && huntGame.at); i++) await wait(100);
+    await wait(400);
+    for (let k = 0; k < 7 && huntGame; k++) {
+      const b = huntGame.cur;
+      const i = k === 3 ? (b.at + 1) % (b.size * b.size) : b.at;
+      await huntWin.webContents.executeJavaScript(`document.querySelectorAll('#grid .cell')[${i}].click()`);
+      await wait(350);
+      if (k === 5) await shot(huntWin, '81-hunt-playing');
+    }
+    for (let i = 0; i < 400 && huntGame; i++) await wait(100);
+  });
+  await wait(1000);
+  await shot(huntWin, '82-hunt-result');
+  console.log('[test] hunt after a round:', store.data.stats.huntBest || 0, JSON.stringify(huntInfo()));
   quitting = true;
   app.quit();
 }

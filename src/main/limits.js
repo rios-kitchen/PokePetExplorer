@@ -15,7 +15,8 @@ const LIMITS = {
   echo:    { day: 6, hour: 2 },    // Chatot Echo rounds
   shuffle: { day: 6, hour: 2 },    // Poké Ball Shuffle games (5 rounds each)
   jump:    { day: 6, hour: 2 },    // Magikarp Jump rounds (5 jumps each)
-  puzzle:  { day: 6, hour: 2 }     // Slide Puzzle boards
+  puzzle:  { day: 6, hour: 2 },    // Slide Puzzle boards
+  hunt:    { day: 6, hour: 2 }     // Shiny Hunt rounds (30 seconds each)
 };
 const HOUR = 3600e3;
 
