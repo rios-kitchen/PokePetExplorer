@@ -274,6 +274,7 @@ window.PanelRaising = function PanelRaising(env) {
   $('#goHunt').addEventListener('click', () => api.send('hunt:open'));
   $('#goQuick').addEventListener('click', () => api.send('quick:open'));
   $('#goLights').addEventListener('click', () => api.send('lights:open'));
+  $('#goDitto').addEventListener('click', () => api.send('ditto:open'));
 
   // the Pokédex: every species met (grey face) or caught (with its portrait), kept even after one leaves the team
   const dexFaces = {};
@@ -376,6 +377,9 @@ window.PanelRaising = function PanelRaising(env) {
     const li = state.lights;
     $('#lightsLeft').textContent = li.left > 0 || li.dayLeft <= 0 ? (li.dayLeft > 0 ? t('lights.left', { n: li.dayLeft, max: li.max, h: li.hourLeft, hmax: li.hourMax }) : t('lights.tired'))
       : t('lights.rest', { m: fm(li.nextAt) });
+    const di = state.ditto;
+    $('#dittoLeft').textContent = di.left > 0 || di.dayLeft <= 0 ? (di.dayLeft > 0 ? t('ditto.left', { n: di.dayLeft, max: di.max, h: di.hourLeft, hmax: di.hourMax }) : t('ditto.tired'))
+      : t('ditto.rest', { m: fm(di.nextAt) });
     const g = state.grass;
     const e = state.encounter;
     const mins = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));

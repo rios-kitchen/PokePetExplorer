@@ -26,6 +26,7 @@
 - [24. 找闪光 ✨ · Shiny Hunt ✨](24-Shiny-Hunt)
 - [25. 电光一闪 ⚡ · Quick Attack ⚡](25-Quick-Attack)
 - [26. 灯笼鱼点灯 💡 · Chinchou Lights 💡](26-Chinchou-Lights)
+- [27. 百变怪照着变 🟣 · Ditto Copy 🟣](27-Ditto-Copy)
 - [常见问题 · FAQ](FAQ)
 - [开发者 · Developers](Developers)
 

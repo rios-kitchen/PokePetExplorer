@@ -28,6 +28,7 @@ const Puzzle = require('./src/main/puzzle');
 const Hunt = require('./src/main/hunt');
 const Quick = require('./src/main/quick');
 const Lights = require('./src/main/lights');
+const Ditto = require('./src/main/ditto');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -100,7 +101,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false, freeQuick: false, freeLights: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false, freeQuick: false, freeLights: false, freeDitto: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -295,6 +296,7 @@ function snapshot() {
     hunt: huntInfo(),
     quick: quickInfo(),
     lights: lightsInfo(),
+    ditto: dittoInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -683,6 +685,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'ditto') {
+    // testing: Ditto Copy without daily / hourly limits, until used again or the app restarts
+    testFlags.freeDitto = !testFlags.freeDitto;
+    changed();
+    if (testFlags.freeDitto) openDitto();
     return { ok: true };
   }
   if (cmd === 'lights') {
@@ -2391,6 +2400,81 @@ function lightsFinish(token, taps) {
   return { ok: true, reward, best: stats.lightsBest, info: lightsInfo() };
 }
 
+// ---------- Ditto Copy (百变怪照着变) ----------
+let dittoWin = null;
+let dittoGame = null;   // { token, n, right, cur } – the game being played (one at a time)
+
+function openDitto() {
+  if (!dittoWin || dittoWin.isDestroyed()) {
+    dittoWin = new BrowserWindow({
+      width: 420, height: 600, resizable: false, show: false, title: T('ditto.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) dittoWin.setMenu(null);
+    if (process.env.POKEPET_TEST) dittoWin.webContents.on('console-message', (e) => console.log('[ditto]', e.message));
+    dittoWin.loadFile(path.join(__dirname, 'src', 'ditto', 'ditto.html'));
+    dittoWin.once('ready-to-show', () => { dittoWin.show(); dittoWin.focus(); });
+    dittoWin.on('closed', () => { dittoWin = null; dittoGame = null; });
+  } else {
+    dittoWin.show();
+    dittoWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Ditto Copy limits as the windows see them (unlimited while testing). */
+function dittoInfo() {
+  if (testFlags.freeDitto) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'ditto', today());
+}
+
+const dittoRound = (g) => ({ n: g.n, cells: g.cur.slice(), show: Ditto.showMs(g.n) });
+
+/** Start a game (counts one play): the first pattern, and Ditto's portrait for the window. */
+async function dittoStart() {
+  const lim = dittoInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'ditto', today());
+  dittoGame = { token: `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, n: 0, right: 0, cur: Ditto.patternOf(0) };
+  const token = dittoGame.token;
+  changed();
+  let face = null;
+  try {
+    const buf = await Sources.portrait(132, 'Normal', spritesDir());
+    if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
+  } catch { /* the window draws a purple blob instead */ }
+  if (!dittoGame || dittoGame.token !== token) return { ok: false };
+  return { ok: true, token, rounds: Ditto.ROUNDS.length, round: dittoRound(dittoGame), face, info: dittoInfo() };
+}
+
+/** The window's copy of the pattern: right or not, then the next pattern, or after the last one the reward. */
+function dittoAnswer(token, taps) {
+  const g = dittoGame;
+  if (!g || g.token !== token) return { ok: false };
+  const was = g.cur;
+  const right = Ditto.matches(was, taps);
+  if (right) g.right++;
+  g.n++;
+  if (g.n < Ditto.ROUNDS.length) {
+    g.cur = Ditto.patternOf(g.n);
+    return { ok: true, right, pattern: was, score: g.right, next: dittoRound(g) };
+  }
+  dittoGame = null;
+  const reward = Ditto.rewardFor(g.right);
+  const stats = store.data.stats;
+  stats.dittoBest = Math.max(stats.dittoBest || 0, g.right);
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    if (g.right >= 4) petEvent('ditto-good', { n: g.right });
+  }
+  changed();
+  return { ok: true, right, pattern: was, score: g.right, done: true, reward, best: stats.dittoBest, info: dittoInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -3217,6 +3301,7 @@ function buildMenu() {
     { label: T('menu.hunt'), click: () => openHunt() },
     { label: T('menu.quick'), click: () => openQuick() },
     { label: T('menu.lights'), click: () => openLights() },
+    { label: T('menu.ditto'), click: () => openDitto() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -3597,6 +3682,9 @@ function registerIpc() {
   ipcMain.handle('lights:start', () => lightsStart());
   ipcMain.handle('lights:finish', (_e, token, taps) => lightsFinish(String(token || ''), Array.isArray(taps) ? taps.slice(0, 5000).map(Number) : []));
   ipcMain.on('lights:open', () => openLights());
+  ipcMain.handle('ditto:start', () => dittoStart());
+  ipcMain.handle('ditto:answer', (_e, token, taps) => dittoAnswer(String(token || ''), Array.isArray(taps) ? taps.slice(0, 32).map(Number) : []));
+  ipcMain.on('ditto:open', () => openDitto());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -4558,6 +4646,29 @@ async function selfTest(dir) {
   await wait(1500);
   await shot(lightsWin, '88-lights-lit');
   console.log('[test] lights after a pond:', store.data.stats.lightsBest || 0, JSON.stringify(lightsInfo()));
+  // Ditto Copy: copy four patterns right and get the third one wrong
+  await step('ditto', async () => openDitto());
+  await wait(2500);
+  await shot(dittoWin, '89-ditto-start');
+  await step('ditto-play', async () => {
+    await dittoWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    for (let k = 0; k < 5 && dittoGame; k++) {
+      for (let i = 0; i < 80 && (await dittoWin.webContents.executeJavaScript('document.body.dataset.phase')) !== 'show'; i++) await wait(50);
+      if (k === 1) await shot(dittoWin, '90-ditto-show');
+      for (let i = 0; i < 100 && (await dittoWin.webContents.executeJavaScript('document.body.dataset.phase')) !== 'copy'; i++) await wait(50);
+      const cells = dittoGame ? dittoGame.cur.slice() : [];
+      if (k === 2) cells[0] = [...Array(Ditto.N).keys()].find((i) => !cells.includes(i));
+      for (const cell of cells) {
+        await dittoWin.webContents.executeJavaScript(`document.querySelector('.cell[data-cell="${cell}"]').click()`);
+        await wait(120);
+      }
+      if (k === 2) { await wait(200); await shot(dittoWin, '91-ditto-wrong'); }
+    }
+    for (let i = 0; i < 60 && (await dittoWin.webContents.executeJavaScript('document.body.dataset.phase')) !== 'done'; i++) await wait(100);
+  });
+  await wait(1000);
+  await shot(dittoWin, '92-ditto-result');
+  console.log('[test] ditto after a game:', store.data.stats.dittoBest || 0, JSON.stringify(dittoInfo()));
   quitting = true;
   app.quit();
 }
