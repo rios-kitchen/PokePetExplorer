@@ -1835,7 +1835,7 @@ let echoGame = null;   // { token, seq } – the tune being sung (one round at a
 function openEcho() {
   if (!echoWin || echoWin.isDestroyed()) {
     echoWin = new BrowserWindow({
-      width: 420, height: 560, resizable: false, show: false, title: T('echo.title'), icon: appIcon(256),
+      width: 420, height: 600, resizable: false, show: false, title: T('echo.title'), icon: appIcon(256),
       backgroundColor: '#1d1c1a', autoHideMenuBar: true,
       webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
     });
@@ -1974,7 +1974,7 @@ let jumpRound = null;   // { token, n, at, cur, total, height } – the round be
 function openJump() {
   if (!jumpWin || jumpWin.isDestroyed()) {
     jumpWin = new BrowserWindow({
-      width: 420, height: 540, resizable: false, show: false, title: T('jump.title'), icon: appIcon(256),
+      width: 420, height: 580, resizable: false, show: false, title: T('jump.title'), icon: appIcon(256),
       backgroundColor: '#1d1c1a', autoHideMenuBar: true,
       webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
     });
@@ -4090,7 +4090,7 @@ async function selfTest(dir) {
       const g = shuffleGame.cur;
       const at = Shuffle.trace(g.start, g.swaps);
       const slot = n < 3 ? at : (at + 1) % g.balls;
-      await shuffleWin.webContents.executeJavaScript(`document.querySelector('.ball[data-slot="${slot}"]').click()`);
+      await shuffleWin.webContents.executeJavaScript(`document.querySelector('.ball[data-slot="${slot}"] .shell').click()`);
       for (let i = 0; i < 40 && (await phase()) === 'wait'; i++) await wait(100);
     }
   });
