@@ -11,7 +11,8 @@ const LIMITS = {
   whack:   { day: 6, hour: 2 },    // Whack-a-Diglett rounds
   types:   { day: 6, hour: 2 },    // Type Match-up rounds (10 questions each)
   rps:     { day: 8, hour: 3 },    // Fire-Water-Grass matches (first to 3)
-  flip:    { day: 6, hour: 2 }     // Voltorb Flip boards
+  flip:    { day: 6, hour: 2 },    // Voltorb Flip boards
+  echo:    { day: 6, hour: 2 }     // Chatot Echo rounds
 };
 const HOUR = 3600e3;
 
