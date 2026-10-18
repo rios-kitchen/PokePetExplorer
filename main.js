@@ -23,6 +23,7 @@ const Rps = require('./src/main/rps');
 const Voltorb = require('./src/main/voltorb');
 const Echo = require('./src/main/echo');
 const Shuffle = require('./src/main/shuffle');
+const Jump = require('./src/main/jump');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -95,7 +96,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -283,6 +284,7 @@ function snapshot() {
     flip: flipInfo(),
     echo: echoInfo(),
     shuffle: shuffleInfo(),
+    jump: jumpInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -671,6 +673,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'jump') {
+    // testing: Magikarp Jump without daily / hourly limits, until used again or the app restarts
+    testFlags.freeJump = !testFlags.freeJump;
+    changed();
+    if (testFlags.freeJump) openJump();
     return { ok: true };
   }
   if (cmd === 'shuffle') {
@@ -1958,6 +1967,83 @@ function shufflePick(token, i) {
   return { ok: true, right, at, found: g.found, done: true, reward, best: stats.shuffleBest, info: shuffleInfo() };
 }
 
+// ---------- Magikarp Jump (鲤鱼王跳跳) ----------
+let jumpWin = null;
+let jumpRound = null;   // { token, n, at, cur, total, height } – the round being played (one at a time)
+
+function openJump() {
+  if (!jumpWin || jumpWin.isDestroyed()) {
+    jumpWin = new BrowserWindow({
+      width: 420, height: 540, resizable: false, show: false, title: T('jump.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) jumpWin.setMenu(null);
+    if (process.env.POKEPET_TEST) jumpWin.webContents.on('console-message', (e) => console.log('[jump]', e.message));
+    jumpWin.loadFile(path.join(__dirname, 'src', 'jump', 'jump.html'));
+    jumpWin.once('ready-to-show', () => { jumpWin.show(); jumpWin.focus(); });
+    jumpWin.on('closed', () => { jumpWin = null; jumpRound = null; });
+  } else {
+    jumpWin.show();
+    jumpWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Magikarp Jump limits as the windows see them (unlimited while testing). */
+function jumpInfo() {
+  if (testFlags.freeJump) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'jump', today());
+}
+
+/** Start a round (counts one play): the first target, and Magikarp's portrait when it's been downloaded. */
+async function jumpStart() {
+  const lim = jumpInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'jump', today());
+  jumpRound = { token: `j${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, n: 0, at: Date.now(), cur: Jump.jumpOf(0), total: 0, height: 0 };
+  const token = jumpRound.token;
+  changed();
+  let face = null;
+  try {
+    const buf = await Sources.portrait(129, 'Normal', spritesDir());
+    if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
+  } catch { /* the window draws a 🐟 instead */ }
+  if (!jumpRound || jumpRound.token !== token) return { ok: false };
+  jumpRound.at = Date.now();
+  return { ok: true, token, jump: jumpRound.cur, jumps: Jump.JUMPS, face, info: jumpInfo() };
+}
+
+/** Stop the bar at `pos` (0 … 1): graded against the target; after the last jump the round is rewarded. */
+function jumpStop(token, pos) {
+  const r = jumpRound;
+  if (!r || r.token !== token || !(pos >= 0 && pos <= 1)) return { ok: false };
+  const points = Date.now() - r.at < 400 ? 0 : Jump.grade(r.cur, pos);   // nobody stops a bar that quickly
+  const cm = Jump.heightOf(points);
+  r.total += points;
+  r.height += cm;
+  const out = { ok: true, points, cm, total: r.total, height: r.height, center: r.cur.center };
+  if (++r.n < Jump.JUMPS) {
+    r.cur = Jump.jumpOf(r.n);
+    r.at = Date.now();
+    return { ...out, jump: r.cur };
+  }
+  jumpRound = null;
+  const reward = Jump.rewardFor(r.total);
+  const stats = store.data.stats;
+  stats.jumpBest = Math.max(stats.jumpBest || 0, r.total);
+  stats.jumpHigh = Math.max(stats.jumpHigh || 0, r.height);
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    if (r.total >= 10) petEvent('jump-good', { n: r.total });
+  }
+  changed();
+  return { ...out, done: true, reward, best: stats.jumpBest, high: stats.jumpHigh, info: jumpInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -2779,6 +2865,7 @@ function buildMenu() {
     { label: T('menu.flip'), click: () => openFlip() },
     { label: T('menu.echo'), click: () => openEcho() },
     { label: T('menu.shuffle'), click: () => openShuffle() },
+    { label: T('menu.jump'), click: () => openJump() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -3142,6 +3229,9 @@ function registerIpc() {
   ipcMain.handle('shuffle:start', () => shuffleStart());
   ipcMain.handle('shuffle:pick', (_e, token, i) => shufflePick(String(token || ''), Number(i)));
   ipcMain.on('shuffle:open', () => openShuffle());
+  ipcMain.handle('jump:start', () => jumpStart());
+  ipcMain.handle('jump:stop', (_e, token, pos) => jumpStop(String(token || ''), Number(pos)));
+  ipcMain.on('jump:open', () => openJump());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -4007,6 +4097,25 @@ async function selfTest(dir) {
   await wait(1200);
   await shot(shuffleWin, '73-shuffle-result');
   console.log('[test] shuffle after a game:', store.data.stats.shuffleBest || 0, JSON.stringify(shuffleInfo()));
+  // Magikarp Jump: stop the bar on the target each time (it's checked in the main process anyway)
+  await step('jump', async () => openJump());
+  await wait(2500);
+  await shot(jumpWin, '74-jump-start');
+  await step('jump-play', async () => {
+    const phase = () => jumpWin.webContents.executeJavaScript('document.body.dataset.phase');
+    await jumpWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    for (let n = 0; n < Jump.JUMPS && jumpRound; n++) {
+      for (let i = 0; i < 60 && (await phase()) !== 'aim'; i++) await wait(100);
+      await wait(600);
+      await jumpWin.webContents.executeJavaScript(`window.__stopAt(${jumpRound.cur.center + (n === 2 ? 0.07 : 0)})`);
+      await wait(300);
+      if (n === 1) await shot(jumpWin, '75-jump-flying');
+      for (let i = 0; i < 60 && (await phase()) === 'fly'; i++) await wait(100);
+    }
+  });
+  await wait(800);
+  await shot(jumpWin, '76-jump-result');
+  console.log('[test] jump after a round:', store.data.stats.jumpBest || 0, JSON.stringify(jumpInfo()));
   quitting = true;
   app.quit();
 }

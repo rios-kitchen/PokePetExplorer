@@ -5,6 +5,8 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **新小游戏「鲤鱼王跳跳」**：能量条来回移动，点击或按空格停在目标上，鲤鱼王就跳得高高的；一共 5 跳，目标越来越小、越来越快；分数越高树果越多（最多 4 个）；每天 6 局，每小时 2 局，不用联网
+  **New mini-game "Magikarp Jump"**: a power bar sweeps back and forth – click or press Space to stop it on the target and Magikarp leaps; 5 jumps with a smaller target and a quicker bar each time; the more points, the more berries (up to 4); 6 a day, 2 an hour, works offline
 - **新小游戏「藏在哪个球里」**：你的伙伴躲进一个精灵球，精灵球换来换去，盯紧它找出来；一共 5 轮，球越来越多、换得越来越快；找到越多树果越多（最多 4 个）；每天 6 局，每小时 2 局，不用联网
   **New mini-game "Poké Ball Shuffle"**: your partner hides in a Poké Ball, the balls get swapped around, and you find it; 5 rounds with more balls and quicker swaps; the more you find, the more berries (up to 4); 6 a day, 2 an hour, works offline
 - **新小游戏「聒噪鸟学舌」**：聒噪鸟在火、水、草、电四个按钮上唱一段曲子，你照着按一遍，每次多一个音，最多 15 个音；唱对越多树果越多（最多 5 个）；也可以按 1 2 3 4；每天 6 局，每小时 2 局，不用联网
