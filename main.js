@@ -1614,7 +1614,7 @@ let typesRound = null;   // { token, questions, answered: [bool], right } – th
 function openTypes() {
   if (!typesWin || typesWin.isDestroyed()) {
     typesWin = new BrowserWindow({
-      width: 420, height: 440, resizable: false, show: false, title: T('types.title'), icon: appIcon(256),
+      width: 420, height: 490, resizable: false, show: false, title: T('types.title'), icon: appIcon(256),
       backgroundColor: '#1d1c1a', autoHideMenuBar: true,
       webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
     });
@@ -1679,7 +1679,7 @@ let rpsMatch = null;   // { token, you, them } – the match being played (one a
 function openRps() {
   if (!rpsWin || rpsWin.isDestroyed()) {
     rpsWin = new BrowserWindow({
-      width: 420, height: 440, resizable: false, show: false, title: T('rps.title'), icon: appIcon(256),
+      width: 420, height: 480, resizable: false, show: false, title: T('rps.title'), icon: appIcon(256),
       backgroundColor: '#1d1c1a', autoHideMenuBar: true,
       webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
     });
@@ -1743,7 +1743,7 @@ let flipBoard = null;   // { token, cards, up: [bool] } – the board being play
 function openFlip() {
   if (!flipWin || flipWin.isDestroyed()) {
     flipWin = new BrowserWindow({
-      width: 460, height: 600, resizable: false, show: false, title: T('flip.title'), icon: appIcon(256),
+      width: 460, height: 690, resizable: false, show: false, title: T('flip.title'), icon: appIcon(256),
       backgroundColor: '#1d1c1a', autoHideMenuBar: true,
       webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
     });
