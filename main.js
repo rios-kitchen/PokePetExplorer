@@ -22,6 +22,7 @@ const TypeQuiz = require('./src/main/typequiz');
 const Rps = require('./src/main/rps');
 const Voltorb = require('./src/main/voltorb');
 const Echo = require('./src/main/echo');
+const Shuffle = require('./src/main/shuffle');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -94,7 +95,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -281,6 +282,7 @@ function snapshot() {
     rps: rpsInfo(),
     flip: flipInfo(),
     echo: echoInfo(),
+    shuffle: shuffleInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -669,6 +671,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'shuffle') {
+    // testing: Poké Ball Shuffle without daily / hourly limits, until used again or the app restarts
+    testFlags.freeShuffle = !testFlags.freeShuffle;
+    changed();
+    if (testFlags.freeShuffle) openShuffle();
     return { ok: true };
   }
   if (cmd === 'echo') {
@@ -1873,6 +1882,82 @@ function echoAnswer(token, attempt) {
   return { ok: true, right, seq: g.seq.slice(), done: true, reward, best: stats.echoBest, info: echoInfo() };
 }
 
+// ---------- Poké Ball Shuffle (藏在哪个球里) ----------
+let shuffleWin = null;
+let shuffleGame = null;   // { token, n, found, cur } – the game being played (one at a time)
+
+function openShuffle() {
+  if (!shuffleWin || shuffleWin.isDestroyed()) {
+    shuffleWin = new BrowserWindow({
+      width: 460, height: 460, resizable: false, show: false, title: T('shuffle.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) shuffleWin.setMenu(null);
+    if (process.env.POKEPET_TEST) shuffleWin.webContents.on('console-message', (e) => console.log('[shuffle]', e.message));
+    shuffleWin.loadFile(path.join(__dirname, 'src', 'shuffle', 'shuffle.html'));
+    shuffleWin.once('ready-to-show', () => { shuffleWin.show(); shuffleWin.focus(); });
+    shuffleWin.on('closed', () => { shuffleWin = null; shuffleGame = null; });
+  } else {
+    shuffleWin.show();
+    shuffleWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Poké Ball Shuffle limits as the windows see them (unlimited while testing). */
+function shuffleInfo() {
+  if (testFlags.freeShuffle) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'shuffle', today());
+}
+
+/** Start a game (counts one play): the first round, and the partner's portrait to hide in the balls. */
+async function shuffleStart() {
+  const lim = shuffleInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'shuffle', today());
+  shuffleGame = { token: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, n: 0, found: 0, cur: Shuffle.round(0) };
+  const token = shuffleGame.token;
+  changed();
+  let face = null;
+  const pet = hasPet() ? activePet() : null;
+  if (pet && pet.dex && pet.stage !== 'egg') {
+    try {
+      const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
+      if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
+    } catch { /* the window draws a Pikachu-yellow ⚡ instead */ }
+  }
+  if (!shuffleGame || shuffleGame.token !== token) return { ok: false };
+  return { ok: true, token, round: shuffleGame.cur, rounds: Shuffle.ROUNDS.length, face, info: shuffleInfo() };
+}
+
+/** Point at a ball: found → the next round (or won after the last); missed → the game ends and is rewarded. */
+function shufflePick(token, i) {
+  const g = shuffleGame;
+  if (!g || g.token !== token || !(i >= 0 && i < g.cur.balls)) return { ok: false };
+  const at = Shuffle.trace(g.cur.start, g.cur.swaps);
+  const right = i === at;
+  if (right) g.found++;
+  if (right && g.n + 1 < Shuffle.ROUNDS.length) {
+    g.n++;
+    g.cur = Shuffle.round(g.n);
+    return { ok: true, right, at, found: g.found, round: g.cur };
+  }
+  shuffleGame = null;
+  const reward = Shuffle.rewardFor(g.found);
+  const stats = store.data.stats;
+  stats.shuffleBest = Math.max(stats.shuffleBest || 0, g.found);
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    if (g.found >= 3) petEvent('shuffle-good', { n: g.found });
+  }
+  changed();
+  return { ok: true, right, at, found: g.found, done: true, reward, best: stats.shuffleBest, info: shuffleInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -2693,6 +2778,7 @@ function buildMenu() {
     { label: T('menu.rps'), click: () => openRps() },
     { label: T('menu.flip'), click: () => openFlip() },
     { label: T('menu.echo'), click: () => openEcho() },
+    { label: T('menu.shuffle'), click: () => openShuffle() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -3053,6 +3139,9 @@ function registerIpc() {
   ipcMain.handle('echo:start', () => echoStart());
   ipcMain.handle('echo:answer', (_e, token, attempt) => echoAnswer(String(token || ''), Array.isArray(attempt) ? attempt.slice(0, Echo.MAX + 1).map(String) : []));
   ipcMain.on('echo:open', () => openEcho());
+  ipcMain.handle('shuffle:start', () => shuffleStart());
+  ipcMain.handle('shuffle:pick', (_e, token, i) => shufflePick(String(token || ''), Number(i)));
+  ipcMain.on('shuffle:open', () => openShuffle());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -3897,6 +3986,27 @@ async function selfTest(dir) {
   await wait(1200);
   await shot(echoWin, '70-echo-result');
   console.log('[test] echo after a round:', store.data.stats.echoBest || 0, JSON.stringify(echoInfo()));
+  // Poké Ball Shuffle: find the partner three times, then pick a wrong ball
+  await step('shuffle', async () => openShuffle());
+  await wait(2500);
+  await shot(shuffleWin, '71-shuffle-start');
+  await step('shuffle-play', async () => {
+    const phase = () => shuffleWin.webContents.executeJavaScript('document.body.dataset.phase');
+    await shuffleWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    for (let n = 0; n < 4 && shuffleGame; n++) {
+      for (let i = 0; i < 40 && (await phase()) === 'idle'; i++) await wait(100);
+      if (n === 1) { await wait(1500); await shot(shuffleWin, '72-shuffle-swapping'); }
+      for (let i = 0; i < 100 && (await phase()) !== 'pick'; i++) await wait(100);
+      const g = shuffleGame.cur;
+      const at = Shuffle.trace(g.start, g.swaps);
+      const slot = n < 3 ? at : (at + 1) % g.balls;
+      await shuffleWin.webContents.executeJavaScript(`document.querySelector('.ball[data-slot="${slot}"]').click()`);
+      for (let i = 0; i < 40 && (await phase()) === 'wait'; i++) await wait(100);
+    }
+  });
+  await wait(1200);
+  await shot(shuffleWin, '73-shuffle-result');
+  console.log('[test] shuffle after a game:', store.data.stats.shuffleBest || 0, JSON.stringify(shuffleInfo()));
   quitting = true;
   app.quit();
 }

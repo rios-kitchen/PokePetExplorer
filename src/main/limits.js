@@ -12,7 +12,8 @@ const LIMITS = {
   types:   { day: 6, hour: 2 },    // Type Match-up rounds (10 questions each)
   rps:     { day: 8, hour: 3 },    // Fire-Water-Grass matches (first to 3)
   flip:    { day: 6, hour: 2 },    // Voltorb Flip boards
-  echo:    { day: 6, hour: 2 }     // Chatot Echo rounds
+  echo:    { day: 6, hour: 2 },    // Chatot Echo rounds
+  shuffle: { day: 6, hour: 2 }     // Poké Ball Shuffle games (5 rounds each)
 };
 const HOUR = 3600e3;
 

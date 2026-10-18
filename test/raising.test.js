@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -998,6 +998,32 @@ test('Fire-Water-Grass: the type triangle, rewards, limits', () => {
   for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'rps', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'rps', day, t0 + 5)), 'rest');
   assert.equal(Limits.LIMITS.rps.day, 8);
+});
+
+test('Poké Ball Shuffle: rounds, swaps, rewards, limits', () => {
+  const S = require('../src/main/shuffle');
+  const Limits = require('../src/main/limits');
+  assert.equal(S.ROUNDS.length, 5);
+  for (let n = 0; n < S.ROUNDS.length; n++) {
+    const r = S.round(n);
+    assert.equal(r.balls, S.ROUNDS[n].balls);
+    assert.equal(r.swaps.length, S.ROUNDS[n].swaps);
+    assert.ok(r.start >= 0 && r.start < r.balls);
+    for (const [a, b] of r.swaps) assert.ok(a !== b && a >= 0 && b >= 0 && a < r.balls && b < r.balls);
+    assert.ok(S.trace(r.start, r.swaps) >= 0 && S.trace(r.start, r.swaps) < r.balls);
+  }
+  // later rounds are harder
+  assert.ok(S.ROUNDS[4].swaps > S.ROUNDS[0].swaps && S.ROUNDS[4].ms < S.ROUNDS[0].ms);
+  assert.equal(S.trace(0, []), 0);
+  assert.equal(S.trace(0, [[0, 2]]), 2);
+  assert.equal(S.trace(0, [[0, 2], [1, 2], [0, 1]]), 0);
+  assert.equal(S.trace(1, [[0, 2]]), 1);
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map((n) => S.rewardFor(n).berries), [0, 1, 1, 2, 3, 4]);
+  assert.equal(S.rewardFor(5).won, true);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'shuffle', day, t0 + i), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'shuffle', day, t0 + 5)), 'rest');
 });
 
 test('Chatot Echo: tunes, answers, rewards, limits', () => {

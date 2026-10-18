@@ -28,6 +28,7 @@ raising, outings, fishing, battles and catching, a Pokédex.
 - [18. 火水草猜拳 ✊ · Fire-Water-Grass ✊](18-Fire-Water-Grass)
 - [19. 霹雳电球翻牌 💣 · Voltorb Flip 💣](19-Voltorb-Flip)
 - [20. 聒噪鸟学舌 🦜 · Chatot Echo 🦜](20-Chatot-Echo)
+- [21. 藏在哪个球里 🔴 · Poké Ball Shuffle 🔴](21-Poke-Ball-Shuffle)
 - [常见问题 · FAQ](FAQ)
 - [开发者 · Developers](Developers)
 
