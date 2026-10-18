@@ -144,24 +144,29 @@
     <!-- EXPEDITION -->
     <section id="tab-expedition" class="tab">
       <!-- going out to play: the tall grass (battles) and the pond -->
-      <h3 data-i18n="out.play"></h3>
-      <div class="battle-bar"></div>
-      <div class="fish-bar"><button id="goFish" class="secondary" data-i18n="dex.goFish"></button><span id="fishLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goQuiz" class="secondary" data-i18n="dex.goQuiz"></button><span id="quizLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goCatch" class="secondary" data-i18n="dex.goCatch"></button><span id="catchLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goMemory" class="secondary" data-i18n="dex.goMemory"></button><span id="memoryLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goWhack" class="secondary" data-i18n="dex.goWhack"></button><span id="whackLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goTypes" class="secondary" data-i18n="dex.goTypes"></button><span id="typesLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goRps" class="secondary" data-i18n="dex.goRps"></button><span id="rpsLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goFlip" class="secondary" data-i18n="dex.goFlip"></button><span id="flipLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goEcho" class="secondary" data-i18n="dex.goEcho"></button><span id="echoLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goShuffle" class="secondary" data-i18n="dex.goShuffle"></button><span id="shuffleLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goJump" class="secondary" data-i18n="dex.goJump"></button><span id="jumpLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goPuzzle" class="secondary" data-i18n="dex.goPuzzle"></button><span id="puzzleLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goHunt" class="secondary" data-i18n="dex.goHunt"></button><span id="huntLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goQuick" class="secondary" data-i18n="dex.goQuick"></button><span id="quickLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goLights" class="secondary" data-i18n="dex.goLights"></button><span id="lightsLeft" class="hint"></span></div>
-      <div class="fish-bar"><button id="goDitto" class="secondary" data-i18n="dex.goDitto"></button><span id="dittoLeft" class="hint"></span></div>
+      <!-- battles and mini-games: as many game cards a row as the window fits; the fold is remembered like the Dex ones (panel.js) -->
+      <details class="fold" data-fold="games" open>
+        <summary><h3 data-i18n="out.play"></h3></summary>
+        <div class="battle-bar"></div>
+        <div class="game-grid">
+          <div class="game"><button id="goFish" class="game-btn" data-dex="118"><img class="game-face" alt=""><span data-i18n="dex.goFish"></span></button><span id="fishLeft" class="hint"></span></div>
+          <div class="game"><button id="goQuiz" class="game-btn" data-dex="25"><img class="game-face" alt=""><span data-i18n="dex.goQuiz"></span></button><span id="quizLeft" class="hint"></span></div>
+          <div class="game"><button id="goCatch" class="game-btn" data-dex="143"><img class="game-face" alt=""><span data-i18n="dex.goCatch"></span></button><span id="catchLeft" class="hint"></span></div>
+          <div class="game"><button id="goMemory" class="game-btn" data-dex="65"><img class="game-face" alt=""><span data-i18n="dex.goMemory"></span></button><span id="memoryLeft" class="hint"></span></div>
+          <div class="game"><button id="goWhack" class="game-btn" data-dex="50"><img class="game-face" alt=""><span data-i18n="dex.goWhack"></span></button><span id="whackLeft" class="hint"></span></div>
+          <div class="game"><button id="goTypes" class="game-btn" data-dex="137"><img class="game-face" alt=""><span data-i18n="dex.goTypes"></span></button><span id="typesLeft" class="hint"></span></div>
+          <div class="game"><button id="goRps" class="game-btn" data-dex="1"><img class="game-face" alt=""><span data-i18n="dex.goRps"></span></button><span id="rpsLeft" class="hint"></span></div>
+          <div class="game"><button id="goFlip" class="game-btn" data-dex="100"><img class="game-face" alt=""><span data-i18n="dex.goFlip"></span></button><span id="flipLeft" class="hint"></span></div>
+          <div class="game"><button id="goEcho" class="game-btn" data-dex="441"><img class="game-face" alt=""><span data-i18n="dex.goEcho"></span></button><span id="echoLeft" class="hint"></span></div>
+          <div class="game"><button id="goShuffle" class="game-btn" data-dex="partner"><img class="game-face" alt=""><span data-i18n="dex.goShuffle"></span></button><span id="shuffleLeft" class="hint"></span></div>
+          <div class="game"><button id="goJump" class="game-btn" data-dex="129"><img class="game-face" alt=""><span data-i18n="dex.goJump"></span></button><span id="jumpLeft" class="hint"></span></div>
+          <div class="game"><button id="goPuzzle" class="game-btn" data-dex="partner"><img class="game-face" alt=""><span data-i18n="dex.goPuzzle"></span></button><span id="puzzleLeft" class="hint"></span></div>
+          <div class="game"><button id="goHunt" class="game-btn" data-dex="partner"><img class="game-face" alt=""><span data-i18n="dex.goHunt"></span></button><span id="huntLeft" class="hint"></span></div>
+          <div class="game"><button id="goQuick" class="game-btn" data-dex="partner"><img class="game-face" alt=""><span data-i18n="dex.goQuick"></span></button><span id="quickLeft" class="hint"></span></div>
+          <div class="game"><button id="goLights" class="game-btn" data-dex="170"><img class="game-face" alt=""><span data-i18n="dex.goLights"></span></button><span id="lightsLeft" class="hint"></span></div>
+          <div class="game"><button id="goDitto" class="game-btn" data-dex="132"><img class="game-face" alt=""><span data-i18n="dex.goDitto"></span></button><span id="dittoLeft" class="hint"></span></div>
+        </div>
+      </details>
       <h3 data-i18n="out.expeditions"></h3>
       <div id="expStats" class="exp-stats"></div>
       <div id="expActive"></div>

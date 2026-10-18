@@ -4,6 +4,7 @@
   const api = window.api;
   const I18N = window.PokeI18N;
   const Sound = window.PokeSound;
+  const Anim = window.PokeAnim;
   const $ = (s) => document.querySelector(s);
 
   const GRADE = ['jump.g0', 'jump.g1', 'jump.g2', 'jump.g3'];
@@ -82,6 +83,7 @@
     round.height = res.height;
     const karp = $('#karp');
     Sound.play(SONG[res.points]);
+    if (player) player.play(res.points === 0 ? 'Hurt' : 'Hop');
     if (res.points === 0) karp.classList.add('splash');
     else karp.style.transform = `translateY(-${Math.round(20 + res.points * 42)}px)`;
     $('#height').textContent = `${metres(res.cm)} m`;
@@ -107,6 +109,18 @@
     button(t('jump.again'));
   }
   window.__stopAt = (pos) => stop(Math.max(0, Math.min(1, pos)));   // the self-test aims for the target
+
+  // Magikarp's animated sprite; its portrait (from jump:start), then 🐟, if there's no sprite
+  let player = null;
+  async function karpSprite() {
+    const sp = await Anim.load(129, false, ['Idle', 'Hop', 'Hurt']);
+    if (!sp || player) return !!player;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 96;
+    $('#karp').replaceChildren(cv);
+    player = new Anim.Player(cv, sp, 0.8);
+    return true;
+  }
 
   function button(label) {
     $('#next').textContent = label;
@@ -136,7 +150,7 @@
     }
     showCount(res.info);
     $('#next').classList.add('hidden');
-    if (res.face) { const img = document.createElement('img'); img.src = res.face; img.alt = ''; $('#karp').replaceChildren(img); }
+    if (res.face && !(await karpSprite())) { const img = document.createElement('img'); img.src = res.face; img.alt = ''; $('#karp').replaceChildren(img); }
     round = { token: res.token, n: 0, jumps: res.jumps, jump: res.jump, total: 0, height: 0, t0: 0, pos: 0 };
     Sound.play('switch');
     await sleep(300);
@@ -161,5 +175,6 @@
     labels();
     showCount(state.jump);
     idle(t('jump.rules'));
+    karpSprite();
   })();
 })();

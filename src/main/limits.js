@@ -6,20 +6,20 @@ const LIMITS = {
   grass:   { day: 16, hour: 3 },   // wild encounters in the tall grass
   fishing: { day: 20, hour: 6 },   // bites (something on the line, landed or not)
   quiz:    { day: 12, hour: 4 },   // Who's That Pokémon? questions
-  catch:   { day: 6, hour: 2 },    // Berry Catch rounds
-  memory:  { day: 6, hour: 2 },    // Memory Match boards
-  whack:   { day: 6, hour: 2 },    // Whack-a-Diglett rounds
-  types:   { day: 6, hour: 2 },    // Type Match-up rounds (10 questions each)
+  catch:   { day: 6, hour: 3 },    // Berry Catch rounds
+  memory:  { day: 6, hour: 3 },    // Memory Match boards
+  whack:   { day: 6, hour: 3 },    // Whack-a-Diglett rounds
+  types:   { day: 6, hour: 3 },    // Type Match-up rounds (10 questions each)
   rps:     { day: 8, hour: 3 },    // Fire-Water-Grass matches (first to 3)
-  flip:    { day: 6, hour: 2 },    // Voltorb Flip boards
-  echo:    { day: 6, hour: 2 },    // Chatot Echo rounds
-  shuffle: { day: 6, hour: 2 },    // Poké Ball Shuffle games (5 rounds each)
-  jump:    { day: 6, hour: 2 },    // Magikarp Jump rounds (5 jumps each)
-  puzzle:  { day: 6, hour: 2 },    // Slide Puzzle boards
-  hunt:    { day: 6, hour: 2 },    // Shiny Hunt rounds (30 seconds each)
-  quick:   { day: 6, hour: 2 },    // Quick Attack rounds (5 draws each)
-  lights:  { day: 6, hour: 2 },    // Chinchou Lights ponds
-  ditto:   { day: 6, hour: 2 }     // Ditto Copy games (5 patterns each)
+  flip:    { day: 6, hour: 3 },    // Voltorb Flip boards
+  echo:    { day: 6, hour: 3 },    // Chatot Echo rounds
+  shuffle: { day: 6, hour: 3 },    // Poké Ball Shuffle games (5 rounds each)
+  jump:    { day: 6, hour: 3 },    // Magikarp Jump rounds (5 jumps each)
+  puzzle:  { day: 6, hour: 3 },    // Slide Puzzle boards
+  hunt:    { day: 6, hour: 3 },    // Shiny Hunt rounds (30 seconds each)
+  quick:   { day: 6, hour: 3 },    // Quick Attack rounds (5 draws each)
+  lights:  { day: 6, hour: 3 },    // Chinchou Lights ponds
+  ditto:   { day: 6, hour: 3 }     // Ditto Copy games (5 patterns each)
 };
 const HOUR = 3600e3;
 

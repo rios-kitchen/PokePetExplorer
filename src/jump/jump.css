@@ -11,6 +11,7 @@ h1 { margin: 12px 0 2px; text-align: center; font-size: 18px; color: var(--yello
 .karp { position: absolute; left: 50%; bottom: 14px; width: 72px; height: 72px; margin-left: -36px; z-index: 1; display: flex;
   align-items: center; justify-content: center; font-size: 46px; transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1); }
 .karp img { width: 72px; height: 72px; image-rendering: pixelated; border-radius: 50%; }
+.karp canvas { width: 96px; height: 96px; flex: none; image-rendering: pixelated; }
 .karp.splash { animation: wiggle 0.12s linear 4 alternate; }
 @keyframes wiggle { from { rotate: -8deg; } to { rotate: 8deg; } }
 .height { position: absolute; right: 10px; top: 8px; font-size: 18px; font-weight: 900; color: #1d3f63; z-index: 2; }

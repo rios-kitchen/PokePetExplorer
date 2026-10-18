@@ -13,7 +13,7 @@
   const t = (k, v) => I18N.t(L(), k, v);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  let game = null;   // { token, n, found, rounds, face, round }
+  let game = null;   // { token, n, found, rounds, face, happy, sad, round }
 
   function phase(p) { document.body.dataset.phase = p; }
 
@@ -108,7 +108,7 @@
     }
     showCount(res.info);
     $('#next').classList.add('hidden');
-    game = { token: res.token, n: 0, found: 0, rounds: res.rounds, face: res.face, round: null };
+    game = { token: res.token, n: 0, found: 0, rounds: res.rounds, face: res.face, happy: res.happy, sad: res.sad, round: null };
     Sound.play('switch');
     play(res.round);
   }
@@ -119,8 +119,11 @@
     const res = await api.invoke('shuffle:pick', game.token, slot);
     if (!res.ok) { idle(t('shuffle.rules')); return; }
     const mine = ballAt(slot), real = ballAt(res.at);
+    // found: the partner pops out happy; missed: it peeks out of the real ball looking sad
+    const mood = (ball, url) => { const img = ball.querySelector('.face img'); if (img && url) img.src = url; };
+    if (res.right) mood(mine, game.happy);
     mine.classList.add('open', res.right ? 'right' : 'wrong');
-    if (!res.right) { await sleep(500); real.classList.add('open', 'right'); }
+    if (!res.right) { await sleep(500); mood(real, game.sad); real.classList.add('open', 'right'); }
     game.found = res.found;
     score();
     if (res.right) Sound.play('chime'); else Sound.play('buzz');

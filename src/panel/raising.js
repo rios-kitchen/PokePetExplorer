@@ -330,7 +330,27 @@ window.PanelRaising = function PanelRaising(env) {
   }
 
   // battles: the grass (with today's / this hour's encounters left) and a wild Pokémon waiting from an outing
+  // the mini-game cards: each shows its Pokémon (the partner for the partner games, Pikachu while there's only an egg)
+  const gameFaces = {};
+  function renderGameFaces(state) {
+    const id = state.settings.pokemon, rec = (state.pets || {})[id] || {};
+    const own = rec.stage === 'egg' ? null : (rec.species && rec.species.dex) || ((state.custom || []).find((c) => c.id === id) || {}).dex;
+    const shiny = !!(own && state.skins && state.skins[id] && state.skins[id].shiny);
+    for (const btn of document.querySelectorAll('.game-btn')) {
+      const partner = btn.dataset.dex === 'partner';
+      const dex = partner ? own || 25 : Number(btn.dataset.dex);
+      const sh = partner && own ? shiny : false;
+      const k = `${dex}${sh ? 's' : ''}`;
+      if (btn.dataset.face === k) continue;
+      btn.dataset.face = k;
+      gameFaces[k] ||= api.invoke('diary:portrait', dex, 'Normal', sh).catch(() => null);
+      const img = btn.querySelector('.game-face');
+      gameFaces[k].then((url) => { if (url && btn.dataset.face === k) { img.src = url; img.classList.add('on'); } });
+    }
+  }
+
   function renderBattleBar(state) {
+    renderGameFaces(state);
     const f = state.fishing;
     const fm = (at) => Math.max(1, Math.ceil((at - Date.now()) / 60000));
     $('#fishLeft').textContent = f.left > 0 || f.dayLeft <= 0 ? (f.dayLeft > 0 ? t('fish.left', { n: f.dayLeft, max: f.max, h: f.hourLeft, hmax: f.hourMax }) : t('fish.tired'))

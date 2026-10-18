@@ -28,12 +28,23 @@
     $('#hint').textContent = t('flip.hint');
   }
 
+  // Voltorb's portrait for the bombs, the marks and the row/column hints (💣 / 💥 until it's downloaded)
+  let voltUrl = null;
+  const voltMark = (fallback) => {
+    if (!voltUrl) return document.createTextNode(fallback);
+    const img = document.createElement('img');
+    img.className = 'voltorb';
+    img.src = voltUrl;
+    img.alt = '';
+    return img;
+  };
+
   const hintCell = (h, k) => {
     const d = document.createElement('div');
     d.className = `hintcell c${k}`;
     d.innerHTML = '<span class="sum"></span><span class="v"></span>';
     d.querySelector('.sum').textContent = h ? String(h.sum).padStart(2, '0') : '';
-    d.querySelector('.v').textContent = h ? `💣${h.volts}` : '';
+    if (h) d.querySelector('.v').append(voltMark('💣'), String(h.volts));
     return d;
   };
 
@@ -50,7 +61,7 @@
         b.dataset.i = i;
         b.disabled = !hints;
         b.addEventListener('click', () => turn(i));
-        b.addEventListener('contextmenu', (e) => { e.preventDefault(); if (!b.classList.contains('up')) { b.classList.toggle('memo'); b.textContent = b.classList.contains('memo') ? '💣' : ''; } });
+        b.addEventListener('contextmenu', (e) => { e.preventDefault(); if (!b.classList.contains('up')) { b.classList.toggle('memo'); b.replaceChildren(...(b.classList.contains('memo') ? [voltMark('💣')] : [])); } });
         board.appendChild(b);
         tiles.push(b);
       }
@@ -65,7 +76,7 @@
   function face(b, v) {
     b.classList.remove('memo');
     b.classList.add('up');
-    if (v === 0) { b.classList.add('volt'); b.textContent = '💥'; } else b.textContent = String(v);
+    if (v === 0) { b.classList.add('volt'); b.replaceChildren(voltMark('💥')); } else b.textContent = String(v);
     b.disabled = true;
   }
 
@@ -132,5 +143,6 @@
     labels();
     showCount(state.flip);
     idle(t('flip.rules'));
+    voltUrl = await api.invoke('diary:portrait', 100, 'Normal', false).catch(() => null);
   })();
 })();

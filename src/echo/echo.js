@@ -4,10 +4,12 @@
   const api = window.api;
   const I18N = window.PokeI18N;
   const Sound = window.PokeSound;
+  const Anim = window.PokeAnim;
   const $ = (s) => document.querySelector(s);
 
   const PADS = ['fire', 'water', 'grass', 'electric'];
-  const ICON = { fire: '🔥', water: '💧', grass: '🌿', electric: '⚡' };
+  const ICON = { fire: '🔥', water: '💧', grass: '🌿', electric: '⚡' };   // until the pad's Pokémon has been downloaded
+  const DEX = { fire: 4, water: 7, grass: 1, electric: 25 };   // Charmander, Squirtle, Bulbasaur, Pikachu
   const SONG = { fire: 'padFire', water: 'padWater', grass: 'padGrass', electric: 'padElectric' };
 
   let state = null;
@@ -36,12 +38,26 @@
 
   const padEl = (pad) => document.querySelector(`.pad[data-pad="${pad}"]`);
 
-  async function flash(pad, ms) {
+  // light = false: only the note sounds (Chatot's tune – you have to listen, the pads stay dark)
+  async function flash(pad, ms, light = true) {
     const el = padEl(pad);
-    el.classList.add('lit');
+    if (light) el.classList.add('lit');
     Sound.play(SONG[pad]);
     await sleep(ms);
     el.classList.remove('lit');
+  }
+
+  // before a game: each pad once, lit, so you know how they sound
+  async function intro() {
+    phase('intro');
+    verdict(t('echo.intro'));
+    await sleep(400);
+    for (const pad of PADS) {
+      if (!game) return;
+      await flash(pad, 520);
+      await sleep(160);
+    }
+    await sleep(500);
   }
 
   function score() {
@@ -77,7 +93,7 @@
     await sleep(600);
     for (const pad of game.seq) {
       if (!game) return;
-      await flash(pad, game.ms);
+      await flash(pad, game.ms, false);
       await sleep(Math.round(game.ms * 0.35));
     }
     $('#bird').classList.remove('sing');
@@ -101,7 +117,8 @@
     game = { token: res.token, seq: res.seq, ms: res.ms, input: [] };
     Sound.play('switch');
     await sleep(400);
-    sing();
+    await intro();
+    if (game) sing();
   }
 
   function press(pad) {
@@ -150,7 +167,17 @@
     const el = document.createElement('div');
     el.className = 'pad';
     el.dataset.pad = p;
-    el.append(ICON[p], document.createElement('small'));
+    const icon = document.createElement('span');
+    icon.className = 'icon';
+    icon.textContent = ICON[p];
+    api.invoke('diary:portrait', DEX[p], 'Normal', false).catch(() => null).then((url) => {
+      if (!url) return;
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      icon.replaceChildren(img);
+    });
+    el.append(icon, document.createElement('small'));
     el.addEventListener('mousedown', () => press(p));
     return el;
   }));
@@ -171,5 +198,13 @@
     labels();
     showCount(state.echo);
     idle(t('echo.rules'));
+    // Chatot itself in the middle, animated, instead of 🦜
+    const sp = await Anim.load(441, false, ['Idle']);
+    if (sp) {
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 64;
+      $('#bird').replaceChildren(cv);
+      new Anim.Player(cv, sp, 0.85);
+    }
   })();
 })();

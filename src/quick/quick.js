@@ -4,6 +4,7 @@
   const api = window.api;
   const I18N = window.PokeI18N;
   const Sound = window.PokeSound;
+  const Anim = window.PokeAnim;
   const $ = (s) => document.querySelector(s);
 
   let state = null;
@@ -39,14 +40,29 @@
     $('#score').textContent = game ? t('quick.score', { n: Math.min(game.n + 1, game.draws), max: game.draws, p: game.points }) : '';
   }
 
-  function face(url) {
-    if (url) {
+  // the partner's animated sprite (Pikachu while it's still an egg); its portrait, then ⚡, if there's no sprite
+  let player = null, shownKey = '';
+  async function face(url) {
+    const p = Anim.partnerOf(state) || { dex: 25, shiny: false };
+    const key = `${p.dex}${p.shiny ? 's' : ''}`;
+    if (player && shownKey === key) return;
+    shownKey = key;
+    const sp = await Anim.load(p.dex, p.shiny, ['Idle', 'Attack', 'Hurt', 'Charge']);
+    if (shownKey !== key) return;
+    if (player) { player.stop(); player = null; }
+    if (sp) {
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 120;
+      $('#face').replaceChildren(cv);
+      player = new Anim.Player(cv, sp, 0.7);
+    } else if (url) {
       const img = document.createElement('img');
       img.src = url;
       img.alt = '';
       $('#face').replaceChildren(img);
     } else $('#face').textContent = '⚡';
   }
+  const act = (name) => { if (player) player.play(name); };
 
   function dots(draws, grades = []) {
     $('#dots').replaceChildren(...Array.from({ length: draws }, (_, i) => {
@@ -66,9 +82,11 @@
     phase('wait');
     const res = await api.invoke('quick:ready', game.token);
     if (!res.ok || !game) return;
+    if (player) player.idle();
     goTimer = setTimeout(() => {
       if (!game || document.body.dataset.phase !== 'wait') return;
       phase('go');
+      act('Charge');
       verdict(t('quick.go'), 'win');
       Sound.play('switch');
       lateTimer = setTimeout(hit, LATE_MS);
@@ -91,6 +109,7 @@
     dots(game.draws, game.grades);
     const good = res.grade === 'great' || res.grade === 'good' || res.grade === 'ok';
     document.body.classList.toggle('hit-good', good);
+    act(good ? 'Attack' : 'Hurt');
     $('#ms').textContent = res.ms === null ? t('quick.tooSoon') : t('quick.ms', { ms: res.ms });
     verdict(t(`quick.${res.grade}`), good ? 'win' : 'lose');
     Sound.play(res.grade === 'great' ? 'chime' : good ? 'blip' : 'buzz');

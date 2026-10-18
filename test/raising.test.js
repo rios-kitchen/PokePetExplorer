@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights', 'ditto']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights', 'ditto', 'puzzlehint']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights', 'ditto']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack', 'lights', 'ditto', 'puzzlehint']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -884,12 +884,13 @@ test('Berry Catch: points, rewards, limits', () => {
   const early = count(0), late = count(1);
   assert.ok(late.poop > early.poop && late.star > early.star && late.berry < early.berry);
   for (const k of Object.keys(early)) assert.ok(k in C.POINTS, k);
-  // limits: 6 rounds a day, 2 an hour
+  // limits: 6 rounds a day, 3 an hour
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   assert.equal(Limits.use(data, 'catch', day, t0), true);
   assert.equal(Limits.use(data, 'catch', day, t0 + 1), true);
-  assert.equal(Limits.blocked(Limits.info(data, 'catch', day, t0 + 2)), 'rest');
+  assert.equal(Limits.use(data, 'catch', day, t0 + 2), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'catch', day, t0 + 3)), 'rest');
   assert.equal(Limits.LIMITS.catch.day, 6);
 });
 
@@ -908,12 +909,13 @@ test('Memory Match: dealing, rewards, limits', () => {
   assert.equal(M.rewardFor(20).berries, 2);
   assert.equal(M.rewardFor(60).berries, 1);
   assert.equal(M.rewardFor(60).xp, 10);
-  // limits: 6 games a day, 2 an hour
+  // limits: 6 games a day, 3 an hour
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   assert.equal(Limits.use(data, 'memory', day, t0), true);
   assert.equal(Limits.use(data, 'memory', day, t0 + 1), true);
-  assert.equal(Limits.blocked(Limits.info(data, 'memory', day, t0 + 2)), 'rest');
+  assert.equal(Limits.use(data, 'memory', day, t0 + 2), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'memory', day, t0 + 3)), 'rest');
   assert.equal(Limits.LIMITS.memory.day, 6);
 });
 
@@ -945,7 +947,8 @@ test('Type Match-up: questions, answers, rewards, limits', () => {
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   assert.equal(Limits.use(data, 'types', day, t0), true);
   assert.equal(Limits.use(data, 'types', day, t0 + 1), true);
-  assert.equal(Limits.blocked(Limits.info(data, 'types', day, t0 + 2)), 'rest');
+  assert.equal(Limits.use(data, 'types', day, t0 + 2), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'types', day, t0 + 3)), 'rest');
 });
 
 test('Voltorb Flip: boards, hints, clearing, rewards, limits', () => {
@@ -976,7 +979,8 @@ test('Voltorb Flip: boards, hints, clearing, rewards, limits', () => {
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   assert.equal(Limits.use(data, 'flip', day, t0), true);
   assert.equal(Limits.use(data, 'flip', day, t0 + 1), true);
-  assert.equal(Limits.blocked(Limits.info(data, 'flip', day, t0 + 2)), 'rest');
+  assert.equal(Limits.use(data, 'flip', day, t0 + 2), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'flip', day, t0 + 3)), 'rest');
 });
 
 test('Fire-Water-Grass: the type triangle, rewards, limits', () => {
@@ -1018,7 +1022,7 @@ test('Shiny Hunt: boards, rewards, limits', () => {
   assert.deepEqual([0, 3, 8, 14, 20, 30].map((n) => H.rewardFor(n).berries), [0, 1, 2, 3, 4, 4]);
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
-  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'hunt', day, t0 + i), true);
+  for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'hunt', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'hunt', day, t0 + 5)), 'rest');
 });
 
@@ -1040,7 +1044,7 @@ test('Ditto Copy: patterns, checks, rewards, limits', () => {
   assert.deepEqual([0, 1, 2, 3, 4, 5].map((n) => D.rewardFor(n).berries), [0, 1, 2, 2, 3, 4]);
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
-  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'ditto', day, t0 + i), true);
+  for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'ditto', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'ditto', day, t0 + 5)), 'rest');
 });
 
@@ -1066,7 +1070,7 @@ test('Chinchou Lights: taps, scrambles, replays, rewards, limits', () => {
   assert.deepEqual([6, 10, 16, 40].map((n) => C.rewardFor(n, 6).berries), [4, 3, 2, 1]);
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
-  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'lights', day, t0 + i), true);
+  for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'lights', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'lights', day, t0 + 5)), 'rest');
 });
 
@@ -1085,7 +1089,7 @@ test('Quick Attack: waits, grades, rewards, limits', () => {
   assert.equal(Q.rewardFor(15, 200).best, 200);
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
-  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'quick', day, t0 + i), true);
+  for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'quick', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'quick', day, t0 + 5)), 'rest');
 });
 
@@ -1109,10 +1113,27 @@ test('Slide Puzzle: shuffles, slides, replays, rewards, limits', () => {
   // a made-up move list is refused
   assert.equal(Z.replay(Z.solved(), [0]), null);
   assert.equal(Z.replay(Z.solved(), [NaN]), null);
-  assert.deepEqual([10, 30, 31, 60, 100, 101].map((n) => Z.rewardFor(n).berries), [4, 4, 3, 3, 2, 1]);
+  // with a hint used: by moves only; without any: 2 more berries
+  assert.deepEqual([10, 30, 31, 60, 100, 101].map((n) => Z.rewardFor(n, 1).berries), [4, 4, 3, 3, 2, 1]);
+  assert.deepEqual([10, 30, 31, 60, 100, 101].map((n) => Z.rewardFor(n, 0).berries), [6, 6, 5, 5, 4, 3]);
+  assert.equal(Z.rewardFor(20, 0).clean, true);
+  assert.equal(Z.rewardFor(20, 3).clean, false);
+  assert.ok(Z.rewardFor(20, 0).xp > Z.rewardFor(20, 1).xp);
+  // a hint: the next few moves of a shortest solution, from wherever the board is now
+  assert.equal(Z.HINTS, 3);
+  for (let k = 0; k < 3; k++) {
+    const b = Z.shuffle();
+    const steps = Z.hint(b);
+    const full = Z.solve(b);
+    assert.deepEqual(steps, full.slice(0, Z.HINT_STEPS));
+    const after = Z.replay(b, steps);
+    assert.ok(after);
+    assert.equal(Z.solve(after).length, full.length - steps.length);
+  }
+  assert.deepEqual(Z.hint(Z.solved()), []);
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
-  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'puzzle', day, t0 + i), true);
+  for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'puzzle', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'puzzle', day, t0 + 5)), 'rest');
 });
 
@@ -1135,7 +1156,7 @@ test('Magikarp Jump: targets, grades, rewards, limits', () => {
   assert.deepEqual([0, 3, 6, 10, 14, 15].map((n) => J.rewardFor(n).berries), [0, 1, 2, 3, 4, 4]);
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
-  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'jump', day, t0 + i), true);
+  for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'jump', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'jump', day, t0 + 5)), 'rest');
 });
 
@@ -1161,7 +1182,7 @@ test('Poké Ball Shuffle: rounds, swaps, rewards, limits', () => {
   assert.equal(S.rewardFor(5).won, true);
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
-  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'shuffle', day, t0 + i), true);
+  for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'shuffle', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'shuffle', day, t0 + 5)), 'rest');
 });
 
@@ -1184,7 +1205,7 @@ test('Chatot Echo: tunes, answers, rewards, limits', () => {
   assert.equal(E.rewardFor(E.MAX - 1).won, false);
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
-  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'echo', day, t0 + i), true);
+  for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'echo', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'echo', day, t0 + 5)), 'rest');
   assert.equal(Limits.LIMITS.echo.day, 6);
 });
@@ -1206,5 +1227,6 @@ test('Whack-a-Diglett: points, rewards, limits', () => {
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   assert.equal(Limits.use(data, 'whack', day, t0), true);
   assert.equal(Limits.use(data, 'whack', day, t0 + 1), true);
-  assert.equal(Limits.blocked(Limits.info(data, 'whack', day, t0 + 2)), 'rest');
+  assert.equal(Limits.use(data, 'whack', day, t0 + 2), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'whack', day, t0 + 3)), 'rest');
 });

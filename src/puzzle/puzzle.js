@@ -12,7 +12,7 @@
   const L = () => (state ? state.settings.lang : 'en');
   const t = (k, v) => I18N.t(L(), k, v);
 
-  let game = null;   // { token, board, moves, face }
+  let game = null;   // { token, board, moves, face, hints (left), used, guide (cells still to click) }
   let cellPx = 88;
 
   function phase(p) { document.body.dataset.phase = p; }
@@ -84,6 +84,40 @@
     return out;
   }
 
+  // hints: the tile to slide next glows, and keeps glowing for the next few moves while you follow it
+  function hintLabel() {
+    const h = $('#hint');
+    h.classList.toggle('hidden', !game);
+    if (!game) return;
+    h.textContent = t('puzzle.hint', { n: game.hints > 90 ? '∞' : game.hints });
+    h.disabled = game.hints <= 0 || document.body.dataset.phase !== 'play';
+  }
+
+  function glow() {
+    for (const el of document.querySelectorAll('.tile.next')) el.classList.remove('next');
+    const cell = game && game.guide[0];
+    if (cell === undefined) return;
+    const el = document.querySelector(`.tile[data-cell="${cell}"]`);
+    if (el) el.classList.add('next');
+  }
+
+  async function hint() {
+    if (!game || game.hints <= 0 || document.body.dataset.phase !== 'play') return;
+    $('#hint').disabled = true;
+    const res = await api.invoke('puzzle:hint', game.token, game.moves);
+    if (!game) return;
+    if (res.ok) {
+      game.hints = res.left;
+      game.used++;
+      game.guide = res.steps;
+      Sound.play('chime');
+      verdict(t('puzzle.hinted', { n: res.steps.length }));
+      glow();
+    }
+    hintLabel();
+  }
+  $('#hint').addEventListener('click', hint);
+
   function move(cell) {
     if (!game || document.body.dataset.phase !== 'play') return;
     const gap = game.board.indexOf(BLANK);
@@ -94,6 +128,8 @@
     el.dataset.cell = gap;
     Object.assign(el.style, at(gap));
     game.moves.push(cell);
+    if (game.guide[0] === cell) game.guide.shift(); else game.guide = [];
+    glow();
     Sound.play('blip');
     score();
     if (game.board.every((v, i) => v === i)) finish();
@@ -101,15 +137,17 @@
 
   async function finish() {
     phase('wait');
+    $('#hint').disabled = true;
     const res = await api.invoke('puzzle:finish', game.token, game.moves);
     if (!res.ok) { idle(t('puzzle.rules')); return; }
     phase('done');
     if (game.face) draw(game.board, game.face, true);   // the missing piece drops in
     Sound.play('fanfare');
     const r = res.reward;
-    verdict(t('puzzle.done', { n: r.moves, b: r.berries, xp: r.xp, best: res.best }), 'win');
+    verdict(t(r.clean ? 'puzzle.doneClean' : 'puzzle.done', { n: r.moves, b: r.berries, xp: r.xp, best: res.best, h: r.hints }), 'win');
     showCount(res.info);
     game = null;
+    hintLabel();
     button(t('puzzle.again'));
   }
 
@@ -124,6 +162,7 @@
     game = null;
     phase('idle');
     score();
+    hintLabel();
     draw([0, 1, 2, 3, 4, 5, 6, 7, 8], null);
     preview(null);
     verdict(text);
@@ -141,13 +180,14 @@
     }
     showCount(res.info);
     $('#next').classList.add('hidden');
-    game = { token: res.token, board: res.board, moves: [], face: res.face };
+    game = { token: res.token, board: res.board, moves: [], face: res.face, hints: res.hints, used: 0, guide: [] };
     draw(game.board, game.face);
     preview(game.face);
     score();
     verdict(t('puzzle.go'));
     Sound.play('switch');
     phase('play');
+    hintLabel();
   }
 
   api.on('state', (s) => {

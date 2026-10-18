@@ -218,6 +218,21 @@
       const st = el.querySelector('.st');
       st.className = `st ${m.status || ''}`; st.textContent = m.status ? t(`status.${m.status}`) : '';
       const hp = el.querySelector('.hp'); if (hp) hp.textContent = `${Math.max(0, m.hp)}/${m.maxHp}`;
+      // both sides' types and ability, so you can plan your moves
+      const tags = (m.types || []).map((ty) => {
+        const c = document.createElement('span');
+        c.className = 'tag';
+        c.style.background = TYPE_COLORS[ty] || '#777';
+        c.textContent = t(`type.${ty}`);
+        return c;
+      });
+      if (m.ability) {
+        const a = document.createElement('span');
+        a.className = 'ability';
+        a.textContent = t('poke.ability', { name: m.ability.names[L()] || m.ability.names.en });
+        tags.push(a);
+      }
+      el.querySelector('.tags').replaceChildren(...tags);
     };
     box($('#wildBox'), shown.wild);
     box($('#meBox'), shown.party[shown.active]);

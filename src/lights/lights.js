@@ -4,6 +4,7 @@
   const api = window.api;
   const I18N = window.PokeI18N;
   const Sound = window.PokeSound;
+  const Anim = window.PokeAnim;
   const $ = (s) => document.querySelector(s);
 
   const SIZE = 4;
@@ -46,12 +47,21 @@
     return out;
   }
 
-  function draw(board, face) {
+  // Chinchou's animated sprite in every cell; its portrait, then 💡, if there's no sprite
+  let sprite = null, portrait = null, players = [];
+  function draw(board, face = portrait) {
+    for (const p of players) p.stop();
+    players = [];
     const cells = board.map((on, i) => {
       const el = document.createElement('div');
       el.className = `lamp ${on ? 'on' : 'off'}`;
       el.dataset.cell = i;
-      if (face) {
+      if (sprite) {
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = 64;
+        el.append(cv);
+        players.push(new Anim.Player(cv, sprite, 0.85));
+      } else if (face) {
         const img = document.createElement('img');
         img.src = face;
         img.alt = '';
@@ -103,7 +113,7 @@
     game = null;
     phase('idle');
     score();
-    draw([true, false, true, false, false, true, false, true, true, false, true, false, false, true, false, true], null);
+    draw([true, false, true, false, false, true, false, true, true, false, true, false, false, true, false, true]);
     verdict(text);
     button(t('lights.start'));
   }
@@ -120,7 +130,7 @@
     showCount(res.info);
     $('#next').classList.add('hidden');
     game = { token: res.token, face: res.face, board: res.board, par: res.par, taps: [], busy: false };
-    draw(game.board, game.face);
+    draw(game.board, game.face || portrait);
     verdict(t('lights.go'));
     Sound.play('switch');
     phase('play');
@@ -139,5 +149,8 @@
     labels();
     showCount(state.lights);
     idle(t('lights.rules'));
+    sprite = await Anim.load(170, false, ['Idle']);
+    if (!sprite) portrait = await api.invoke('diary:portrait', 170, 'Normal', false).catch(() => null);
+    if (!game && (sprite || portrait)) idle(t('lights.rules'));
   })();
 })();
