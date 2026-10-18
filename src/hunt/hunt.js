@@ -55,7 +55,8 @@
         el.append(img);
       } else {
         el.classList.add('dot');
-        el.style.setProperty('--c', `hsl(${48 + (odd ? board.hue : 0)}, 85%, 55%)`);
+        // plain dots are far easier to tell apart than a whole sprite, so their colours differ less
+        el.style.setProperty('--c', `hsl(${48 + (odd ? Math.max(6, Math.round(board.hue * 0.4)) : 0)}, 85%, 55%)`);
       }
       el.addEventListener('click', () => pick(i));
       cells.push(el);

@@ -217,6 +217,8 @@ const hasPet = () => !!S().pokemon && store.data.custom.some((c) => c.id === S()
 // before the starter is chosen these hand out throw-away records, so nothing is saved for "no one"
 const careOfActive = () => (hasPet() ? Care.careOf(store.data, S().pokemon) : Care.freshCare());
 const activePet = () => (hasPet() ? petOf(store.data, S().pokemon) : freshPet());
+/** The partner's team entry ({ id, dex, names }), or null while there is none or it is still an egg. */
+const partnerEntry = () => (hasPet() ? petList().find((p) => p.id === S().pokemon && !p.egg && p.dex) || null : null);
 
 function petName(id = S().pokemon) {
   const p = petList().find((x) => x.id === id);
@@ -1948,8 +1950,8 @@ async function shuffleStart() {
   const token = shuffleGame.token;
   changed();
   let face = null;
-  const pet = hasPet() ? activePet() : null;
-  if (pet && pet.dex && pet.stage !== 'egg') {
+  const pet = partnerEntry();
+  if (pet) {
     try {
       const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
       if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
@@ -2101,8 +2103,8 @@ async function puzzleStart() {
   const token = puzzleGame.token;
   changed();
   let face = null;
-  const pet = hasPet() ? activePet() : null;
-  if (pet && pet.dex && pet.stage !== 'egg') {
+  const pet = partnerEntry();
+  if (pet) {
     try {
       const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
       if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
@@ -2173,8 +2175,8 @@ async function huntStart() {
   const token = huntGame.token;
   changed();
   let face = null;
-  const pet = hasPet() ? activePet() : null;
-  if (pet && pet.dex && pet.stage !== 'egg') {
+  const pet = partnerEntry();
+  if (pet) {
     try {
       const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir());
       if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
@@ -4305,6 +4307,7 @@ async function selfTest(dir) {
   await step('puzzle-play', async () => {
     await puzzleWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
     for (let i = 0; i < 40 && !(puzzleGame && (await puzzleWin.webContents.executeJavaScript('document.body.dataset.phase')) === 'play'); i++) await wait(100);
+    await wait(600);   // let the shuffled tiles paint before the screenshot
     await shot(puzzleWin, '78-puzzle-shuffled');
     const path = puzzleGame ? Puzzle.solve(puzzleGame.board) : [];
     for (const cell of path) {
