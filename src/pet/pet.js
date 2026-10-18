@@ -345,6 +345,12 @@
       if (!P.playAnim(['Hop', 'Pose'])) P.jump(1);
       if (!P.bubbleBusy()) P.showBubble(say('catchGood', { n: e.n }), { ms: 2500 });
     },
+    'types-good'(e) {
+      if (P.isAway()) return;
+      P.hearts(2);
+      if (!P.playAnim(['Nod', 'Hop'])) P.jump(1);
+      if (!P.bubbleBusy()) P.showBubble(say('typesGood', { n: e.n }), { ms: 2500 });
+    },
     'whack-good'(e) {
       if (P.isAway()) return;
       P.hearts(2);

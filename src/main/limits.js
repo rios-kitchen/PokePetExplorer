@@ -8,7 +8,8 @@ const LIMITS = {
   quiz:    { day: 12, hour: 4 },   // Who's That Pokémon? questions
   catch:   { day: 6, hour: 2 },    // Berry Catch rounds
   memory:  { day: 6, hour: 2 },    // Memory Match boards
-  whack:   { day: 6, hour: 2 }     // Whack-a-Diglett rounds
+  whack:   { day: 6, hour: 2 },    // Whack-a-Diglett rounds
+  types:   { day: 6, hour: 2 }     // Type Match-up rounds (10 questions each)
 };
 const HOUR = 3600e3;
 

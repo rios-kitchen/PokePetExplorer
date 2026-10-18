@@ -18,6 +18,7 @@ const Quiz = require('./src/main/quiz');
 const CatchRules = require('./src/shared/catch-rules');
 const MemoryRules = require('./src/shared/memory-rules');
 const WhackRules = require('./src/shared/whack-rules');
+const TypeQuiz = require('./src/main/typequiz');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -90,7 +91,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -273,6 +274,7 @@ function snapshot() {
     catchGame: catchInfo(),
     memory: memoryInfo(),
     whack: whackInfo(),
+    types: typesInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -661,6 +663,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'typequiz') {
+    // testing: Type Match-up without daily / hourly limits, until used again or the app restarts
+    testFlags.freeTypes = !testFlags.freeTypes;
+    changed();
+    if (testFlags.freeTypes) openTypes();
     return { ok: true };
   }
   if (cmd === 'whack') {
@@ -1580,6 +1589,71 @@ function whackFinish(token, score) {
   return { ok: true, ...r, best: stats.whackBest, info: whackInfo() };
 }
 
+// ---------- Type Match-up (属性相克) ----------
+let typesWin = null;
+let typesRound = null;   // { token, questions, answered: [bool], right } – the round being played (one at a time)
+
+function openTypes() {
+  if (!typesWin || typesWin.isDestroyed()) {
+    typesWin = new BrowserWindow({
+      width: 420, height: 440, resizable: false, show: false, title: T('types.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) typesWin.setMenu(null);
+    if (process.env.POKEPET_TEST) typesWin.webContents.on('console-message', (e) => console.log('[types]', e.message));
+    typesWin.loadFile(path.join(__dirname, 'src', 'types', 'types.html'));
+    typesWin.once('ready-to-show', () => { typesWin.show(); typesWin.focus(); });
+    typesWin.on('closed', () => { typesWin = null; typesRound = null; });
+  } else {
+    typesWin.show();
+    typesWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Type Match-up limits as the windows see them (unlimited while testing). */
+function typesInfo() {
+  if (testFlags.freeTypes) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'types', today());
+}
+
+/** Start a round of questions (counts one play). The answers stay here. */
+function typesStart() {
+  const lim = typesInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'types', today());
+  const questions = TypeQuiz.round();
+  typesRound = { token: `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, questions, answered: questions.map(() => false), right: 0 };
+  changed();
+  return { ok: true, token: typesRound.token, questions: questions.map((q) => ({ atk: q.atk, def: q.def })), info: typesInfo() };
+}
+
+/** Check one answer; after the last one, the round's reward. */
+function typesAnswer(token, i, choice) {
+  const r = typesRound;
+  if (!r || r.token !== token || !r.questions[i] || r.answered[i]) return { ok: false };
+  r.answered[i] = true;
+  const q = r.questions[i];
+  const correct = choice === q.answer;
+  if (correct) r.right++;
+  const out = { ok: true, correct, answer: q.answer, mult: q.mult };
+  if (!r.answered.every(Boolean)) return out;
+  typesRound = null;
+  const reward = TypeQuiz.rewardFor(r.right);
+  const stats = store.data.stats;
+  stats.typesBest = Math.max(stats.typesBest || 0, reward.right);
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    if (reward.xp) addXp(reward.xp);
+    if (reward.mood) addMood(reward.mood);
+    if (reward.right >= 7) petEvent('types-good', { n: reward.right });
+  }
+  changed();
+  return { ...out, done: true, reward, best: stats.typesBest, info: typesInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -2396,6 +2470,7 @@ function buildMenu() {
     { label: T('menu.catch'), click: () => openCatch() },
     { label: T('menu.memory'), click: () => openMemory() },
     { label: T('menu.whack'), click: () => openWhack() },
+    { label: T('menu.types'), click: () => openTypes() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -2744,6 +2819,9 @@ function registerIpc() {
   ipcMain.handle('whack:start', () => whackStart());
   ipcMain.handle('whack:finish', (_e, token, score) => whackFinish(String(token || ''), score));
   ipcMain.on('whack:open', () => openWhack());
+  ipcMain.handle('types:start', () => typesStart());
+  ipcMain.handle('types:answer', (_e, token, i, choice) => typesAnswer(String(token || ''), Number(i), String(choice || '')));
+  ipcMain.on('types:open', () => openTypes());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -3506,6 +3584,27 @@ async function selfTest(dir) {
   await wait(24000);
   await shot(whackWin, '56-whack-result');
   console.log('[test] whack after a round:', store.data.stats.whackBest, JSON.stringify(whackInfo()));
+  // Type Match-up: answer the first question right and the second wrong, then the rest right
+  await step('types', async () => openTypes());
+  await wait(2500);
+  await shot(typesWin, '57-types-start');
+  await step('types-play', async () => {
+    await typesWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    await wait(800);
+    const qs = typesRound ? typesRound.questions : [];
+    for (let i = 0; i < qs.length; i++) {
+      const pick = i === 1 ? TypeQuiz.CHOICES.find((c) => c !== qs[i].answer) : qs[i].answer;
+      await typesWin.webContents.executeJavaScript(`document.querySelector('#choices button[data-choice="${pick}"]').click()`);
+      await wait(400);
+      if (i === 0) await shot(typesWin, '58-types-right');
+      if (i === 1) await shot(typesWin, '59-types-wrong');
+      if (i < qs.length - 1) await typesWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+      await wait(200);
+    }
+  });
+  await wait(800);
+  await shot(typesWin, '60-types-result');
+  console.log('[test] types after a round:', store.data.stats.typesBest, JSON.stringify(typesInfo()));
   quitting = true;
   app.quit();
 }

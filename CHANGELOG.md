@@ -5,6 +5,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **新小游戏「属性相克」**：某个属性的招式打中某个属性的宝可梦，效果绝佳、一般、效果不好还是没有效果？每局 10 题，后 5 题是双属性；答对越多树果越多；每天 6 局，每小时 2 局，不用联网
+  **New mini-game "Type Match-up"**: an attack of one type hits a Pokémon of another – super effective, normal, not very effective or no effect? 10 questions a round, the last 5 with dual types; more right, more berries; 6 a day, 2 an hour, works offline
+
 ## 1.6.0 · 2026-10-18
 
 - **究极异兽和悖谬宝可梦**：作为特殊遭遇出现（领头 Lv30 以后各 1/800，去阿罗拉旅行时更容易遇到究极异兽，去帕底亚时更容易遇到悖谬宝可梦），有专门的开场白，收服之前都还会再遇到
