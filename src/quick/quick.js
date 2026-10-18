@@ -36,14 +36,15 @@
     $('#verdict').textContent = text;
   }
 
+  const nameOf = (names) => (names ? names[L()] || names.en : '');
   function score() {
-    $('#score').textContent = game ? t('quick.score', { n: Math.min(game.n + 1, game.draws), max: game.draws, p: game.points }) : '';
+    const who = game && game.player ? `${t('game.player', { name: nameOf(game.player.names) })} · ` : '';
+    $('#score').textContent = game ? who + t('quick.score', { n: Math.min(game.n + 1, game.draws), max: game.draws, p: game.points }) : '';
   }
 
   // who's in the grass: the round's player (a random team member) or, between rounds, the partner (Pikachu while it's
   // still an egg) – its animated sprite; its portrait, then ⚡, if there's no sprite
   let player = null, shownKey = '';
-  const nameOf = (names) => (names ? names[L()] || names.en : '');
   async function face(url, who = null) {
     const p = (who && who.dex ? who : null) || Anim.partnerOf(state) || { dex: 25, shiny: false };
     const key = `${p.dex}${p.shiny ? 's' : ''}`;
@@ -129,7 +130,7 @@
       $('#ms').textContent = r.best === null ? '' : t('quick.ms', { ms: r.best });   // the round's best, not the last draw
       document.body.classList.remove('hit-good');
       verdict(t('quick.result', { p: r.points, best: r.best === null ? '–' : r.best, b: r.berries, xp: r.xp, rec: res.record || '–' })
-        + (res.share ? ` ${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : ''), r.points >= 10 ? 'win' : '');
+        + (res.share ? `\n${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : ''), r.points >= 10 ? 'win' : '');
     }, 700);
     showCount(res.info);
     button(t('quick.again'));
@@ -166,9 +167,8 @@
     }
     showCount(res.info);
     $('#next').classList.add('hidden');
-    game = { token: res.token, face: res.face, draws: res.draws, n: 0, points: 0, grades: [], busy: false };
+    game = { token: res.token, player: res.player || null, face: res.face, draws: res.draws, n: 0, points: 0, grades: [], busy: false };
     face(game.face, res.player);
-    if (res.player) $('#ms').textContent = t('game.player', { name: nameOf(res.player.names) });
     dots(game.draws);
     ready();
   }

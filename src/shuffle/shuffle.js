@@ -32,7 +32,7 @@
     return player && player.names ? nameOf(player.names) : t('shuffle.partner');
   }
   // the partner's small share of the XP when another team member played
-  const shareLine = (res) => (res.share ? ` ${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : '');
+  const shareLine = (res) => (res.share ? `\n${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : '');
 
   function labels() {
     document.title = t('shuffle.title');

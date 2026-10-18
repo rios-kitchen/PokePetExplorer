@@ -146,7 +146,7 @@
     Sound.play('fanfare');
     const r = res.reward;
     verdict(t(r.clean ? 'puzzle.doneClean' : 'puzzle.done', { n: r.moves, b: r.berries, xp: r.xp, best: res.best, h: r.hints })
-      + (res.share ? ` ${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : ''), 'win');
+      + (res.share ? `\n${t('game.share', { name: nameOf(res.shareTo), xp: res.share })}` : ''), 'win');
     showCount(res.info);
     game = null;
     hintLabel();
