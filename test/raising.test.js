@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -891,4 +891,28 @@ test('Berry Catch: points, rewards, limits', () => {
   assert.equal(Limits.use(data, 'catch', day, t0 + 1), true);
   assert.equal(Limits.blocked(Limits.info(data, 'catch', day, t0 + 2)), 'rest');
   assert.equal(Limits.LIMITS.catch.day, 6);
+});
+
+test('Memory Match: dealing, rewards, limits', () => {
+  const M = require('../src/shared/memory-rules');
+  const Limits = require('../src/main/limits');
+  // each face twice, in some order
+  const cards = M.deal([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.equal(cards.length, 16);
+  for (let d = 1; d <= 8; d++) assert.equal(cards.filter((c) => c === d).length, 2);
+  assert.ok(!cards.includes(9));
+  // fewer turns, more berries; fewer than 8 can't be real and counts as 8
+  assert.deepEqual(M.rewardFor(8), { turns: 8, berries: 4, xp: 40, mood: 6 });
+  assert.equal(M.rewardFor(3).turns, 8);
+  assert.equal(M.rewardFor(16).berries, 3);
+  assert.equal(M.rewardFor(20).berries, 2);
+  assert.equal(M.rewardFor(60).berries, 1);
+  assert.equal(M.rewardFor(60).xp, 10);
+  // limits: 6 games a day, 2 an hour
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  assert.equal(Limits.use(data, 'memory', day, t0), true);
+  assert.equal(Limits.use(data, 'memory', day, t0 + 1), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'memory', day, t0 + 2)), 'rest');
+  assert.equal(Limits.LIMITS.memory.day, 6);
 });

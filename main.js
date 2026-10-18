@@ -16,6 +16,7 @@ const Album = require('./src/main/album');
 const Fishing = require('./src/main/fishing');
 const Quiz = require('./src/main/quiz');
 const CatchRules = require('./src/shared/catch-rules');
+const MemoryRules = require('./src/shared/memory-rules');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -88,7 +89,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -269,6 +270,7 @@ function snapshot() {
     fishing: fishingInfo(),
     quiz: quizInfo(),
     catchGame: catchInfo(),
+    memory: memoryInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -657,6 +659,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'memory') {
+    // testing: Memory Match without daily / hourly limits, until used again or the app restarts
+    testFlags.freeMemory = !testFlags.freeMemory;
+    changed();
+    if (testFlags.freeMemory) openMemory();
     return { ok: true };
   }
   if (cmd === 'catchgame') {
@@ -1255,7 +1264,7 @@ function finishBattle() {
   b.party.forEach((m, i) => {
     if (m.status && m.status.id !== 'confusion' && m.status.id !== 'sleep') {
       const care = Care.careOf(d, ctx.ids[i]);
-      if (!care.status) { Care.inflict(care, m.status.id); care.status.known = true; }
+      if (!care.status && !care.fainted) { Care.inflict(care, m.status.id); care.status.known = true; }
     }
   });
   ctx.result = result;
@@ -1501,6 +1510,89 @@ function catchFinish(token, score) {
   }
   changed();
   return { ok: true, ...r, best: stats.catchBest, info: catchInfo() };
+}
+
+// ---------- Memory Match (记忆翻牌) ----------
+let memoryWin = null;
+let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
+
+function openMemory() {
+  if (!memoryWin || memoryWin.isDestroyed()) {
+    memoryWin = new BrowserWindow({
+      width: 460, height: 580, resizable: false, show: false, title: T('memory.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) memoryWin.setMenu(null);
+    if (process.env.POKEPET_TEST) memoryWin.webContents.on('console-message', (e) => console.log('[memory]', e.message));
+    memoryWin.loadFile(path.join(__dirname, 'src', 'memory', 'memory.html'));
+    memoryWin.once('ready-to-show', () => { memoryWin.show(); memoryWin.focus(); });
+    memoryWin.on('closed', () => { memoryWin = null; memoryBoard = null; });
+  } else {
+    memoryWin.show();
+    memoryWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Memory Match limits as the windows see them (unlimited while testing). */
+function memoryInfo() {
+  if (testFlags.freeMemory) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'memory', today());
+}
+
+/**
+ * A new board: 8 Pokémon faces (PMD portraits – your team and ones you've met first, then any), dealt twice.
+ * Counts one play once the faces are ready.
+ */
+async function memoryStart() {
+  const lim = memoryInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  const idx = Sources.creditIndexCached(spritesDir());
+  const drawn = idx && idx.dex ? new Set(Object.entries(idx.dex).filter(([, e]) => e && e.portrait).map(([k]) => Number(k))) : null;
+  const ok = (d) => d >= 1 && d <= 1025 && (!drawn || drawn.has(d));
+  const shuffle = (a) => a.map((v) => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map((x) => x[1]);
+  const mine = shuffle([...new Set([...petList().map((p) => p.dex), ...Object.keys(store.data.pokedex || {}).map(Number)])].filter((d) => d && ok(d)));
+  const pool = drawn ? [...drawn].filter(ok) : Array.from({ length: 1025 }, (_, i) => i + 1);
+  const picked = mine.slice(0, 4);
+  while (picked.length < MemoryRules.PAIRS + 4) {   // a few spare in case a face can't be had
+    const d = pool[Math.floor(Math.random() * pool.length)];
+    if (!picked.includes(d)) picked.push(d);
+  }
+  const faces = [];
+  for (const dex of picked) {
+    if (faces.length >= MemoryRules.PAIRS) break;
+    let buf = null;
+    try { buf = await Sources.portrait(dex, 'Normal', spritesDir()); } catch { return { ok: false, error: 'net' }; }
+    if (buf) faces.push({ dex, url: `data:image/png;base64,${buf.toString('base64')}` });
+  }
+  if (faces.length < MemoryRules.PAIRS) return { ok: false, error: 'net' };
+  if (!lim.free) Limits.use(store.data, 'memory', today());
+  const cards = MemoryRules.deal(faces.map((f) => f.dex));
+  memoryBoard = { token: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: Date.now(), cards };
+  changed();
+  const urls = Object.fromEntries(faces.map((f) => [f.dex, f.url]));
+  return { ok: true, token: memoryBoard.token, cards: cards.map((dex) => ({ dex, url: urls[dex] })), info: memoryInfo() };
+}
+
+/** The board is cleared: berries by the turns it took, and the partner learns a little and is happy. */
+function memoryFinish(token, turns) {
+  const board = memoryBoard;
+  if (!board || board.token !== token) return { ok: false };
+  memoryBoard = null;
+  if (Date.now() - board.at < MemoryRules.MIN_SECONDS * 1000) return { ok: false };
+  const r = MemoryRules.rewardFor(turns);
+  const stats = store.data.stats;
+  stats.memoryBest = Math.min(stats.memoryBest || Infinity, r.turns);
+  store.data.berries += r.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(r.xp);
+    addMood(r.mood);
+    petEvent('memory-done', { n: r.turns });
+  }
+  changed();
+  return { ok: true, ...r, best: stats.memoryBest, info: memoryInfo() };
 }
 
 // ---------- desktop play: fling (丢丢乐) and peeking from the screen edge ----------
@@ -2234,6 +2326,7 @@ function buildMenu() {
     { label: T('menu.fishing'), click: () => openFishing() },
     { label: T('menu.quiz'), click: () => openQuiz() },
     { label: T('menu.catch'), click: () => openCatch() },
+    { label: T('menu.memory'), click: () => openMemory() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -2576,6 +2669,9 @@ function registerIpc() {
   ipcMain.handle('catch:start', () => catchStart());
   ipcMain.handle('catch:finish', (_e, token, score) => catchFinish(String(token || ''), score));
   ipcMain.on('catch:open', () => openCatch());
+  ipcMain.handle('memory:start', () => memoryStart());
+  ipcMain.handle('memory:finish', (_e, token, turns) => memoryFinish(String(token || ''), turns));
+  ipcMain.on('memory:open', () => openMemory());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -3297,6 +3393,31 @@ async function selfTest(dir) {
   await wait(24000);
   await shot(catchWin, '50-catch-result');
   console.log('[test] catch after a round:', store.data.stats.catchBest, JSON.stringify(catchInfo()));
+  // Memory Match: deal a board, turn a wrong pair, then clear it
+  await step('memory', async () => openMemory());
+  await wait(3000);
+  await shot(memoryWin, '51-memory-start');
+  await step('memory-play', async () => {
+    await memoryWin.webContents.executeJavaScript(`document.querySelector('#ovButton').click()`);
+    await wait(6000);
+    const order = memoryBoard ? memoryBoard.cards : [];
+    const first = order.findIndex((d) => d !== order[0]);
+    if (first > 0) await memoryWin.webContents.executeJavaScript(`(() => { const t = document.querySelectorAll('.tile'); t[0].click(); t[${first}].click(); })()`);
+    await wait(300);
+  });
+  await shot(memoryWin, '52-memory-turned');
+  await step('memory-clear', async () => {
+    await wait(5000);   // past MIN_SECONDS
+    const order = memoryBoard ? memoryBoard.cards : [];
+    for (const dex of [...new Set(order)]) {
+      const [a, b] = order.map((d, i) => (d === dex ? i : -1)).filter((i) => i >= 0);
+      await memoryWin.webContents.executeJavaScript(`(() => { const t = document.querySelectorAll('.tile'); t[${a}].click(); t[${b}].click(); })()`);
+      await wait(150);
+    }
+  });
+  await wait(2500);
+  await shot(memoryWin, '53-memory-result');
+  console.log('[test] memory after a board:', store.data.stats.memoryBest, JSON.stringify(memoryInfo()));
   quitting = true;
   app.quit();
 }
