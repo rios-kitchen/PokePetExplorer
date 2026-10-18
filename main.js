@@ -17,6 +17,7 @@ const Fishing = require('./src/main/fishing');
 const Quiz = require('./src/main/quiz');
 const CatchRules = require('./src/shared/catch-rules');
 const MemoryRules = require('./src/shared/memory-rules');
+const WhackRules = require('./src/shared/whack-rules');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -89,7 +90,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -271,6 +272,7 @@ function snapshot() {
     quiz: quizInfo(),
     catchGame: catchInfo(),
     memory: memoryInfo(),
+    whack: whackInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -659,6 +661,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'whack') {
+    // testing: Whack-a-Diglett without daily / hourly limits, until used again or the app restarts
+    testFlags.freeWhack = !testFlags.freeWhack;
+    changed();
+    if (testFlags.freeWhack) openWhack();
     return { ok: true };
   }
   if (cmd === 'memory') {
@@ -1512,6 +1521,65 @@ function catchFinish(token, score) {
   return { ok: true, ...r, best: stats.catchBest, info: catchInfo() };
 }
 
+// ---------- Whack-a-Diglett (敲敲地鼠) ----------
+let whackWin = null;
+let whackRound = null;   // { token, at } – the round being played (one at a time)
+
+function openWhack() {
+  if (!whackWin || whackWin.isDestroyed()) {
+    whackWin = new BrowserWindow({
+      width: 500, height: 560, resizable: false, show: false, title: T('whack.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) whackWin.setMenu(null);
+    if (process.env.POKEPET_TEST) whackWin.webContents.on('console-message', (e) => console.log('[whack]', e.message));
+    whackWin.loadFile(path.join(__dirname, 'src', 'whack', 'whack.html'));
+    whackWin.once('ready-to-show', () => { whackWin.show(); whackWin.focus(); });
+    whackWin.on('closed', () => { whackWin = null; whackRound = null; });
+  } else {
+    whackWin.show();
+    whackWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Whack-a-Diglett limits as the windows see them (unlimited while testing). */
+function whackInfo() {
+  if (testFlags.freeWhack) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'whack', today());
+}
+
+/** Start a round (counts one play). */
+function whackStart() {
+  const lim = whackInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'whack', today());
+  whackRound = { token: `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: Date.now() };
+  changed();
+  return { ok: true, token: whackRound.token, seconds: WhackRules.ROUND_S, info: whackInfo() };
+}
+
+/** The round is over: its score becomes berries, XP and mood for the partner (a round can't end before its time). */
+function whackFinish(token, score) {
+  const round = whackRound;
+  if (!round || round.token !== token) return { ok: false };
+  whackRound = null;
+  const early = Date.now() - round.at < (WhackRules.ROUND_S - 3) * 1000;
+  const r = WhackRules.rewardFor(early ? 0 : score);
+  const stats = store.data.stats;
+  stats.whackBest = Math.max(stats.whackBest || 0, r.score);
+  store.data.berries += r.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    if (r.xp) addXp(r.xp);
+    if (r.mood) addMood(r.mood);
+    if (r.score >= 12) petEvent('whack-good', { n: r.score });
+  }
+  changed();
+  return { ok: true, ...r, best: stats.whackBest, info: whackInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -2327,6 +2395,7 @@ function buildMenu() {
     { label: T('menu.quiz'), click: () => openQuiz() },
     { label: T('menu.catch'), click: () => openCatch() },
     { label: T('menu.memory'), click: () => openMemory() },
+    { label: T('menu.whack'), click: () => openWhack() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -2672,6 +2741,9 @@ function registerIpc() {
   ipcMain.handle('memory:start', () => memoryStart());
   ipcMain.handle('memory:finish', (_e, token, turns) => memoryFinish(String(token || ''), turns));
   ipcMain.on('memory:open', () => openMemory());
+  ipcMain.handle('whack:start', () => whackStart());
+  ipcMain.handle('whack:finish', (_e, token, score) => whackFinish(String(token || ''), score));
+  ipcMain.on('whack:open', () => openWhack());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -3418,6 +3490,22 @@ async function selfTest(dir) {
   await wait(2500);
   await shot(memoryWin, '53-memory-result');
   console.log('[test] memory after a board:', store.data.stats.memoryBest, JSON.stringify(memoryInfo()));
+  // Whack-a-Diglett: play a round, tapping every hole now and then
+  await step('whack', async () => openWhack());
+  await wait(3000);
+  await shot(whackWin, '54-whack-start');
+  await step('whack-play', async () => {
+    await whackWin.webContents.executeJavaScript(`document.querySelector('#ovButton').click();
+      (() => { const c = document.querySelector('#field'); const r = c.getBoundingClientRect(); let i = 0;
+        const iv = setInterval(() => { i++; const h = i % 9; const x = 32 + (h % 3) * 48, y = 52 + Math.floor(h / 3) * 34;
+          c.dispatchEvent(new MouseEvent('mousedown', { clientX: r.left + (x / 160) * r.width, clientY: r.top + (y / 140) * r.height, bubbles: true }));
+          if (i > 600) clearInterval(iv); }, 45); })()`);
+  });
+  await wait(9000);
+  await shot(whackWin, '55-whack-playing');
+  await wait(24000);
+  await shot(whackWin, '56-whack-result');
+  console.log('[test] whack after a round:', store.data.stats.whackBest, JSON.stringify(whackInfo()));
   quitting = true;
   app.quit();
 }

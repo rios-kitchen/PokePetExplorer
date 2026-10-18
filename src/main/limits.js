@@ -7,7 +7,8 @@ const LIMITS = {
   fishing: { day: 20, hour: 6 },   // bites (something on the line, landed or not)
   quiz:    { day: 12, hour: 4 },   // Who's That Pokémon? questions
   catch:   { day: 6, hour: 2 },    // Berry Catch rounds
-  memory:  { day: 6, hour: 2 }     // Memory Match boards
+  memory:  { day: 6, hour: 2 },    // Memory Match boards
+  whack:   { day: 6, hour: 2 }     // Whack-a-Diglett rounds
 };
 const HOUR = 3600e3;
 

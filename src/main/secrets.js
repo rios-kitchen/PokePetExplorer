@@ -18,7 +18,8 @@ const COMMANDS = {
   'fc55effc29603ccd646912cfcec556e761570777b0bb96f1ef6544f9ec01c07e': 'evolution',
   '35344ee34b8d2ee655e2509952890e8f99218e2272d6ff61b77877f23a93d452': 'quiz',
   'aebacd58458d19c80a6a76ca425b02397f92fff3876d80734ee2aa607e856a26': 'catchgame',
-  '501c8c549c43abaf1ad8af1151f6e947136a2756444816ba84f0a1c1538387fb': 'memory'
+  '501c8c549c43abaf1ad8af1151f6e947136a2756444816ba84f0a1c1538387fb': 'memory',
+  'b20c47a23d742e126d7466c3b685fa274c3f283194979b98de8d1a84febbd028': 'whack'
 };
 
 /** "word arg arg" → { cmd, args } (cmd null when the word isn't one). */

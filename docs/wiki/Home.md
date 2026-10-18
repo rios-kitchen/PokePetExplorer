@@ -23,6 +23,7 @@ raising, outings, fishing, battles and catching, a Pokédex.
 - [13. 猜猜我是谁 ❓ · Who's That Pokémon? ❓](13-Who-s-that-Pokemon)
 - [14. 接树果 🍓 · Berry Catch 🍓](14-Berry-Catch)
 - [15. 记忆翻牌 🃏 · Memory Match 🃏](15-Memory-Match)
+- [16. 敲敲地鼠 🔨 · Whack-a-Diglett 🔨](16-Whack-a-Diglett)
 - [常见问题 · FAQ](FAQ)
 - [开发者 · Developers](Developers)
 

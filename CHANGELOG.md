@@ -5,6 +5,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **新小游戏「敲敲地鼠」**：地鼠从 9 个洞里冒出来，趁它缩回去之前点它；金色地鼠 +3，点到霹雳电球扣分；一局 30 秒；每天 6 局，每小时 2 局
+  **New mini-game "Whack-a-Diglett"**: Diglett pop out of nine holes – click them before they duck; golden ones are worth 3, Voltorb cost points; 30-second rounds; 6 a day, 2 an hour
+
 - **新小游戏「记忆翻牌」**：16 张牌里藏着 8 对宝可梦头像，每次翻两张找出对子；回合越少树果越多；每天 6 局，每小时 2 局
   **New mini-game "Memory Match"**: 16 cards hide 8 pairs of Pokémon faces – turn two at a time and find every pair; fewer turns, more berries; 6 a day, 2 an hour
 
