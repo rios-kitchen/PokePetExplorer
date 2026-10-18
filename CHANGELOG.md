@@ -5,12 +5,14 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
-- **新小游戏「霹雳电球翻牌」**：和心金魂银游戏城里一样，5×5 张牌里藏着 1、2、3 和霹雳电球，看每行每列的提示推理，把 2 和 3 都翻出来就赢；右键可以标记电球；每天 6 局，每小时 2 局，不用联网
-  **New mini-game "Voltorb Flip"**: as in the HeartGold / SoulSilver Game Corner – 25 cards hide 1s, 2s, 3s and Voltorb; work out the rows and columns from their hints and turn over every 2 and 3; right-click marks a Voltorb; 6 a day, 2 an hour, works offline
-- **新小游戏「火水草猜拳」**：和野生训练家用属性猜拳，火克草、草克水、水克火，先赢 3 次获胜；赢了 3 个树果，输了也有 1 个；每天 8 局，每小时 3 局，不用联网
-  **New mini-game "Fire-Water-Grass"**: rock-paper-scissors with types against a wild trainer – fire beats grass, grass beats water, water beats fire; first to 3; 3 berries for a win, 1 for a loss; 8 a day, 3 an hour, works offline
+## 1.7.0 · 2026-10-18
+
 - **新小游戏「属性相克」**：某个属性的招式打中某个属性的宝可梦，效果绝佳、一般、效果不好还是没有效果？每局 10 题，后 5 题是双属性；答对越多树果越多；每天 6 局，每小时 2 局，不用联网
   **New mini-game "Type Match-up"**: an attack of one type hits a Pokémon of another – super effective, normal, not very effective or no effect? 10 questions a round, the last 5 with dual types; more right, more berries; 6 a day, 2 an hour, works offline
+- **新小游戏「火水草猜拳」**：和野生训练家用属性猜拳，火克草、草克水、水克火，先赢 3 次获胜；赢了 3 个树果，输了也有 1 个；每天 8 局，每小时 3 局，不用联网
+  **New mini-game "Fire-Water-Grass"**: rock-paper-scissors with types against a wild trainer – fire beats grass, grass beats water, water beats fire; first to 3; 3 berries for a win, 1 for a loss; 8 a day, 3 an hour, works offline
+- **新小游戏「霹雳电球翻牌」**：和心金魂银游戏城里一样，5×5 张牌里藏着 1、2、3 和霹雳电球，看每行每列的提示推理，把 2 和 3 都翻出来就赢；右键可以标记电球；每天 6 局，每小时 2 局，不用联网
+  **New mini-game "Voltorb Flip"**: as in the HeartGold / SoulSilver Game Corner – 25 cards hide 1s, 2s, 3s and Voltorb; work out the rows and columns from their hints and turn over every 2 and 3; right-click marks a Voltorb; 6 a day, 2 an hour, works offline
 
 ## 1.6.0 · 2026-10-18
 
