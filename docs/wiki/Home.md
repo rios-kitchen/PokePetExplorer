@@ -26,6 +26,7 @@ raising, outings, fishing, battles and catching, a Pokédex.
 - [16. 敲敲地鼠 🔨 · Whack-a-Diglett 🔨](16-Whack-a-Diglett)
 - [17. 属性相克 ⚔️ · Type Match-up ⚔️](17-Type-Match-up)
 - [18. 火水草猜拳 ✊ · Fire-Water-Grass ✊](18-Fire-Water-Grass)
+- [19. 霹雳电球翻牌 💣 · Voltorb Flip 💣](19-Voltorb-Flip)
 - [常见问题 · FAQ](FAQ)
 - [开发者 · Developers](Developers)
 

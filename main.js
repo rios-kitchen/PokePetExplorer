@@ -20,6 +20,7 @@ const MemoryRules = require('./src/shared/memory-rules');
 const WhackRules = require('./src/shared/whack-rules');
 const TypeQuiz = require('./src/main/typequiz');
 const Rps = require('./src/main/rps');
+const Voltorb = require('./src/main/voltorb');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -92,7 +93,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -277,6 +278,7 @@ function snapshot() {
     whack: whackInfo(),
     types: typesInfo(),
     rps: rpsInfo(),
+    flip: flipInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -665,6 +667,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'voltorbflip') {
+    // testing: Voltorb Flip without daily / hourly limits, until used again or the app restarts
+    testFlags.freeFlip = !testFlags.freeFlip;
+    changed();
+    if (testFlags.freeFlip) openFlip();
     return { ok: true };
   }
   if (cmd === 'rps') {
@@ -1727,6 +1736,71 @@ function rpsThrow(token, move) {
   return { ...out, done: true, reward, wins: stats.rpsWins || 0, info: rpsInfo() };
 }
 
+// ---------- Voltorb Flip (霹雳电球翻牌) ----------
+let flipWin = null;
+let flipBoard = null;   // { token, cards, up: [bool] } – the board being played (one at a time)
+
+function openFlip() {
+  if (!flipWin || flipWin.isDestroyed()) {
+    flipWin = new BrowserWindow({
+      width: 460, height: 600, resizable: false, show: false, title: T('flip.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) flipWin.setMenu(null);
+    if (process.env.POKEPET_TEST) flipWin.webContents.on('console-message', (e) => console.log('[flip]', e.message));
+    flipWin.loadFile(path.join(__dirname, 'src', 'flip', 'flip.html'));
+    flipWin.once('ready-to-show', () => { flipWin.show(); flipWin.focus(); });
+    flipWin.on('closed', () => { flipWin = null; flipBoard = null; });
+  } else {
+    flipWin.show();
+    flipWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Voltorb Flip limits as the windows see them (unlimited while testing). */
+function flipInfo() {
+  if (testFlags.freeFlip) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'flip', today());
+}
+
+/** Deal a board (counts one play): the window gets only the hints. */
+function flipStart() {
+  const lim = flipInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'flip', today());
+  const cards = Voltorb.deal();
+  flipBoard = { token: `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, cards, up: cards.map(() => false) };
+  changed();
+  return { ok: true, token: flipBoard.token, hints: Voltorb.hints(cards), info: flipInfo() };
+}
+
+/** Turn one card over; a Voltorb ends the board, the last 2 or 3 clears it. */
+function flipTurn(token, i) {
+  const b = flipBoard;
+  if (!b || b.token !== token || !(i >= 0 && i < b.cards.length) || b.up[i]) return { ok: false };
+  b.up[i] = true;
+  const value = b.cards[i];
+  const coins = Voltorb.coinsOf(b.cards, b.up);
+  const won = value !== 0 && Voltorb.cleared(b.cards, b.up);
+  const out = { ok: true, value, coins: value === 0 ? 0 : coins };
+  if (value !== 0 && !won) return out;
+  flipBoard = null;
+  const reward = Voltorb.rewardFor(won, coins);
+  const stats = store.data.stats;
+  if (won) stats.flipWins = (stats.flipWins || 0) + 1;
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    if (won) petEvent('flip-won', {});
+  }
+  changed();
+  return { ...out, done: true, cards: b.cards, reward, wins: stats.flipWins || 0, info: flipInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -2545,6 +2619,7 @@ function buildMenu() {
     { label: T('menu.whack'), click: () => openWhack() },
     { label: T('menu.types'), click: () => openTypes() },
     { label: T('menu.rps'), click: () => openRps() },
+    { label: T('menu.flip'), click: () => openFlip() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -2899,6 +2974,9 @@ function registerIpc() {
   ipcMain.handle('rps:start', () => rpsStart());
   ipcMain.handle('rps:throw', (_e, token, move) => rpsThrow(String(token || ''), String(move || '')));
   ipcMain.on('rps:open', () => openRps());
+  ipcMain.handle('flip:start', () => flipStart());
+  ipcMain.handle('flip:turn', (_e, token, i) => flipTurn(String(token || ''), Number(i)));
+  ipcMain.on('flip:open', () => openFlip());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -3698,6 +3776,32 @@ async function selfTest(dir) {
   await wait(600);
   await shot(rpsWin, '63-rps-result');
   console.log('[test] rps after a match:', store.data.stats.rpsWins || 0, JSON.stringify(rpsInfo()));
+  // Voltorb Flip: a cleared board (turning only the cards that aren't Voltorb), then one lost on a Voltorb
+  await step('flip', async () => openFlip());
+  await wait(2500);
+  await shot(flipWin, '64-flip-start');
+  await step('flip-win', async () => {
+    await flipWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    await wait(800);
+    const cards = flipBoard ? flipBoard.cards : [];
+    const safe = cards.map((v, i) => (v > 1 ? i : -1)).filter((i) => i >= 0);
+    for (const [k, i] of safe.entries()) {
+      await flipWin.webContents.executeJavaScript(`document.querySelectorAll('.tile')[${i}].click()`);
+      await wait(150);
+      if (k === 1) await shot(flipWin, '65-flip-turning');
+    }
+  });
+  await wait(800);
+  await shot(flipWin, '66-flip-won');
+  await step('flip-lose', async () => {
+    await flipWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    await wait(800);
+    const i = flipBoard ? flipBoard.cards.indexOf(0) : -1;
+    if (i >= 0) await flipWin.webContents.executeJavaScript(`document.querySelectorAll('.tile')[${i}].click()`);
+  });
+  await wait(800);
+  await shot(flipWin, '67-flip-lost');
+  console.log('[test] flip after two boards:', store.data.stats.flipWins || 0, JSON.stringify(flipInfo()));
   quitting = true;
   app.quit();
 }

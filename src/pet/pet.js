@@ -345,6 +345,12 @@
       if (!P.playAnim(['Hop', 'Pose'])) P.jump(1);
       if (!P.bubbleBusy()) P.showBubble(say('catchGood', { n: e.n }), { ms: 2500 });
     },
+    'flip-won'() {
+      if (P.isAway()) return;
+      P.hearts(2);
+      if (!P.playAnim(['Pose', 'Hop'])) P.jump(1);
+      if (!P.bubbleBusy()) P.showBubble(say('flipWon'), { ms: 2500 });
+    },
     'rps-won'() {
       if (P.isAway()) return;
       P.hearts(2);

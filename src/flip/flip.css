@@ -1,0 +1,31 @@
+:root { --ink: #f0ede6; --muted: #a39f95; --card: #fbf8f0; --yellow: #ffd84a; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1c1a; color: var(--ink); user-select: none;
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+h1 { margin: 10px 0 0; text-align: center; font-size: 18px; color: var(--yellow); letter-spacing: 1px; }
+.coins { margin: 2px 0 8px; text-align: center; font-size: 15px; font-weight: 800; min-height: 21px; }
+.board { display: grid; grid-template-columns: repeat(6, 56px); grid-auto-rows: 56px; gap: 6px; width: max-content; margin: 0 auto;
+  padding: 10px; border: 3px solid #2a2420; border-radius: 10px; background: #2f8a5a; }
+.tile { position: relative; border: 3px solid #1f5a3a; border-radius: 6px; background: #3fa86e; cursor: pointer; padding: 0;
+  font: 800 26px/1 sans-serif; color: #23221f; }
+.tile::after { content: ''; position: absolute; inset: 6px; border: 2px solid rgba(255, 255, 255, 0.25); border-radius: 3px; }
+.tile:hover:not(:disabled) { background: #52bd80; }
+.tile.up { background: var(--card); cursor: default; }
+.tile.up::after { display: none; }
+.tile.volt { background: #e03838; color: #fff; }
+.tile.memo { color: #e03838; font-size: 18px; }
+.tile:disabled { cursor: default; }
+.hintcell { border: 3px solid rgba(0, 0, 0, 0.3); border-radius: 6px; display: flex; flex-direction: column; justify-content: center;
+  align-items: center; font-weight: 800; color: #23221f; line-height: 1.15; }
+.hintcell .sum { font-size: 17px; }
+.hintcell .v { font-size: 12px; }
+.hintcell.c0 { background: #e8806a; } .hintcell.c1 { background: #6ac078; } .hintcell.c2 { background: #e8c050; }
+.hintcell.c3 { background: #5a98e0; } .hintcell.c4 { background: #b07ae0; }
+.hidden { visibility: hidden; }
+.verdict { margin: 8px 16px 4px; text-align: center; min-height: 20px; font-size: 15px; font-weight: 700; white-space: pre-line; }
+.verdict.win { color: #7be0a2; } .verdict.lose { color: #ff8a80; }
+.foot { width: 380px; margin: 4px auto 0; text-align: center; }
+.primary { background: var(--yellow); border: 2px solid #23221f; border-radius: 10px; padding: 6px 22px; font: inherit; font-weight: 700; color: #23221f; cursor: pointer; }
+.primary:disabled { opacity: 0.5; cursor: default; }
+.hint { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.count { margin: 2px 0 0; color: var(--muted); font-size: 12px; white-space: pre-line; }
