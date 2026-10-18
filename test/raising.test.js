@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump', 'puzzle', 'shinyhunt', 'quickattack']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -1020,6 +1020,25 @@ test('Shiny Hunt: boards, rewards, limits', () => {
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'hunt', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'hunt', day, t0 + 5)), 'rest');
+});
+
+test('Quick Attack: waits, grades, rewards, limits', () => {
+  const Q = require('../src/main/quick');
+  const Limits = require('../src/main/limits');
+  for (let i = 0; i < 50; i++) {
+    const w = Q.waitOf();
+    assert.ok(w >= 1200 && w < 4000);
+  }
+  assert.equal(Q.waitOf(() => 0), 1200);
+  assert.deepEqual([-300, 0, 50, 200, 300, 500, 900].map((ms) => Q.grade(ms).grade), ['early', 'early', 'early', 'great', 'good', 'ok', 'slow']);
+  assert.deepEqual([200, 300, 500, 900, -1].map((ms) => Q.grade(ms).points), [3, 2, 1, 0, 0]);
+  assert.equal(Q.grade(NaN).grade, 'early');
+  assert.deepEqual([0, 3, 6, 10, 13, 15].map((p) => Q.rewardFor(p, 250).berries), [0, 1, 2, 3, 4, 4]);
+  assert.equal(Q.rewardFor(15, 200).best, 200);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'quick', day, t0 + i), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'quick', day, t0 + 5)), 'rest');
 });
 
 test('Slide Puzzle: shuffles, slides, replays, rewards, limits', () => {

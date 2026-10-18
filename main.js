@@ -26,6 +26,7 @@ const Shuffle = require('./src/main/shuffle');
 const Jump = require('./src/main/jump');
 const Puzzle = require('./src/main/puzzle');
 const Hunt = require('./src/main/hunt');
+const Quick = require('./src/main/quick');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -98,7 +99,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false, freeShuffle: false, freeJump: false, freePuzzle: false, freeHunt: false, freeQuick: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -291,6 +292,7 @@ function snapshot() {
     jump: jumpInfo(),
     puzzle: puzzleInfo(),
     hunt: huntInfo(),
+    quick: quickInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -679,6 +681,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'quickattack') {
+    // testing: Quick Attack without daily / hourly limits, until used again or the app restarts
+    testFlags.freeQuick = !testFlags.freeQuick;
+    changed();
+    if (testFlags.freeQuick) openQuick();
     return { ok: true };
   }
   if (cmd === 'shinyhunt') {
@@ -2219,6 +2228,92 @@ function huntFinish(token) {
   return { ok: true, reward, misses: g.misses, best: stats.huntBest, info: huntInfo() };
 }
 
+// ---------- Quick Attack (电光一闪) ----------
+let quickWin = null;
+let quickGame = null;   // { token, n, points, best, early, goAt } – the round being played (one at a time)
+
+function openQuick() {
+  if (!quickWin || quickWin.isDestroyed()) {
+    quickWin = new BrowserWindow({
+      width: 420, height: 580, resizable: false, show: false, title: T('quick.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) quickWin.setMenu(null);
+    if (process.env.POKEPET_TEST) quickWin.webContents.on('console-message', (e) => console.log('[quick]', e.message));
+    quickWin.loadFile(path.join(__dirname, 'src', 'quick', 'quick.html'));
+    quickWin.once('ready-to-show', () => { quickWin.show(); quickWin.focus(); });
+    quickWin.on('closed', () => { quickWin = null; quickGame = null; });
+  } else {
+    quickWin.show();
+    quickWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Quick Attack limits as the windows see them (unlimited while testing). */
+function quickInfo() {
+  if (testFlags.freeQuick) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'quick', today());
+}
+
+/** Start a round (counts one play), with the partner's portrait for the window. */
+async function quickStart() {
+  const lim = quickInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'quick', today());
+  quickGame = { token: `q${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, n: 0, points: 0, best: null, early: 0, goAt: 0 };
+  const token = quickGame.token;
+  changed();
+  let face = null;
+  const pet = partnerEntry();
+  if (pet) {
+    try {
+      const buf = await Sources.portrait(pet.dex, 'Normal', spritesDir(), !!(store.data.skins[pet.id] || {}).shiny);
+      if (buf) face = `data:image/png;base64,${buf.toString('base64')}`;
+    } catch { /* the window draws ⚡ instead */ }
+  }
+  if (!quickGame || quickGame.token !== token) return { ok: false };
+  return { ok: true, token, draws: Quick.DRAWS, face, info: quickInfo() };
+}
+
+/** The window is ready for the next draw: pick the wait before the "!" and start the clock. */
+function quickReady(token) {
+  const g = quickGame;
+  if (!g || g.token !== token || g.n >= Quick.DRAWS || g.goAt) return { ok: false };
+  const wait = Quick.waitOf();
+  g.goAt = Date.now() + wait;
+  return { ok: true, wait, n: g.n };
+}
+
+/** A click (or the window giving up after LATE_MS): grade it; after the last draw, the round's reward. */
+function quickHit(token) {
+  const g = quickGame;
+  if (!g || g.token !== token || !g.goAt) return { ok: false };
+  const ms = Date.now() - g.goAt;
+  g.goAt = 0;
+  const r = Quick.grade(ms);
+  g.n++;
+  g.points += r.points;
+  if (r.grade === 'early') g.early++;
+  else if (r.grade !== 'slow') g.best = g.best === null ? ms : Math.min(g.best, ms);
+  const res = { ok: true, ms: r.grade === 'early' ? null : ms, grade: r.grade, points: g.points, n: g.n };
+  if (g.n < Quick.DRAWS) return res;
+  quickGame = null;
+  const reward = Quick.rewardFor(g.points, g.best);
+  const stats = store.data.stats;
+  if (g.best !== null) stats.quickBest = stats.quickBest ? Math.min(stats.quickBest, g.best) : g.best;
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    if (g.points >= 10) petEvent('quick-good', { ms: g.best });
+  }
+  changed();
+  return { ...res, done: true, reward, early: g.early, record: stats.quickBest || null, info: quickInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -3043,6 +3138,7 @@ function buildMenu() {
     { label: T('menu.jump'), click: () => openJump() },
     { label: T('menu.puzzle'), click: () => openPuzzle() },
     { label: T('menu.hunt'), click: () => openHunt() },
+    { label: T('menu.quick'), click: () => openQuick() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -3416,6 +3512,10 @@ function registerIpc() {
   ipcMain.handle('hunt:pick', (_e, token, i) => huntPick(String(token || ''), Number(i)));
   ipcMain.handle('hunt:finish', (_e, token) => huntFinish(String(token || '')));
   ipcMain.on('hunt:open', () => openHunt());
+  ipcMain.handle('quick:start', () => quickStart());
+  ipcMain.handle('quick:ready', (_e, token) => quickReady(String(token || '')));
+  ipcMain.handle('quick:hit', (_e, token) => quickHit(String(token || '')));
+  ipcMain.on('quick:open', () => openQuick());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -4338,6 +4438,26 @@ async function selfTest(dir) {
   await wait(1000);
   await shot(huntWin, '82-hunt-result');
   console.log('[test] hunt after a round:', store.data.stats.huntBest || 0, JSON.stringify(huntInfo()));
+  // Quick Attack: one false start, then react to each "!"
+  await step('quick', async () => openQuick());
+  await wait(2500);
+  await shot(quickWin, '83-quick-start');
+  await step('quick-play', async () => {
+    await quickWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    for (let i = 0; i < 40 && !(quickGame && quickGame.goAt); i++) await wait(100);
+    await quickWin.webContents.executeJavaScript(`document.querySelector('#arena').click()`);   // too early
+    for (let k = 0; k < 8 && quickGame; k++) {
+      for (let i = 0; i < 80 && quickGame && (await quickWin.webContents.executeJavaScript('document.body.dataset.phase')) !== 'go'; i++) await wait(50);
+      if (!quickGame) break;
+      if (k === 1) await shot(quickWin, '84-quick-go');
+      await wait(150);
+      await quickWin.webContents.executeJavaScript(`document.querySelector('#arena').click()`);
+    }
+    for (let i = 0; i < 40 && (await quickWin.webContents.executeJavaScript('document.body.dataset.phase')) !== 'done'; i++) await wait(100);
+  });
+  await wait(800);
+  await shot(quickWin, '85-quick-result');
+  console.log('[test] quick after a round:', store.data.stats.quickBest || 0, JSON.stringify(quickInfo()));
   quitting = true;
   app.quit();
 }

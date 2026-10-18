@@ -32,6 +32,7 @@ raising, outings, fishing, battles and catching, a Pokédex.
 - [22. 鲤鱼王跳跳 🐟 · Magikarp Jump 🐟](22-Magikarp-Jump)
 - [23. 拼图 🧩 · Slide Puzzle 🧩](23-Slide-Puzzle)
 - [24. 找闪光 ✨ · Shiny Hunt ✨](24-Shiny-Hunt)
+- [25. 电光一闪 ⚡ · Quick Attack ⚡](25-Quick-Attack)
 - [常见问题 · FAQ](FAQ)
 - [开发者 · Developers](Developers)
 
