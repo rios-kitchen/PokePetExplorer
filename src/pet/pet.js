@@ -351,6 +351,12 @@
       if (!P.playAnim(['Pose', 'Hop'])) P.jump(1);
       if (!P.bubbleBusy()) P.showBubble(say('flipWon'), { ms: 2500 });
     },
+    'jump-good'(e) {
+      if (P.isAway()) return;
+      P.hearts(2);
+      if (!P.playAnim(['Hop', 'Pose'])) P.jump(2);
+      if (!P.bubbleBusy()) P.showBubble(say('jumpGood', { n: e.n }), { ms: 2500 });
+    },
     'shuffle-good'(e) {
       if (P.isAway()) return;
       P.hearts(2);

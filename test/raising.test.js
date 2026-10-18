@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo', 'shuffle', 'jump']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -998,6 +998,29 @@ test('Fire-Water-Grass: the type triangle, rewards, limits', () => {
   for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'rps', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'rps', day, t0 + 5)), 'rest');
   assert.equal(Limits.LIMITS.rps.day, 8);
+});
+
+test('Magikarp Jump: targets, grades, rewards, limits', () => {
+  const J = require('../src/main/jump');
+  const Limits = require('../src/main/limits');
+  for (let n = 0; n < J.JUMPS; n++) {
+    const j = J.jumpOf(n);
+    assert.ok(j.center - j.ok >= 0 && j.center + j.ok <= 1, 'the target fits on the bar');
+    assert.ok(j.perfect < j.good && j.good < j.ok);
+    assert.equal(J.grade(j, j.center), 3);
+    assert.equal(J.grade(j, j.center + j.good * 0.99), 2);
+    assert.equal(J.grade(j, j.center - j.ok * 0.99), 1);
+    assert.equal(J.grade(j, j.center + j.ok * 1.01), 0);
+    assert.equal(J.grade(j, NaN), 0);
+  }
+  // later jumps are harder
+  assert.ok(J.jumpOf(4).perfect < J.jumpOf(0).perfect && J.jumpOf(4).speed > J.jumpOf(0).speed);
+  assert.ok(J.heightOf(3) > J.heightOf(2) && J.heightOf(1) > J.heightOf(0));
+  assert.deepEqual([0, 3, 6, 10, 14, 15].map((n) => J.rewardFor(n).berries), [0, 1, 2, 3, 4, 4]);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'jump', day, t0 + i), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'jump', day, t0 + 5)), 'rest');
 });
 
 test('Poké Ball Shuffle: rounds, swaps, rewards, limits', () => {
