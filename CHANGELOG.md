@@ -5,6 +5,8 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+## 1.12.1 · 2026-10-18
+
 - **小游戏列表改成卡片**：外出页的「去玩」里，每个小游戏一张带宝可梦头像的卡片，窗口越宽一行放得越多；整块可以折叠，会记住
   **Mini-game cards**: under "Play outside" in the Outings tab, each mini-game is a card with a Pokémon's portrait, as many a row as the window fits; the whole list folds away and remembers it
 - **每个小游戏每小时 3 局**（原来是 2 局；钓鱼、猜猜我是谁本来就更多，不变）
