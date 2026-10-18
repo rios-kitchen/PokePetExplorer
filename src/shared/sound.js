@@ -39,7 +39,11 @@
       [1319, 0.32, 0.07], [1568, 0.4, 0.3]],
     alarm: [[1568, 0, 0.08], [0, 0.09, 0.05], [1568, 0.15, 0.08], [0, 0.24, 0.05], [1568, 0.3, 0.08]],
     sleep: [[392, 0, 0.2, 'triangle'], [330, 0.22, 0.3, 'triangle']],
-    switch: [[440, 0, 0.06], [660, 0.06, 0.06], [880, 0.12, 0.06], [1320, 0.18, 0.12]]
+    switch: [[440, 0, 0.06], [660, 0.06, 0.06], [880, 0.12, 0.06], [1320, 0.18, 0.12]],
+    // Chatot Echo pads: the four notes of an A major chord, like the classic Simon
+    padFire: [[330, 0, 0.3, 'triangle', 0.12]], padWater: [[440, 0, 0.3, 'triangle', 0.12]],
+    padGrass: [[554, 0, 0.3, 'triangle', 0.12]], padElectric: [[659, 0, 0.3, 'triangle', 0.12]],
+    buzz: [[110, 0, 0.35, 'sawtooth', 0.06]]
   };
 
   function play(name) {

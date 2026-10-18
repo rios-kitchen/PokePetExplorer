@@ -21,6 +21,7 @@ const WhackRules = require('./src/shared/whack-rules');
 const TypeQuiz = require('./src/main/typequiz');
 const Rps = require('./src/main/rps');
 const Voltorb = require('./src/main/voltorb');
+const Echo = require('./src/main/echo');
 const Daily = require('./src/main/daily');
 const Weather = require('./src/main/weather');
 const Battle = require('./src/main/battle');
@@ -93,7 +94,7 @@ async function promptUpdate(st) {
     updateDialogOpen = false;
   }
 }
-const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false };   // switched by hidden test commands, never saved
+const testFlags = { freeFishing: false, fishCenter: false, freeQuiz: false, freeCatch: false, freeMemory: false, freeWhack: false, freeTypes: false, freeRps: false, freeFlip: false, freeEcho: false };   // switched by hidden test commands, never saved
 const PAT_XP_PER_DAY = 20;
 let drag = null;
 
@@ -279,6 +280,7 @@ function snapshot() {
     types: typesInfo(),
     rps: rpsInfo(),
     flip: flipInfo(),
+    echo: echoInfo(),
     fishingNow: fishingNow(),
     fishSpot: Fishing.spotName(fishSpot),
     encounter: waitingEncounter() ? { names: d.wild.encounter.sp.names, until: d.wild.encounter.until } : null,
@@ -667,6 +669,13 @@ async function runSecret(text) {
     if (cmd === 'win') { b.wild.hp = 0; b.wild.fainted = true; b.over = 'win'; } else b.over = 'caught';
     finishBattle();
     send(wildWin, 'wild:refresh');
+    return { ok: true };
+  }
+  if (cmd === 'echo') {
+    // testing: Chatot Echo without daily / hourly limits, until used again or the app restarts
+    testFlags.freeEcho = !testFlags.freeEcho;
+    changed();
+    if (testFlags.freeEcho) openEcho();
     return { ok: true };
   }
   if (cmd === 'voltorbflip') {
@@ -1801,6 +1810,69 @@ function flipTurn(token, i) {
   return { ...out, done: true, cards: b.cards, reward, wins: stats.flipWins || 0, info: flipInfo() };
 }
 
+// ---------- Chatot Echo (聒噪鸟学舌) ----------
+let echoWin = null;
+let echoGame = null;   // { token, seq } – the tune being sung (one round at a time)
+
+function openEcho() {
+  if (!echoWin || echoWin.isDestroyed()) {
+    echoWin = new BrowserWindow({
+      width: 420, height: 560, resizable: false, show: false, title: T('echo.title'), icon: appIcon(256),
+      backgroundColor: '#1d1c1a', autoHideMenuBar: true,
+      webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
+    });
+    if (!IS_MAC) echoWin.setMenu(null);
+    if (process.env.POKEPET_TEST) echoWin.webContents.on('console-message', (e) => console.log('[echo]', e.message));
+    echoWin.loadFile(path.join(__dirname, 'src', 'echo', 'echo.html'));
+    echoWin.once('ready-to-show', () => { echoWin.show(); echoWin.focus(); });
+    echoWin.on('closed', () => { echoWin = null; echoGame = null; });
+  } else {
+    echoWin.show();
+    echoWin.focus();
+  }
+  if (IS_MAC) app.focus({ steal: true });
+}
+
+/** Chatot Echo limits as the windows see them (unlimited while testing). */
+function echoInfo() {
+  if (testFlags.freeEcho) return { left: 999, dayLeft: 999, hourLeft: 999, max: 999, hourMax: 999, recent: 0, nextAt: null, free: true };
+  return Limits.info(store.data, 'echo', today());
+}
+
+/** Start a round (counts one play): Chatot sings the first note. */
+function echoStart() {
+  const lim = echoInfo();
+  const why = Limits.blocked(lim);
+  if (why) return { ok: false, error: why, nextAt: lim.nextAt };
+  if (!lim.free) Limits.use(store.data, 'echo', today());
+  echoGame = { token: `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, seq: [Echo.stepOf()] };
+  changed();
+  return { ok: true, token: echoGame.token, seq: echoGame.seq.slice(), ms: Echo.noteMs(1), max: Echo.MAX, info: echoInfo() };
+}
+
+/** The tune sung back: right → one note longer (or won at MAX); wrong → the round ends and is rewarded. */
+function echoAnswer(token, attempt) {
+  const g = echoGame;
+  if (!g || g.token !== token) return { ok: false };
+  const right = Echo.matches(g.seq, attempt);
+  if (right && g.seq.length < Echo.MAX) {
+    g.seq.push(Echo.stepOf());
+    return { ok: true, right, seq: g.seq.slice(), ms: Echo.noteMs(g.seq.length) };
+  }
+  echoGame = null;
+  const reward = Echo.rewardFor(right ? g.seq.length : g.seq.length - 1);
+  const stats = store.data.stats;
+  stats.echoBest = Math.max(stats.echoBest || 0, reward.cleared);
+  store.data.berries += reward.berries;
+  if (hasPet() && !activeAway() && activePet().stage !== 'egg') {
+    addXp(reward.xp);
+    addMood(reward.mood);
+    if (reward.cleared >= 5) petEvent('echo-good', { n: reward.cleared });
+  }
+  changed();
+  return { ok: true, right, seq: g.seq.slice(), done: true, reward, best: stats.echoBest, info: echoInfo() };
+}
+
 // ---------- Memory Match (记忆翻牌) ----------
 let memoryWin = null;
 let memoryBoard = null;   // { token, at, cards } – the board being played (one at a time)
@@ -2620,6 +2692,7 @@ function buildMenu() {
     { label: T('menu.types'), click: () => openTypes() },
     { label: T('menu.rps'), click: () => openRps() },
     { label: T('menu.flip'), click: () => openFlip() },
+    { label: T('menu.echo'), click: () => openEcho() },
     { label: T('menu.wild'), click: () => openWild(false) },
     { label: T('menu.diary'), click: () => openPanel('diary') },
     { type: 'separator' },
@@ -2977,6 +3050,9 @@ function registerIpc() {
   ipcMain.handle('flip:start', () => flipStart());
   ipcMain.handle('flip:turn', (_e, token, i) => flipTurn(String(token || ''), Number(i)));
   ipcMain.on('flip:open', () => openFlip());
+  ipcMain.handle('echo:start', () => echoStart());
+  ipcMain.handle('echo:answer', (_e, token, attempt) => echoAnswer(String(token || ''), Array.isArray(attempt) ? attempt.slice(0, Echo.MAX + 1).map(String) : []));
+  ipcMain.on('echo:open', () => openEcho());
   ipcMain.handle('photo:save', (_e, p) => savePhoto(p || {}));
   ipcMain.handle('photo:fav', (_e, id, fav) => favoritePhoto(id, fav));
   ipcMain.handle('photo:get', (_e, id) => {
@@ -3802,6 +3878,25 @@ async function selfTest(dir) {
   await wait(800);
   await shot(flipWin, '67-flip-lost');
   console.log('[test] flip after two boards:', store.data.stats.flipWins || 0, JSON.stringify(flipInfo()));
+  // Chatot Echo: sing back three tunes, then a wrong note
+  await step('echo', async () => openEcho());
+  await wait(2500);
+  await shot(echoWin, '68-echo-start');
+  await step('echo-play', async () => {
+    const phase = () => echoWin.webContents.executeJavaScript('document.body.dataset.phase');
+    const press = (pad) => echoWin.webContents.executeJavaScript(`document.querySelector('.pad[data-pad="${pad}"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))`);
+    await echoWin.webContents.executeJavaScript(`document.querySelector('#next').click()`);
+    for (let round = 0; round < 4 && echoGame; round++) {
+      for (let i = 0; i < 60 && (await phase()) !== 'input'; i++) await wait(100);
+      if (round === 1) await shot(echoWin, '69-echo-input');
+      const seq = echoGame.seq.slice();
+      if (round === 3) { await press(Echo.PADS.find((p) => p !== seq[0])); break; }
+      for (const pad of seq) { await press(pad); await wait(120); }
+    }
+  });
+  await wait(1200);
+  await shot(echoWin, '70-echo-result');
+  console.log('[test] echo after a round:', store.data.stats.echoBest || 0, JSON.stringify(echoInfo()));
   quitting = true;
   app.quit();
 }

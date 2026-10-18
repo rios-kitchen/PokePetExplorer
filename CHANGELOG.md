@@ -5,6 +5,9 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **新小游戏「聒噪鸟学舌」**：聒噪鸟在火、水、草、电四个按钮上唱一段曲子，你照着按一遍，每次多一个音，最多 15 个音；唱对越多树果越多（最多 5 个）；也可以按 1 2 3 4；每天 6 局，每小时 2 局，不用联网
+  **New mini-game "Chatot Echo"**: a Simon game – Chatot sings a tune on four type pads and you play it back, one note longer each time, up to 15; the more you sing back, the more berries (up to 5); keys 1–4 work too; 6 a day, 2 an hour, works offline
+
 ## 1.7.0 · 2026-10-18
 
 - **新小游戏「属性相克」**：某个属性的招式打中某个属性的宝可梦，效果绝佳、一般、效果不好还是没有效果？每局 10 题，后 5 题是双属性；答对越多树果越多；每天 6 局，每小时 2 局，不用联网

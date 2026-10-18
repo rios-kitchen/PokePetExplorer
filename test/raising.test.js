@@ -399,11 +399,11 @@ test('hidden commands are recognised only by their exact word', { skip: !localWo
   assert.deepEqual(found[1].args, ['pikachu', 'shiny']);
   assert.equal(Secrets.parse(localWords.return).cmd, 'return');
   // newer words may not be in an older local file yet
-  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
+  for (const c of ['battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo']) if (localWords[c]) assert.equal(Secrets.parse(localWords[c]).cmd, c);
 });
 
 test('unknown words are not commands', () => {
-  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip']) assert.equal(Secrets.parse(w).cmd, null);
+  for (const w of ['hello', '', 'berries', 'hatch', 'shiny', 'cheat', 'battle', 'win', 'catch', 'fishing', 'update', 'forecast', 'battlefx', 'evolution', 'quiz', 'catchgame', 'memory', 'whack', 'typequiz', 'rps', 'voltorbflip', 'echo']) assert.equal(Secrets.parse(w).cmd, null);
 });
 
 test('every expedition has a pixel scene', () => {
@@ -998,6 +998,30 @@ test('Fire-Water-Grass: the type triangle, rewards, limits', () => {
   for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'rps', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'rps', day, t0 + 5)), 'rest');
   assert.equal(Limits.LIMITS.rps.day, 8);
+});
+
+test('Chatot Echo: tunes, answers, rewards, limits', () => {
+  const E = require('../src/main/echo');
+  const Limits = require('../src/main/limits');
+  assert.deepEqual(E.PADS, ['fire', 'water', 'grass', 'electric']);
+  for (let i = 0; i < 50; i++) assert.ok(E.PADS.includes(E.stepOf()));
+  assert.equal(E.stepOf(() => 0), 'fire');
+  assert.equal(E.stepOf(() => 0.999), 'electric');
+  assert.equal(E.matches(['fire', 'grass'], ['fire', 'grass']), true);
+  assert.equal(E.matches(['fire', 'grass'], ['fire', 'water']), false);
+  assert.equal(E.matches(['fire', 'grass'], ['fire']), false);
+  assert.equal(E.matches(['fire'], 'fire'), false);
+  // quicker as the tune grows, never too quick
+  assert.ok(E.noteMs(1) > E.noteMs(10));
+  assert.ok(E.noteMs(E.MAX) >= 260);
+  assert.deepEqual([0, 1, 4, 7, 10, 14, 15].map((n) => E.rewardFor(n).berries), [0, 1, 2, 3, 4, 4, 5]);
+  assert.equal(E.rewardFor(E.MAX).won, true);
+  assert.equal(E.rewardFor(E.MAX - 1).won, false);
+  const data = fresh();
+  const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
+  for (let i = 0; i < 2; i++) assert.equal(Limits.use(data, 'echo', day, t0 + i), true);
+  assert.equal(Limits.blocked(Limits.info(data, 'echo', day, t0 + 5)), 'rest');
+  assert.equal(Limits.LIMITS.echo.day, 6);
 });
 
 test('Whack-a-Diglett: points, rewards, limits', () => {

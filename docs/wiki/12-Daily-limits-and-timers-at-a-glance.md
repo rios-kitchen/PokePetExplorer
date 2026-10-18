@@ -17,6 +17,7 @@
 | 属性相克 | 每天 6 局（每局 10 题），任意 1 小时内 2 局；每局最多 4 🍓 |
 | 火水草猜拳 | 每天 8 局，任意 1 小时内 3 局；赢 3 🍓，输 1 🍓 |
 | 霹雳电球翻牌 | 每天 6 局，任意 1 小时内 2 局；赢 3–4 🍓 |
+| 聒噪鸟学舌 | 每天 6 局，任意 1 小时内 2 局；每局最多 5 🍓 |
 | 节日礼物 | 每个节日 1 次 |
 | 摸摸给经验 | 每 15 秒最多 1 点，每天最多 20 点 |
 | 进化 | 原作等级（或进化石、联系绳、亲密度 220），且加入满 7 天 / 上次进化后满 14 天 |
@@ -46,6 +47,7 @@
 | Type Match-up | 6 rounds of 10 questions a day, 2 within any hour; at most 4 🍓 a round |
 | Fire-Water-Grass | 8 matches a day, 3 within any hour; 3 🍓 for a win, 1 for a loss |
 | Voltorb Flip | 6 boards a day, 2 within any hour; 3–4 🍓 for a cleared board |
+| Chatot Echo | 6 rounds a day, 2 within any hour; at most 5 🍓 a round |
 | Holiday gifts | once per holiday |
 | XP from patting | at most 1 every 15 s, 20 a day |
 | Evolution | the games' level (or a stone, the Linking Cord, friendship 220), plus 7 days on the team / 14 days since the last one |

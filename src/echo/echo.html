@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>PokePet Explorer</title>
+  <link rel="stylesheet" href="echo.css">
+</head>
+<body data-phase="idle">
+  <h1 id="title"></h1>
+  <p id="score" class="score"></p>
+  <div class="board">
+    <div id="pads" class="pads"></div>
+    <div id="bird" class="bird">🦜</div>
+  </div>
+  <p id="verdict" class="verdict"></p>
+  <div class="foot">
+    <button id="next" class="primary hidden"></button>
+    <p id="keys" class="count"></p>
+    <p id="count" class="count"></p>
+  </div>
+  <script src="../shared/i18n.js"></script>
+  <script src="../shared/sound.js"></script>
+  <script src="echo.js"></script>
+</body>
+</html>
