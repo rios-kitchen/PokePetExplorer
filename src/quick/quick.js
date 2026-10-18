@@ -105,6 +105,8 @@
     score();
     setTimeout(() => {
       Sound.play(r.points >= 10 ? 'fanfare' : 'chime');
+      $('#ms').textContent = r.best === null ? '' : t('quick.ms', { ms: r.best });   // the round's best, not the last draw
+      document.body.classList.remove('hit-good');
       verdict(t('quick.result', { p: r.points, best: r.best === null ? '–' : r.best, b: r.berries, xp: r.xp, rec: res.record || '–' }), r.points >= 10 ? 'win' : '');
     }, 700);
     showCount(res.info);

@@ -2235,7 +2235,7 @@ let quickGame = null;   // { token, n, points, best, early, goAt } – the round
 function openQuick() {
   if (!quickWin || quickWin.isDestroyed()) {
     quickWin = new BrowserWindow({
-      width: 420, height: 560, resizable: false, show: false, title: T('quick.title'), icon: appIcon(256),
+      width: 420, height: 580, resizable: false, show: false, title: T('quick.title'), icon: appIcon(256),
       backgroundColor: '#1d1c1a', autoHideMenuBar: true,
       webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true }
     });
