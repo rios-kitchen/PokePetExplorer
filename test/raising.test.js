@@ -1131,29 +1131,44 @@ test('Slide Puzzle: shuffles, slides, replays, rewards, limits', () => {
     assert.equal(Z.solve(after).length, full.length - steps.length);
   }
   assert.deepEqual(Z.hint(Z.solved()), []);
+  // a random face each puzzle
+  assert.ok(Z.EMOTIONS.length > 5 && Z.EMOTIONS.includes(Z.emotionOf()));
+  assert.equal(Z.emotionOf(() => 0), 'Normal');
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'puzzle', day, t0 + i), true);
   assert.equal(Limits.blocked(Limits.info(data, 'puzzle', day, t0 + 5)), 'rest');
 });
 
-test('Magikarp Jump: targets, grades, rewards, limits', () => {
+test('Magikarp Jump: swimmers, leaps, bumps, rewards, limits', () => {
   const J = require('../src/main/jump');
   const Limits = require('../src/main/limits');
-  for (let n = 0; n < J.JUMPS; n++) {
-    const j = J.jumpOf(n);
-    assert.ok(j.center - j.ok >= 0 && j.center + j.ok <= 1, 'the target fits on the bar');
-    assert.ok(j.perfect < j.good && j.good < j.ok);
-    assert.equal(J.grade(j, j.center), 3);
-    assert.equal(J.grade(j, j.center + j.good * 0.99), 2);
-    assert.equal(J.grade(j, j.center - j.ok * 0.99), 1);
-    assert.equal(J.grade(j, j.center + j.ok * 1.01), 0);
-    assert.equal(J.grade(j, NaN), 0);
+  for (let k = 0; k < 20; k++) {
+    const sw = J.swimmersOf();
+    assert.equal(sw.length, J.SWIMMERS);
+    assert.ok(sw[0].at === J.FIRST_AT);
+    for (let i = 1; i < sw.length; i++) assert.ok(sw[i].at - sw[i - 1].at >= 1000, 'every swimmer can be cleared on its own');
+    for (const s of sw) assert.ok(J.KINDS.includes(s.dex) && s.ms >= 1300);
+    // a leap 300 ms before each one clears them all
+    assert.equal(J.replay(sw, sw.map((s) => s.at - 300)).dodged, J.SWIMMERS);
   }
-  // later jumps are harder
-  assert.ok(J.jumpOf(4).perfect < J.jumpOf(0).perfect && J.jumpOf(4).speed > J.jumpOf(0).speed);
-  assert.ok(J.heightOf(3) > J.heightOf(2) && J.heightOf(1) > J.heightOf(0));
-  assert.deepEqual([0, 3, 6, 10, 14, 15].map((n) => J.rewardFor(n).berries), [0, 1, 2, 3, 4, 4]);
+  const sw = [{ at: 2000 }, { at: 3200 }, { at: 4400 }, { at: 5600 }, { at: 6800 }];
+  // too early, too late, just right
+  assert.equal(J.clears(sw[0], [2000 - 600]), false);
+  assert.equal(J.clears(sw[0], [2000 - 100]), false);
+  assert.equal(J.clears(sw[0], [2000 - 300]), true);
+  // clicks while still in the air don't count
+  assert.deepEqual(J.jumpsOf([100, 300, 900, 50]), [50, 900]);
+  // no jumps: 3 bumps and the rest never come
+  const none = J.replay(sw, []);
+  assert.equal(none.dodged, 0);
+  assert.equal(none.bumps, J.LIVES);
+  assert.equal(none.results.length, J.LIVES);
+  assert.equal(none.over, true);
+  const two = J.replay(sw, [1700, 2900]);
+  assert.deepEqual(two.results, [true, true, false, false, false]);
+  assert.equal(two.dodged, 2);
+  assert.deepEqual([0, 3, 6, 9, 11, 12].map((n) => J.rewardFor(n).berries), [0, 1, 2, 3, 3, 4]);
   const data = fresh();
   const day = '2026-10-18', t0 = Date.parse('2026-10-18T10:00:00');
   for (let i = 0; i < 3; i++) assert.equal(Limits.use(data, 'jump', day, t0 + i), true);

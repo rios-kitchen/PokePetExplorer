@@ -19,6 +19,10 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
   **Slide Puzzle hints**: 3 a puzzle, a glowing tile shows the way for the next 5 moves; solve it without one for 2 more 🍓
 - **少用 emoji，多用宝可梦**：聒噪鸟学舌的按钮和中间的聒噪鸟、火水草猜拳的出拳、霹雳电球翻牌的电球、百变怪照着变的空棋盘都换成宝可梦的形象；伙伴还是蛋的时候，伙伴类小游戏由皮卡丘出场
   **Pokémon instead of emoji**: Chatot Echo's pads and Chatot itself, Fire-Water-Grass's throws, Voltorb Flip's Voltorbs and Ditto Copy's empty board now show Pokémon; Pikachu stands in for the partner games while your partner is still an egg
+- **鲤鱼王跳跳改玩法**：不再停能量条，而是有宝可梦从右边游过来，点击或按空格让鲤鱼王跳过去；每局 12 只，被撞 3 次结束
+  **Magikarp Jump, new way to play**: no more power bar – Pokémon swim in from the right and you click or press Space to leap over them; 12 a round, 3 bumps and it's over
+- **更多表情**：灯笼鱼全部点亮时一起开心；找闪光找对了闪光那只开心，点错了被点的和闪光的都难过；拼图每局随机换一种伙伴表情
+  **More expressions**: every Chinchou looks happy when the pond is lit; in Shiny Hunt the shiny looks happy when found, and both it and the wrong pick look sad on a miss; Slide Puzzle uses a different partner expression each time
 - **对战显示属性和特性**：双方血条下面显示属性（草、火、水……）和特性
   **Types and abilities in battle**: both sides show their types (Grass, Fire, Water …) and ability under the HP bar
 

@@ -10,7 +10,7 @@
   const L = () => (state ? state.settings.lang : 'en');
   const t = (k, v) => I18N.t(L(), k, v);
 
-  let game = null;   // { token, face, board, found, misses, ends, seconds, busy }
+  let game = null;   // { token, face, happy, sad, board, found, misses, ends, seconds, busy }
   let tick = 0;
 
   function phase(p) { document.body.dataset.phase = p; }
@@ -71,8 +71,11 @@
     if (!res.ok) { game.busy = false; return; }
     if (res.over) { finish(); return; }
     const cells = document.querySelectorAll('#grid .cell');
+    // found: the shiny looks happy; missed: the one clicked and the real shiny both look sad
+    const mood = (cell, url) => { const img = cell.querySelector('img'); if (img && url) img.src = url; };
     cells[res.at].classList.add('found');
-    if (!res.right) { cells[i].classList.add('missed'); game.misses++; }
+    mood(cells[res.at], res.right ? game.happy : game.sad);
+    if (!res.right) { cells[i].classList.add('missed'); mood(cells[i], game.sad); game.misses++; }
     Sound.play(res.right ? 'chime' : 'buzz');
     game.found = res.found;
     score();
@@ -82,7 +85,7 @@
       game.board = res.board;
       draw(game.board, game.face);
       game.busy = false;
-    }, res.right ? 250 : 650);
+    }, res.right ? 450 : 800);
   }
 
   async function finish() {
@@ -129,7 +132,7 @@
     }
     showCount(res.info);
     $('#next').classList.add('hidden');
-    game = { token: res.token, face: res.face, board: res.board, found: 0, misses: 0, seconds: res.seconds, ends: Date.now() + res.seconds * 1000, busy: false };
+    game = { token: res.token, face: res.face, happy: res.happy, sad: res.sad, board: res.board, found: 0, misses: 0, seconds: res.seconds, ends: Date.now() + res.seconds * 1000, busy: false };
     draw(game.board, game.face);
     verdict(t('hunt.go'));
     Sound.play('switch');

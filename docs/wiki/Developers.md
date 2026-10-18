@@ -33,6 +33,7 @@ Electron + vanilla JS · 数据文件版本 / store version 6（旧存档的等�
 | 番茄钟默认值 / Pomodoro defaults | `src/main/store.js` | `pomodoro: { focus: 25, short: 5, long: 15, longEvery: 4 }` |
 | 界面文字 / UI text | `src/shared/i18n.js` | en / zh |
 | 小游戏里的动画形象 / Animated sprites in the mini-games | `src/shared/anim.js` | `PokeAnim.load(dex, shiny, names)`, `new PokeAnim.Player(canvas, sprite)` |
+| 鲤鱼王跳跳 / Magikarp Jump | `src/main/jump.js` | `SWIMMERS` (12), `LIVES` (3), `AIR_FROM` / `AIR_TO` / `JUMP_MS` / `HALF` (leap timing) |
 | 拼图提示 / Slide Puzzle hints | `src/main/puzzle.js` | `HINTS` (3), `HINT_STEPS` (5), `CLEAN_BONUS` (2) |
 
 ## 测试 / Testing

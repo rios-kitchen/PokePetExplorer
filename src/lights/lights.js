@@ -89,9 +89,25 @@
     if (game.board.every(Boolean)) finish();
   }
 
+  // all lit: every Chinchou's face turns happy, and they bounce
+  let happy = null;
+  function cheer() {
+    if (!happy) return;
+    for (const p of players) p.stop();
+    players = [];
+    for (const el of document.querySelectorAll('#pond .lamp')) {
+      const img = document.createElement('img');
+      img.src = happy;
+      img.alt = '';
+      el.replaceChildren(img);
+      el.classList.add('cheer');
+    }
+  }
+
   async function finish() {
     game.busy = true;
     phase('done');
+    cheer();
     const res = await api.invoke('lights:finish', game.token, game.taps);
     game = null;
     if (!res.ok) { idle(t('lights.rules')); return; }
@@ -149,6 +165,7 @@
     labels();
     showCount(state.lights);
     idle(t('lights.rules'));
+    api.invoke('diary:portrait', 170, 'Happy', false).catch(() => null).then((url) => { happy = url; });
     sprite = await Anim.load(170, false, ['Idle']);
     if (!sprite) portrait = await api.invoke('diary:portrait', 170, 'Normal', false).catch(() => null);
     if (!sprite && !portrait) return;

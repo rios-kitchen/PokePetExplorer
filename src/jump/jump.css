@@ -4,23 +4,25 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1c1a; col
   font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
 h1 { margin: 12px 0 2px; text-align: center; font-size: 18px; color: var(--yellow); letter-spacing: 1px; }
 .score { margin: 0 0 8px; text-align: center; font-size: 14px; font-weight: 800; min-height: 20px; }
-.pond { position: relative; width: 360px; height: 230px; margin: 0 auto; border: 3px solid #2a2420; border-radius: 12px; overflow: hidden;
-  background: linear-gradient(#7cc6ee, #c9ecfa); }
-.water { position: absolute; left: 0; right: 0; bottom: 0; height: 52px; background: linear-gradient(#3b8fd0, #2765a6);
-  border-top: 3px solid #e6f6ff; }
-.karp { position: absolute; left: 50%; bottom: 14px; width: 72px; height: 72px; margin-left: -36px; z-index: 1; display: flex;
-  align-items: center; justify-content: center; font-size: 46px; transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1); }
-.karp img { width: 72px; height: 72px; image-rendering: pixelated; border-radius: 50%; }
-.karp canvas { width: 96px; height: 96px; flex: none; image-rendering: pixelated; }
-.karp.splash { animation: wiggle 0.12s linear 4 alternate; }
-@keyframes wiggle { from { rotate: -8deg; } to { rotate: 8deg; } }
-.height { position: absolute; right: 10px; top: 8px; font-size: 18px; font-weight: 900; color: #1d3f63; z-index: 2; }
-.bar { position: relative; width: 340px; height: 26px; margin: 14px auto 0; border: 3px solid #23221f; border-radius: 8px; background: #45423c;
-  overflow: hidden; cursor: pointer; }
-.zone { position: absolute; top: 0; bottom: 0; }
-.zone.ok { background: #c9a227; } .zone.good { background: #7bbf4a; } .zone.perfect { background: #2fa25a; }
-.needle { position: absolute; top: -2px; bottom: -2px; width: 4px; margin-left: -2px; background: #fff; box-shadow: 0 0 6px #fff; }
-body:not([data-phase="aim"]) .bar { cursor: default; }
+.pond { position: relative; width: 360px; height: 260px; margin: 0 auto; border: 3px solid #2a2420; border-radius: 12px; overflow: hidden;
+  background: linear-gradient(#7cc6ee, #c9ecfa); cursor: pointer; }
+body:not([data-phase="play"]) .pond { cursor: default; }
+.water { position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background: linear-gradient(#3b8fd0, #2765a6);
+  border-top: 3px solid #e6f6ff; z-index: 0; }
+.hearts { position: absolute; right: 10px; top: 8px; font-size: 16px; z-index: 3; letter-spacing: 2px; }
+/* Magikarp on the left, at the waterline; a leap lasts 700 ms (main/jump.js: in the air from 70 to 620 ms) */
+.karp { position: absolute; left: 50px; bottom: 30px; width: 80px; height: 80px; z-index: 2; display: flex;
+  align-items: center; justify-content: center; font-size: 46px; }
+.karp img { width: 64px; height: 64px; image-rendering: pixelated; border-radius: 50%; }
+.karp canvas { width: 80px; height: 80px; flex: none; image-rendering: pixelated; }
+.karp.leap { animation: leap 700ms linear; }
+@keyframes leap { 0% { transform: translateY(0); } 10% { transform: translateY(-62px); } 30% { transform: translateY(-112px); }
+  50% { transform: translateY(-130px); } 70% { transform: translateY(-112px); } 88% { transform: translateY(-62px); } 100% { transform: translateY(0); } }
+.karp.bumped { filter: brightness(1.6) saturate(0.4); }
+.swimmers { position: absolute; left: 0; right: 0; bottom: 34px; height: 44px; z-index: 1; }
+.swimmer { position: absolute; left: 0; top: 0; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+.swimmer canvas { width: 44px; height: 44px; image-rendering: pixelated; }
+.swimmer img { width: 40px; height: 40px; border-radius: 50%; image-rendering: pixelated; }
 .hidden { display: none !important; }
 .verdict { margin: 12px 16px 6px; text-align: center; min-height: 40px; font-size: 14px; font-weight: 700; white-space: pre-line; }
 .verdict.win { color: #7be0a2; } .verdict.lose { color: #ff8a80; }

@@ -1,5 +1,6 @@
-/* PokePet Explorer – Magikarp Jump. A power bar sweeps back and forth; stop it on the target and Magikarp splashes
- * high into the air. Five jumps a round. The main process makes the targets and grades every stop (main/jump.js). */
+/* PokePet Explorer – Magikarp Jump. Pokémon swim in from the right; click or press Space to make Magikarp leap over
+ * each one. 12 a round, 3 bumps and it's over. The main process makes the swimmers and replays the jump times before
+ * rewarding the round (main/jump.js) – the window uses the same timings to show what happens. */
 (() => {
   const api = window.api;
   const I18N = window.PokeI18N;
@@ -7,16 +8,15 @@
   const Anim = window.PokeAnim;
   const $ = (s) => document.querySelector(s);
 
-  const GRADE = ['jump.g0', 'jump.g1', 'jump.g2', 'jump.g3'];
-  const SONG = ['buzz', 'blip', 'chime', 'levelup'];
+  // the same as main/jump.js
+  const AIR_FROM = 70, AIR_TO = 620, JUMP_MS = 700, HALF = 70;
+  const POND_W = 360, KARP_X = 90, SWIM_W = 44;
 
   let state = null;
   const L = () => (state ? state.settings.lang : 'en');
   const t = (k, v) => I18N.t(L(), k, v);
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const metres = (cm) => (cm / 100).toFixed(1);
 
-  let round = null;   // { token, n, jumps, jump, total, height, t0, pos }
+  let round = null;   // { token, swimmers, lives, t0, jumps (ms after the start), next (first swimmer not passed yet), bumps, dodged, els }
   let raf = 0;
 
   function phase(p) { document.body.dataset.phase = p; }
@@ -41,85 +41,111 @@
   }
 
   function score() {
-    $('#score').textContent = round ? t('jump.round', { n: Math.min(round.n + 1, round.jumps), max: round.jumps, pts: round.total, m: metres(round.height) }) : '';
+    $('#score').textContent = round ? t('jump.round', { n: round.dodged, max: round.swimmers.length }) : '';
+    $('#hearts').textContent = round ? '❤️'.repeat(Math.max(0, round.lives - round.bumps)) + '🖤'.repeat(Math.min(round.lives, round.bumps)) : '';
   }
 
-  function zones(j) {
-    const put = (el, half) => { el.style.left = `${(j.center - half) * 100}%`; el.style.width = `${half * 200}%`; };
-    put($('#zOk'), j.ok); put($('#zGood'), j.good); put($('#zPerfect'), j.perfect);
-  }
-
-  const needle = (pos) => { $('#needle').style.left = `${pos * 100}%`; };
-
-  // the bar sweeps 0 → 1 → 0 …, `speed` sweeps a second
-  function sweep(now) {
-    if (!round || document.body.dataset.phase !== 'aim') return;
-    const p = (((now - round.t0) / 1000) * round.jump.speed) % 2;
-    round.pos = p < 1 ? p : 2 - p;
-    needle(round.pos);
-    raf = requestAnimationFrame(sweep);
-  }
-
-  function aim() {
-    zones(round.jump);
-    needle(0);
-    score();
-    verdict(t('jump.aim'));
-    round.t0 = performance.now();
-    round.pos = 0;
-    phase('aim');
-    raf = requestAnimationFrame(sweep);
-  }
-
-  async function stop(pos) {
-    if (!round || document.body.dataset.phase !== 'aim') return;
-    cancelAnimationFrame(raf);
-    phase('fly');
-    if (pos != null) round.pos = pos;
-    needle(round.pos);
-    const res = await api.invoke('jump:stop', round.token, round.pos);
-    if (!res.ok) { idle(t('jump.rules')); return; }
-    round.total = res.total;
-    round.height = res.height;
-    const karp = $('#karp');
-    Sound.play(SONG[res.points]);
-    if (player) player.play(res.points === 0 ? 'Hurt' : 'Hop');
-    if (res.points === 0) karp.classList.add('splash');
-    else karp.style.transform = `translateY(-${Math.round(20 + res.points * 42)}px)`;
-    $('#height').textContent = `${metres(res.cm)} m`;
-    verdict(t(GRADE[res.points], { m: metres(res.cm) }), res.points ? 'win' : 'lose');
-    await sleep(500);
-    karp.style.transform = '';
-    await sleep(600);
-    karp.classList.remove('splash');
-    $('#height').textContent = '';
-    round.n++;
-    score();
-    if (!res.done) {
-      round.jump = res.jump;
-      aim();
-      return;
-    }
-    const r = res.reward;
-    Sound.play(r.total >= 10 ? 'fanfare' : 'chime');
-    verdict(t('jump.result', { pts: r.total, m: metres(res.height), b: r.berries, xp: r.xp, best: res.best, high: metres(res.high) }), r.total >= 10 ? 'win' : '');
-    showCount(res.info);
-    round = null;
-    phase('idle');
-    button(t('jump.again'));
-  }
-  window.__stopAt = (pos) => stop(Math.max(0, Math.min(1, pos)));   // the self-test aims for the target
-
-  // Magikarp's animated sprite; its portrait (from jump:start), then 🐟, if there's no sprite
+  // Magikarp: its animated sprite facing right (its portrait, then 🐟, if there's no sprite)
   let player = null;
   async function karpSprite() {
     const sp = await Anim.load(129, false, ['Idle', 'Hop', 'Hurt']);
     if (!sp || player) return !!player;
     const cv = document.createElement('canvas');
-    cv.width = cv.height = 96;
+    cv.width = cv.height = 80;
     $('#karp').replaceChildren(cv);
-    player = new Anim.Player(cv, sp, 0.8);
+    player = new Anim.Player(cv, sp, 0.8, 2);
     return true;
+  }
+
+  // the swimmers: animated sprites facing left, or their portraits
+  const looks = {};
+  function swimmerEl(dex) {
+    const el = document.createElement('div');
+    el.className = 'swimmer';
+    looks[dex] ||= Anim.load(dex, false, ['Idle']).then(async (sp) => ({ sp, face: sp ? null : await api.invoke('diary:portrait', dex, 'Normal', false).catch(() => null) }));
+    looks[dex].then(({ sp, face }) => {
+      if (sp) {
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = SWIM_W;
+        el.replaceChildren(cv);
+        el.__player = new Anim.Player(cv, sp, 0.9, 6);
+      } else if (face) {
+        const img = document.createElement('img');
+        img.src = face;
+        img.alt = '';
+        el.replaceChildren(img);
+      } else el.textContent = '🐡';
+    });
+    return el;
+  }
+
+  const inAir = (now) => round.jumps.some((j) => now >= j && now < j + JUMP_MS);
+  const clears = (s) => round.jumps.some((j) => j + AIR_FROM <= s.at - HALF && s.at + HALF <= j + AIR_TO);
+
+  function jump() {
+    if (!round || document.body.dataset.phase !== 'play') return;
+    const now = performance.now() - round.t0;
+    if (inAir(now)) return;
+    round.jumps.push(Math.round(now));
+    const karp = $('#karp');
+    karp.classList.remove('leap');
+    void karp.offsetWidth;   // restart the leap
+    karp.classList.add('leap');
+    if (player) player.play('Hop');
+    Sound.play('pat');
+  }
+
+  function frame() {
+    if (!round || document.body.dataset.phase !== 'play') return;
+    const now = performance.now() - round.t0;
+    round.swimmers.forEach((s, i) => {
+      const x = KARP_X + ((s.at - now) / s.ms) * (POND_W - KARP_X + SWIM_W);
+      const el = round.els[i];
+      if (x > POND_W + SWIM_W || x < -SWIM_W * 2) { el.style.display = 'none'; return; }
+      el.style.display = '';
+      el.style.transform = `translateX(${Math.round(x - SWIM_W / 2)}px)`;
+    });
+    // a swimmer has passed under Magikarp: cleared or bumped?
+    while (round.next < round.swimmers.length && now > round.swimmers[round.next].at + HALF) {
+      const s = round.swimmers[round.next++];
+      if (clears(s)) {
+        round.dodged++;
+        Sound.play('blip');
+        verdict(t('jump.over'), 'win');
+      } else {
+        round.bumps++;
+        Sound.play('buzz');
+        verdict(t('jump.bump'), 'lose');
+        if (player) player.play('Hurt');
+        $('#karp').classList.add('bumped');
+        setTimeout(() => $('#karp').classList.remove('bumped'), 400);
+      }
+      score();
+      if (round.bumps >= round.lives) { finish(); return; }
+    }
+    if (round.next >= round.swimmers.length) { finish(); return; }
+    // the self-test leaps over the first few swimmers
+    const auto = window.__autoJump || 0;
+    const s = round.swimmers[round.next];
+    if (round.next < auto && now >= s.at - 300 && !inAir(now)) jump();
+    raf = requestAnimationFrame(frame);
+  }
+
+  async function finish() {
+    cancelAnimationFrame(raf);
+    phase('wait');
+    const res = await api.invoke('jump:finish', round.token, round.jumps);
+    for (const el of round.els) { if (el.__player) el.__player.stop(); }
+    $('#swimmers').replaceChildren();
+    round = null;
+    phase('idle');
+    if (!res.ok) { verdict(t('jump.rules')); button(t('jump.start')); return; }
+    const r = res.reward;
+    Sound.play(r.dodged >= 9 ? 'fanfare' : 'chime');
+    verdict(t('jump.result', { n: r.dodged, max: 12, b: r.berries, xp: r.xp, best: res.best }), r.dodged >= 9 ? 'win' : '');
+    $('#score').textContent = t('jump.round', { n: r.dodged, max: 12 });
+    showCount(res.info);
+    button(t('jump.again'));
   }
 
   function button(label) {
@@ -133,8 +159,6 @@
     round = null;
     phase('idle');
     score();
-    zones({ center: 0.5, ok: 0, good: 0, perfect: 0 });
-    needle(0);
     verdict(text);
     button(t('jump.start'));
   }
@@ -151,16 +175,23 @@
     showCount(res.info);
     $('#next').classList.add('hidden');
     if (res.face && !(await karpSprite())) { const img = document.createElement('img'); img.src = res.face; img.alt = ''; $('#karp').replaceChildren(img); }
-    round = { token: res.token, n: 0, jumps: res.jumps, jump: res.jump, total: 0, height: 0, t0: 0, pos: 0 };
+    const els = res.swimmers.map((s) => swimmerEl(s.dex));
+    for (const el of els) el.style.display = 'none';
+    $('#swimmers').replaceChildren(...els);
+    round = { token: res.token, swimmers: res.swimmers, lives: res.lives, t0: performance.now(), jumps: [], next: 0, bumps: 0, dodged: 0, els };
+    score();
+    verdict(t('jump.go'));
     Sound.play('switch');
-    await sleep(300);
-    aim();
+    phase('play');
+    raf = requestAnimationFrame(frame);
   }
 
-  $('#bar').addEventListener('mousedown', () => stop());
-  $('#pond').addEventListener('mousedown', () => stop());
+  $('#pond').addEventListener('mousedown', jump);
   document.addEventListener('keydown', (e) => {
-    if ((e.code === 'Space' || e.key === ' ') && document.body.dataset.phase === 'aim') { e.preventDefault(); stop(); }
+    if (e.code !== 'Space' && e.key !== ' ') return;
+    e.preventDefault();
+    if (round) jump();
+    else if (!$('#next').classList.contains('hidden') && !$('#next').disabled) start();
   });
 
   api.on('state', (s) => {

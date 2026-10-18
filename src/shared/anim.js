@@ -1,7 +1,7 @@
 /* PokePet Explorer – animated PMD sprites for the mini-game windows. load() fetches a Pokémon's animations (through
  * 'battle:assets', which downloads them the first time) and Player draws one into a canvas: it loops Idle and can play
  * another animation (Attack, Hurt, Hop …) once. Every animation is drawn at the same scale and spot, so switching
- * doesn't make the Pokémon jump. Row 0 of a PMD sheet is the Pokémon facing the viewer. */
+ * doesn't make the Pokémon jump. Row 0 of a PMD sheet is the Pokémon facing the viewer (the size is measured on it). */
 (() => {
   const TICK = 1000 / 60;   // PMD frame durations are in 1/60 s
 
@@ -67,10 +67,11 @@
   }
 
   class Player {
-    /** fill: how much of the canvas the idle Pokémon takes up. */
-    constructor(canvas, sprite, fill = 0.8) {
+    /** fill: how much of the canvas the idle Pokémon takes up; row: which way it faces (0 down, 2 right, 6 left). */
+    constructor(canvas, sprite, fill = 0.8, row = 0) {
       this.cv = canvas;
       this.sp = sprite;
+      this.row = row;
       const idle = sprite.Idle;
       this.k = Math.max(1, Math.floor(fill * Math.min(canvas.width / idle.box.w, canvas.height / idle.box.h) * 4) / 4);
       // where each frame's centre goes, so the idle Pokémon sits in the middle of the canvas
@@ -121,7 +122,8 @@
       g.imageSmoothingEnabled = false;
       g.clearRect(0, 0, this.cv.width, this.cv.height);
       const w = a.fw * this.k, h = a.fh * this.k;
-      g.drawImage(img, f * a.fw, 0, a.fw, a.fh, Math.round(this.cx - w / 2), Math.round(this.cy - h / 2), w, h);
+      const row = (this.row + 1) * a.fh <= img.height ? this.row : 0;
+      g.drawImage(img, f * a.fw, row * a.fh, a.fw, a.fh, Math.round(this.cx - w / 2), Math.round(this.cy - h / 2), w, h);
     }
   }
 
