@@ -345,6 +345,12 @@
       if (!P.playAnim(['Hop', 'Pose'])) P.jump(1);
       if (!P.bubbleBusy()) P.showBubble(say('catchGood', { n: e.n }), { ms: 2500 });
     },
+    'memory-done'(e) {
+      if (P.isAway()) return;
+      P.hearts(2);
+      if (!P.playAnim(['Hop', 'Pose'])) P.jump(1);
+      if (!P.bubbleBusy()) P.showBubble(say('memoryDone', { n: e.n }), { ms: 2500 });
+    },
     'quiz-right'(e) {
       if (P.isAway()) return;
       P.hearts(1);

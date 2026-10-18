@@ -5,6 +5,12 @@ Installers for every version are on [Releases](https://github.com/rios-kitchen/P
 
 ## 未发布 · Unreleased
 
+- **新小游戏「记忆翻牌」**：16 张牌里藏着 8 对宝可梦头像，每次翻两张找出对子；回合越少树果越多；每天 6 局，每小时 2 局
+  **New mini-game "Memory Match"**: 16 cards hide 8 pairs of Pokémon faces – turn two at a time and find every pair; fewer turns, more berries; 6 a day, 2 an hour
+
+- **修复**：输掉对战时，如果队伍里有中了灼伤、中毒、麻痹或冰冻的宝可梦，对战会卡住报错
+  **Fixed**: losing a battle with a burned, poisoned, paralysed or frozen Pokémon on the team made the battle hang with an error
+
 - **新小游戏「接树果」**：树上掉下树果、泡芙和星星，左右移动宝可梦去接，小心便便；一局 30 秒，按分数得树果和经验；每天 6 局，每小时 2 局
   **New mini-game "Berry Catch"**: berries, Poké Puffs and stars fall from the trees – move your Pokémon to catch them and dodge the poop; 30-second rounds, berries and XP by score; 6 a day, 2 an hour
 
